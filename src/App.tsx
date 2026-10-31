@@ -141,7 +141,7 @@ function App() {
       const payload = {
         name:(profile.summary || researchBrief).slice(0,56),
         objective:researchBrief, target_regions:targetRegions, platform_slugs:[],
-        scope:{input_mode:'structured_research',research_profile:profile,original_brief:researchBrief,profile_version:1,workflow_state:'in_progress',active_step:1},
+        scope:{...(projectId?projects.find(item=>item.id===projectId)?.scope??{}:{}),input_mode:'structured_research',research_profile:profile,original_brief:researchBrief,profile_version:1,workflow_state:'in_progress',active_step:1},
         status:'planning',
       };
       const result = projectId
