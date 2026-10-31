@@ -1,5 +1,14 @@
 import React from 'react';
-import { Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep } from '@carbon/react';
+import {
+ Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep,
+ Accordion, AccordionItem, FluidForm, FormGroup, Checkbox, RadioButtonGroup, RadioButton,
+ unstable__FluidTextInput as FluidTextInput,
+ unstable__FluidTextArea as FluidTextArea,
+ unstable__FluidDropdown as FluidDropdown,
+ unstable__FluidMultiSelect as FluidMultiSelect,
+ unstable__FluidComboBox as FluidComboBox,
+ unstable__FluidNumberInput as FluidNumberInput,
+} from '@carbon/react';
 import { Add, ArrowLeft, ArrowRight, Renew, ChartLine } from '@carbon/icons-react';
 
 export type ResearchDimension = { key:string; label:string; values:string[]; status:'provided'|'suggested'|'needs_confirmation'|'user_confirmed'; note?:string };
@@ -59,8 +68,17 @@ const fieldSpecs=[
  ['exclusions','排除条件','例如：排除二手商品、低评分商品'],
  ['purchase_requirements','采购数量与成本要求','例如：首单 500 件，目标 FOB 成本'],
  ['business_goals','商业目标与研究问题','例如：寻找新品机会、评估进入德国市场的可行性'],
- ['other_constraints','其他约束条件','填写其他必须遵守的研究限制'],
+ ['other_constraints','其他约束条件','填写其他必须遵守的研究限制'],\n ['other_research_notes','其他研究说明 / 自然语言补充','补充背景、研究假设、特殊关注点或其他说明'],
 ];
+const countryOptions=['美国','英国','德国','法国','意大利','西班牙','加拿大','澳大利亚','日本','韩国','中国','荷兰','瑞典','波兰','阿联酋','沙特阿拉伯'];
+const languageOptions=['英语','中文','德语','法语','西班牙语','意大利语','日语','韩语','荷兰语','阿拉伯语','多语言 / 自动识别'];
+const categoryOptions=['消费电子','家居用品','厨房用品','宠物用品','美容与个人护理','运动与户外','母婴用品','服装与配饰','汽车用品','工业与商业用品'];
+const supplyOptions=['中国','越南','印度','泰国','马来西亚','印度尼西亚','台湾','韩国','日本','美国','德国','墨西哥','土耳其'];
+const complianceOptions=['CE','RoHS','FCC','UKCA','REACH','FDA','CPC','Prop 65'];
+const logisticsOptions=['易碎','带电池','大件','液体','粉末','温控','危险品限制','超重'];
+const channelOptions=['Amazon','独立站','线下零售','TikTok Shop'];
+const goalOptions=['市场进入','竞品分析','选品开发'];
+const toItems=(values:string[])=>values.map(value=>({id:value,text:value}));
 function ResearchProgress({activeStep,maxUnlockedStep,stepReady}:{activeStep:number;maxUnlockedStep:number;stepReady:boolean[]}) {
  return <Tile className="research-progress-tile">
   <div className="module-heading"><div><h3 className="cds--type-heading-03">五步研究工作流</h3><p>按顺序完成研究流程；后续步骤将在前置数据准备完成后解锁。</p></div><Tag type="blue" className="synesis-workspace-tag">第 {activeStep+1} / 5 步</Tag></div>
@@ -104,7 +122,7 @@ export function ResearchWizard(props:Props) {
  const [customLabel,setCustomLabel]=React.useState('');
  const [customValue,setCustomValue]=React.useState('');
  const [activeStep,setActiveStep]=React.useState(0);
- const [selectedSources,setSelectedSources]=React.useState<string[]>([]);
+ const [selectedSources,setSelectedSources]=React.useState<string[]>([]);\n const [openPanels,setOpenPanels]=React.useState([true,false,false,false]);
  const project=projects.find(p=>p.id===projectId);
  const projectPlans=plans.filter(p=>p.project_id===projectId); const plan=projectPlans[0];
  const projectTasks=tasks.filter(t=>t.project_id===projectId); const projectReports=reports.filter(r=>r.project_id===projectId);
@@ -140,10 +158,53 @@ export function ResearchWizard(props:Props) {
   <Tile className="research-start-tile">
    <p className="eyebrow">STEP 1 / RESEARCH SCOPE</p><h2 className="cds--type-heading-03">建立你的市场研究需求</h2>
    <p>按字段填写关键信息；不确定的项目可以留空。AI 会帮助整理、识别缺失项，并保留信息来源状态。</p>
-   <div className="research-intake-grid">
-    {fieldSpecs.map(([key,label,placeholder])=><div className="research-intake-field" key={key}>{dropdownOptions[key]?<><label className="research-select-label" htmlFor={'intake-'+key}>{label}</label><select id={'intake-'+key} className="research-select-control" value={formValues[key]??''} onChange={e=>{setFormValues(v=>({...v,[key]:e.target.value}));setProfile(null);}}><option value="">请选择（可留空）</option>{dropdownOptions[key].map(option=><option key={option} value={option}>{option}</option>)}</select></>:<TextInput id={'intake-'+key} labelText={label} helperText={key==='keywords'?'输入产品名称、核心品类或目标搜索词；多个关键词可用逗号分隔。':undefined} value={formValues[key]??''} placeholder={placeholder} onChange={e=>{setFormValues(v=>({...v,[key]:e.target.value}));setProfile(null);}}/>}</div>)}
-   </div>
-   <div className="research-intake-field research-intake-wide"><TextArea id="research-brief" labelText="其他研究说明 / 自然语言补充" value={brief} onChange={e=>{setBrief(e.target.value);setProfile(null);}} rows={4} placeholder="例如：希望比较德国和法国市场的竞争强度，重点寻找差异化产品机会，并评估适合跨境电商的切入方式。"/></div>
+   <FluidForm className="research-fluid-form">
+    <Accordion align="start" className="research-intake-accordion">
+     <AccordionItem title={<span className="research-accordion-title"><b>01</b> 核心研究目标 <small>研究范围、关键词与目标市场</small></span>} open={openPanels[0]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===0?!isOpen:x))}>
+      <div className="research-fluid-grid">
+       <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-keywords" labelText="核心关键词" helperText="多个关键词请使用逗号分隔；也可以一行填写一个关键词。" rows={4} value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field research-fluid-span"><FluidMultiSelect id="intake-countries" titleText="目标国家" label="选择国家 / 地区" items={toItems(countryOptions)} itemToString={(item:any)=>item?.text??''} selectedItems={toItems(splitValues(formValues.countries??''))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:selectedItems.map((x:any)=>x.id).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen"/></div>
+       <div className="research-fluid-field"><FluidTextInput id="intake-regions" labelText="目标地区 / 城市" value={formValues.regions??''} placeholder="例如：加州、巴伐利亚州、伦敦" onChange={(e:any)=>{setFormValues(v=>({...v,regions:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field"><FluidDropdown id="intake-languages" titleText="研究语言" label="选择研究语言" items={toItems(languageOptions)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(languageOptions).find(x=>x.id===formValues.languages)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,languages:selectedItem?.id??''}));setProfile(null);}}/></div>
+       <div className="research-fluid-field"><FluidDropdown id="intake-time-range" titleText="研究时间范围" label="选择时间范围" items={toItems(dropdownOptions.time_range)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(dropdownOptions.time_range).find(x=>x.id===formValues.time_range)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,time_range:selectedItem?.id??''}));setProfile(null);}}/></div>
+      </div>
+     </AccordionItem>
+     <AccordionItem title={<span className="research-accordion-title"><b>02</b> 产品与竞品画像 <small>产品属性、品牌、价格与竞争对手</small></span>} open={openPanels[1]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===1?!isOpen:x))}>
+      <div className="research-fluid-grid">
+       <div className="research-fluid-field"><FluidComboBox id="intake-category" titleText="产品类别" placeholder="搜索或输入自定义类别" items={toItems(categoryOptions)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(categoryOptions).find(x=>x.id===formValues.product_categories)??null} allowCustomValue onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,product_categories:selectedItem?.text??''}));setProfile(null);}}/></div>
+       <div className="research-fluid-field"><FluidTextInput id="intake-attributes" labelText="产品属性与规格" value={formValues.product_attributes??''} placeholder="材质、尺寸、容量、功能、连接方式等" onChange={(e:any)=>{setFormValues(v=>({...v,product_attributes:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field"><FluidTextInput id="intake-brands" labelText="品牌" value={formValues.brands??''} placeholder="输入品牌名称" onChange={(e:any)=>{setFormValues(v=>({...v,brands:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-models" labelText="型号 / SKU / UPC / EAN" helperText="支持多行输入，每行填写一个型号或商品标识符。" rows={3} value={formValues.models_identifiers??''} onChange={(e:any)=>{setFormValues(v=>({...v,models_identifiers:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field research-fluid-span"><label className="cds--label">价格范围与币种</label><div className="research-price-range">
+        <FluidNumberInput id="intake-price-min" label="最低价格" min={0} step={1} value={formValues.price_min??''} onChange={(e:any)=>{setFormValues(v=>({...v,price_min:e.target.value,price_range:[e.target.value,v.price_max].filter(Boolean).join(' - ')+(v.price_currency?' '+v.price_currency:'')}));setProfile(null);}}/>
+        <FluidNumberInput id="intake-price-max" label="最高价格" min={0} step={1} value={formValues.price_max??''} onChange={(e:any)=>{setFormValues(v=>({...v,price_max:e.target.value,price_range:[v.price_min,e.target.value].filter(Boolean).join(' - ')+(v.price_currency?' '+v.price_currency:'')}));setProfile(null);}}/>
+        <FluidDropdown id="intake-price-currency" titleText="币种" label="币种" items={toItems(['USD','EUR','CNY'])} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(['USD','EUR','CNY']).find(x=>x.id===(formValues.price_currency??'USD'))??toItems(['USD','EUR','CNY'])[0]} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,price_currency:selectedItem?.id??'USD',price_range:[v.price_min,v.price_max].filter(Boolean).join(' - ')+(selectedItem?.id?' '+selectedItem.id:'')}));setProfile(null);}}/>
+       </div></div>
+       <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-competitors" labelText="竞争对手" helperText="可按回车换行，也可使用逗号分隔品牌或企业名称。" rows={3} value={formValues.competitors??''} onChange={(e:any)=>{setFormValues(v=>({...v,competitors:e.target.value}));setProfile(null);}}/></div>
+      </div>
+     </AccordionItem>
+     <AccordionItem title={<span className="research-accordion-title"><b>03</b> 市场与渠道受众 <small>目标客户、销售渠道与参考来源</small></span>} open={openPanels[2]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===2?!isOpen:x))}>
+      <div className="research-fluid-grid">
+       <div className="research-fluid-field research-fluid-span"><FluidTextInput id="intake-customers" labelText="目标客户群体" value={formValues.target_customers??''} placeholder="例如：养猫家庭、宠物店、年轻上班族" onChange={(e:any)=>{setFormValues(v=>({...v,target_customers:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field research-fluid-span"><FormGroup legendText="销售渠道"><div className="research-checkbox-grid">{channelOptions.map(option=><Checkbox key={option} id={'channel-'+option} labelText={option} checked={splitValues(formValues.sales_channels??'').includes(option)} onChange={(checked:boolean)=>{const values=splitValues(formValues.sales_channels??'');setFormValues(v=>({...v,sales_channels:(checked?[...values,option]:values.filter(x=>x!==option)).join(', ')}));setProfile(null);}}/> )}</div></FormGroup></div>
+       <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-urls" labelText="参考 URL / 社交账号" helperText="每行填写一个网址或社交账号链接。" rows={4} value={formValues.reference_urls??''} placeholder="https://example.com/product" onChange={(e:any)=>{setFormValues(v=>({...v,reference_urls:e.target.value}));setProfile(null);}}/></div>
+      </div>
+     </AccordionItem>
+     <AccordionItem title={<span className="research-accordion-title"><b>04</b> 供应链与高级设定 <small>供应链、合规、物流和商业目标</small></span>} open={openPanels[3]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===3?!isOpen:x))}>
+      <div className="research-fluid-grid">
+       <div className="research-fluid-field"><FluidComboBox id="intake-origin" titleText="原产地 / 供应链市场" placeholder="搜索或输入国家 / 地区" items={toItems(supplyOptions)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(supplyOptions).find(x=>x.id===formValues.origin_supply_markets)??null} allowCustomValue onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,origin_supply_markets:selectedItem?.text??''}));setProfile(null);}}/></div>
+       <div className="research-fluid-field"><FluidMultiSelect id="intake-certifications" titleText="认证与合规要求" label="选择认证标准" items={toItems(complianceOptions)} itemToString={(item:any)=>item?.text??''} selectedItems={toItems(splitValues(formValues.certifications??''))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,certifications:selectedItems.map((x:any)=>x.id).join(', ')}));setProfile(null);}}/></div>
+       <div className="research-fluid-field"><FluidTextInput id="intake-usage" labelText="使用场景" value={formValues.usage_scenarios??''} placeholder="描述典型使用情境" onChange={(e:any)=>{setFormValues(v=>({...v,usage_scenarios:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field"><FluidMultiSelect id="intake-logistics" titleText="包装与物流属性" label="选择物流属性" items={toItems(logisticsOptions)} itemToString={(item:any)=>item?.text??''} selectedItems={toItems(splitValues(formValues.logistics_attributes??''))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,logistics_attributes:selectedItems.map((x:any)=>x.id).join(', ')}));setProfile(null);}}/></div>
+       <div className="research-fluid-field"><FluidTextInput id="intake-exclusions" labelText="排除条件" value={formValues.exclusions??''} placeholder="例如：排除二手商品、低评分商品" onChange={(e:any)=>{setFormValues(v=>({...v,exclusions:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field"><FluidTextInput id="intake-purchase" labelText="采购数量与成本要求" value={formValues.purchase_requirements??''} placeholder="例如：首单 500 件，目标 FOB 成本" onChange={(e:any)=>{setFormValues(v=>({...v,purchase_requirements:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field research-fluid-span"><FormGroup legendText="商业目标与研究问题"><RadioButtonGroup name="business-goal" value={formValues.business_goals??''} onChange={(value:string)=>{setFormValues(v=>({...v,business_goals:value}));setProfile(null);}}><div className="research-radio-grid">{goalOptions.map(option=><RadioButton key={option} id={'goal-'+option} value={option} labelText={option}/>)}</div></RadioButtonGroup></FormGroup></div>
+       <div className="research-fluid-field"><FluidTextInput id="intake-constraints" labelText="其他约束条件" value={formValues.other_constraints??''} placeholder="填写研究限制条件" onChange={(e:any)=>{setFormValues(v=>({...v,other_constraints:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-other-notes" labelText="其他研究说明 / 自然语言补充" helperText="可补充研究背景、优先级、假设、关注的问题和希望 AI 特别分析的内容。" rows={6} value={brief||formValues.other_research_notes||''} onChange={(e:any)=>{setBrief(e.target.value);setFormValues(v=>({...v,other_research_notes:e.target.value}));setProfile(null);}}/></div>
+      </div>
+     </AccordionItem>
+    </Accordion>
+   </FluidForm>
    <div className="research-start-actions"><span>所有字段均可选；至少填写一个条件或补充说明即可开始。</span><Button kind="primary" renderIcon={Renew} disabled={(!brief.trim()&&!Object.values(formValues).some(v=>v.trim()))||busy} onClick={()=>void parseBrief()}>AI 整理研究需求</Button></div>
    {parseError&&<p className="error-text">{parseError}</p>}
   </Tile>
