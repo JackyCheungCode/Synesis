@@ -79,3 +79,14 @@ test('research intake retries malformed JSON through the selected provider', () 
   assert.match(branch, /selectedModel=model/);
   assert.match(branch, /缺少 dimensions 数组/);
 });
+
+
+test('Apify plan generation extracts and repairs malformed Cloudflare JSON', () => {
+  const planBranch = backend.slice(backend.indexOf("if (action === 'plans.generate')"), backend.indexOf("if (action === 'plans.approve')"));
+  assert.match(planBranch, /parseJsonObject\(raw\)/);
+  assert.match(planBranch, /Repair the model output into one complete valid JSON object/);
+  assert.match(planBranch, /repairResponse=await fetch/);
+  assert.match(planBranch, /cloudflareModelPath\(cloudflareModel\)/);
+  assert.match(planBranch, /max_tokens:8000/);
+  assert.match(planBranch, /缺少 research_questions、platform_tasks 或 deliverables 数组/);
+});
