@@ -339,8 +339,8 @@ function App() {
         const safe='=+-@'.includes(raw[0]??'')||firstChar===9||firstChar===13?"'"+raw:raw;
         return '"'+safe.replace(/"/g,'""')+'"';
       };
-      const csv=[keys.map(csvCell).join(','),...rows.map(row=>keys.map(key=>csvCell(row[key])).join(','))].join('\\r\\n');
-      const blob=new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
+      const csv=[keys.map(csvCell).join(','),...rows.map(row=>keys.map(key=>csvCell(row[key])).join(','))].join('\r\n');
+      const blob=new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
       const url=URL.createObjectURL(blob);const link=document.createElement('a');
       link.href=url;link.download='synesis-project-'+targetProjectId+'-unified-dataset.csv';link.click();URL.revokeObjectURL(url);
       setNotice({kind:'success',text:'已导出 '+rows.length.toLocaleString()+' 条跨平台标准化数据及原始 JSON。'});
@@ -518,8 +518,8 @@ function App() {
         const text = '=+-@'.includes(raw[0] ?? '') || first === 9 || first === 13 ? `'${raw}` : raw;
         return `"${text.replace(/"/g,'""')}"`;
       };
-      const csv = [keys.map(csvCell).join(','),...rows.map(row=>keys.map(key=>csvCell(row[key])).join(','))].join('\\r\\n');
-      const blob = new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
+      const csv = [keys.map(csvCell).join(','),...rows.map(row=>keys.map(key=>csvCell(row[key])).join(','))].join('\r\n');
+      const blob = new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href=url; link.download=`synesis-task-${task.id}-results.csv`; link.click();
