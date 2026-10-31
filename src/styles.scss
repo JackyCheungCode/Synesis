@@ -1491,7 +1491,8 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
   color: var(--cds-text-primary) !important;
   font-size: 12px !important;
   line-height: 1.4 !important;
-  white-space: nowrap !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
   opacity: 1 !important;
 }
 .synesis-app .research-fluid-form .cds--multi-select .cds--tag__close-icon,
@@ -1625,14 +1626,17 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
   display:block!important;
   min-width:0!important;
   max-width:100%!important;
-  overflow:hidden!important;
-  text-overflow:ellipsis!important;
-  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
   text-align:left!important;
   color:var(--cds-text-primary)!important;
 }
 .synesis-app .research-country-field .cds--multi-select .cds--list-box__field {
   min-width:0!important;
+  min-height:2.5rem!important;
+  height:auto!important;
   justify-content:flex-start!important;
   background:var(--cds-field-01)!important;
   color:var(--cds-text-primary)!important;
