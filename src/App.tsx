@@ -605,7 +605,7 @@ function App() {
             cloudflareAccountId={cloudflareAccountId} setCloudflareAccountId={setCloudflareAccountId}
             integrationMeta={integrationMeta} setIntegrationMeta={setIntegrationMeta}
             providerModels={Object.fromEntries(Object.entries(selectedProviderModels).map(([slug,model])=>[slug,model]))} selectedProvider={selectedProvider} setSelectedProvider={setSelectedProvider}
-            models={providerModelsList} selectedModels={selectedProviderModels} onLoadModels={loadProviderModels} onSelectModel={saveProviderModel}
+            models={providerModelsList} selectedModels={selectedProviderModels} onLoadModels={(slug,force)=>void loadProviderModels(slug,force)} onSelectModel={saveProviderModel}
             onSave={(slug,name,kind)=>void saveCredential(slug,name,kind)}
             onTest={(slug,kind)=>void testConnection(slug,kind)}
           />}
