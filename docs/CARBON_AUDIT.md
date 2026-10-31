@@ -102,7 +102,7 @@
 | ID | 页面 | 验收重点 | 证据 | 初始结论 |
 |---|---|---|---|---|
 | L-01 | 登录/注册 | 表单宽度、品牌区、错误通知、窄屏堆叠 | `src/auth/AuthProvider.tsx`、`src/styles/carbon-foundation.scss` | **静态通过（2026-10-31）**：标题 42px/300、正文 14px/0.16px、标签 12px/0.32px；白底/炭黑/IBM Blue 60；输入框底边线、0px 圆角、无阴影；桌面 16 列/平板 8 列/移动 4 列；标签可见且不依赖 placeholder。真实视口截图、键盘与读屏仍待实测 |
-| L-02 | Dashboard | KPI 信息层级、空状态、创建入口、卡片网格 | `WorkspaceDashboard.tsx:1-14` | 部分通过；需验证不同数据量 |
+| L-02 | Dashboard | KPI 信息层级、空状态、创建入口、卡片网格 | `src/features/dashboard/WorkspaceDashboard.tsx`、`src/styles/carbon-foundation.scss` | **静态实现完成（2026-10-31）**：四项 KPI 使用 dl/dt/dd 语义；零项目显示 status 空状态；研究流程改为有序步骤；主创建按钮保留；桌面 4 列、平板 2 列、移动 2 列 KPI / 单列流程；页面样式隔离。构建/CI 与视口实测待确认 |
 | L-03 | 项目列表/研究需求 | 四组 Accordion、字段密度、国家地图与表单响应式 | `ResearchWizard.tsx:338-422` | 部分通过；地图与长表单需实测 |
 | L-04 | Step 1 需求确认 | 画像分组、必填/可选信息、长文本和动态维度 | `ResearchWizard.tsx:454`、`:401-418` | 部分通过 |
 | L-05 | Step 2 平台选择 | 分类 Tabs、平台列表、已选 Tags、Actor 候选、滚动 | `ResearchWizard.tsx:455-480` | 部分通过 |
@@ -353,3 +353,17 @@ Carbon 官方依据：
 - 修复：移除品牌色块与彩色侧栏；标题统一 42px / 300 Light；正文与标签采用指定字号、行高及字距；移除字段 placeholder；输入框改为仅底部边线、焦点 IBM Blue 60；按钮 48px；所有页面表面方角、无阴影；桌面/平板/移动栅格分别为 16/8/4 列。
 - 静态结论：已按源码完成整改；尚未运行构建、CI 与真实浏览器验证，不得记为运行时通过。
 - 待验证：320、375、768、1024、1440px；Tab/Shift+Tab、表单提交、错误/成功状态、200%/400% 缩放、NVDA/VoiceOver。
+
+
+### L-02 Dashboard 页面整改记录（2026-10-31）
+
+- 范围：`src/features/dashboard/WorkspaceDashboard.tsx` 与页面专属样式 `src/styles/carbon-foundation.scss`。
+- 变更提交：
+  - `73b10fae2897c8ad8e9c9b591aa9057e8d383c91` — KPI 与流程语义结构重写。
+  - `0db982b2277b5e8747a6e4db3a4cb49e3a2d491e` — Dashboard 响应式布局。
+  - `84a5f439ec49d32d24ca43c8bba431be4985b463` — 零项目空状态。
+  - `b8f95916abe32d6ec678fbc54835006f1d6a1141` — Dashboard 专属间距收敛到 8px 网格。
+  - `6df68b465aaf9c2b1b5a8f4ac3023faa2b583860` — Dashboard 静态回归断言。
+- 修复：移除彩色 Tag 流程节点；KPI 使用 definition list 语义与数字等宽；流程使用有序列表；新增零项目空状态；保留“开始新研究”主操作；布局限定在 dashboard-* 命名空间，避免影响其他页面；断点为 1055px / 672px；Dashboard 专属间距使用 Carbon spacing-03/05/06 等 8px 倍数 token。
+- 静态结论：源码整改完成；自动化 CI 正在触发/待结果；没有可用真实浏览器控制环境，未做 320/375/768/1024/1440px 截图、内容溢出或键盘实测。
+- 待验证：四个 KPI 的 0/常规/大数值；项目列表空/有数据；320/375/768/1024/1440px；200%/400% 缩放；键盘与 NVDA/VoiceOver。
