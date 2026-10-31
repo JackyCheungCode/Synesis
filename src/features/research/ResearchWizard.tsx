@@ -64,7 +64,7 @@ export function ResearchWizard(props:Props) {
     <Tile>
       <div className="module-heading"><div><h3>第二步 · Apify 采集计划</h3><p>审核采集目标、内容和预期成本。技术参数由系统管理。</p></div><Tag type={plan?.status==='pending_approval'?'warm-gray':plan?.status==='approved'?'green':'blue'}>{plan?.status??'计划生成中'}</Tag></div>
       {plan&&<><p>{String(plan.plan.executive_summary??'AI 已生成研究采集计划。')}</p><div className="research-plan-list">{projectStageTasks.map((task:any,index:number)=><div className="research-plan-row" key={index}><div><b>{task.platform}</b><p>{task.purpose}</p></div></div>)}</div><div className="research-plan-meta"><span>预计费用：{plan.estimated_cost===null?'暂不可估算':`$ ${Number(plan.estimated_cost).toFixed(2)}`}</span><span>采集任务：{proposedTasks.length}</span></div>
-      {plan.status==='pending_approval'&&<div className="research-approval"><p>{actorsReady?'计划已生成，批准后将自动启动 Apify 采集、数据同步与后续分析。':'当前计划包含尚未验证的 Actor，系统不会执行未经验证的采集配置。请先完成后台 Actor 配置。'}</p><Button kind="primary" disabled={!actorsReady||busy} onClick={()=>onApprove(plan)}>批准并开始自动研究</Button></div>}</>}
+      {plan.status==='pending_approval'&&<div className="research-approval"><p>{actorsReady?'Actor ID 已填写。批准时服务器会先检查 Actor 是否存在、可访问且未弃用，再启动采集。':'AI 尚未提供可验证的 Apify Actor ID，系统不会猜测 Actor 或启动采集。请先完善后台 Actor 目录。'}</p><Button kind="primary" disabled={!actorsReady||busy} onClick={()=>onApprove(plan)}>批准并开始自动研究</Button></div>}</>}
       {!plan&&<p>AI 正在生成采集计划。</p>}
     </Tile>
     <Tile>
