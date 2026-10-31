@@ -219,7 +219,8 @@ export function ResearchWizard(props:Props) {
  const requiredReady=Boolean(formValues.keywords?.trim()&&formValues.countries?.trim()&&formValues.languages?.trim());
  const filledFieldCount=fieldSpecs.filter(([key])=>String(formValues[key]??(key==='other_research_notes'?brief:'' )).trim().length>0).length;
  const completeness=Math.round(filledFieldCount/fieldSpecs.length*100);
- const selectedCountryCodes=splitValues(formValues.countries??'').map(label=>countryByLabel.get(label)?.id).filter(Boolean) as string[];
+ const selectedLabels=splitValues(formValues.countries??'');
+  const selectedCountryCodes=countryOptions.filter(item=>selectedLabels.includes(item.text)).map(item=>item.id);
  function createProfileFromForm():ResearchProfile {
   const dimensions=fieldSpecs.filter(([key])=>String(formValues[key]??(key==='other_research_notes'?brief:'' )).trim()).map(([key,label])=>({key,label,values:splitValues(String(formValues[key]??(key==='other_research_notes'?brief:''))),status:'provided' as const}));
   return {summary:'根据用户填写的结构化研究需求建立的研究画像。',dimensions,research_goals:splitValues(formValues.business_goals??''),assumptions:[],missing_information:[]};
