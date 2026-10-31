@@ -130,8 +130,8 @@ export function normalizeResearchRecord(platformSlug, record) {
   const definitions = {
     title: [/^(title|name|product.?name|item.?name|headline|job.?title|company.?name|app.?name|property.?name|post.?title)$/i],
     brand: [/^(brand(name)?|seller.?name|merchant|store.?name|shop.?name|company|company.?name|publisher|source|developer.?name)$/i],
-    creator: [/^(author|author.?name|creator|username|user.?name|owner.?username|channel.?name|account.?name)$/i],
-    description: [/^(description|product.?description|summary|snippet|caption|text|content|excerpt|about|overview)$/i],
+    creator: [/^(author|author.?name|creator|username|user.?name|owner.?username|channel.?name|account.?name|nickname|unique.?id|handle)$/i],
+    description: [/^(description|product.?description|summary|snippet|caption|text|content|excerpt|about|overview|desc)$/i],
     category: [/^(category|categories|department|product.?type|industry|sector|section|topic)$/i],
     price: [/^(price|sale.?price|current.?price|amount|cost|listing.?price|unit.?price|salary|compensation|rent|nightly.?price)$/i],
     currency: [/^(currency|currency.?code|price.?currency)$/i],
@@ -142,8 +142,8 @@ export function normalizeResearchRecord(platformSlug, record) {
     comments: [/^(comments|comment.?count|reply.?count|replies)$/i],
     shares: [/^(shares|share.?count|repost.?count)$/i],
     location: [/^(location|address|city|country|region|headquarters|workplace)$/i],
-    published_at: [/^(published.?at|created.?at|posted.?at|timestamp|date|updated.?at|filed.?at)$/i],
-    source_url: [/^(canonical.?url|product.?url|item.?url|post.?url|video.?url|article.?url|job.?url|listing.?url|website|url|permalink|link|href)$/i],
+    published_at: [/^(published.?at|created.?at|create.?time|posted.?at|timestamp|date|updated.?at|filed.?at)$/i],
+    source_url: [/^(canonical.?url|product.?url|item.?url|post.?url|video.?url|web.?video.?url|share.?url|article.?url|job.?url|listing.?url|website|url|permalink|link|href)$/i],
     external_id: [/^(asin|product.?id|item.?id|listing.?id|offer.?id|external.?id|record.?id|case.?number|document.?number|app.?id|video.?id|post.?id)$/i],
   };
   const normalizedData = {};
