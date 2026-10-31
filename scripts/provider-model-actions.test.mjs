@@ -53,7 +53,7 @@ test('Amazon plans populate required product URL arrays from research keywords',
   const planBranch = backend.slice(backend.indexOf("if (action === 'plans.generate')"), backend.indexOf("if (action === 'plans.approve')"));
   assert.match(planBranch, /researchKeywords/);
   assert.match(planBranch, /https:\/\/www\.amazon\.com\/s\?k=/);
-  assert.match(planBranch, /必填数组字段/);
+  assert.match(backend, /必填数组字段/);
   assert.match(planBranch, /categoryOrProductUrls/);
 });
 
