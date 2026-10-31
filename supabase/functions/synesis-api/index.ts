@@ -835,6 +835,25 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (action === 'tasks.logs') {
+      const taskId=String(body.taskId??'').trim();
+      if(!taskId) return json({error:'缺少任务 ID'},400);
+      const {data:task,error}=await admin.from('collection_tasks')
+        .select('id,status,external_run_id').eq('id',taskId).eq('user_id',userId).maybeSingle();
+      if(error||!task) return json({error:'采集任务不存在'},404);
+      if(!task.external_run_id) return json({logs:'等待 Apify Run 启动，暂时没有运行日志。',available:false});
+      const {clear:apifyToken}=await getCredential('apify','integration');
+      const response=await fetch(`https://api.apify.com/v2/actor-runs/${encodeURIComponent(task.external_run_id)}/log?raw=0`,{
+        headers:{Authorization:`Bearer ${apifyToken}`,Accept:'text/plain'},
+      });
+      if(!response.ok) {
+        const detail=(await response.text()).slice(0,300);
+        return json({error:`Apify 日志读取失败（${response.status}）：${detail}`},502);
+      }
+      const raw=await response.text();
+      return json({logs:raw.slice(-12000),available:Boolean(raw.trim()),truncated:raw.length>12000});
+    }
+
     if (action === 'tasks.results') {
       const { taskId, limit = 100, offset = 0 } = body;
       const safeLimit = Math.min(250, Math.max(1, Number(limit) || 100));
