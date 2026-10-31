@@ -54,6 +54,40 @@ function parseJsonObject(raw: string): Record<string, unknown> {
 }
 
 type CompactInputSchema = { type?: string; properties?: Record<string,{type?:string|string[];minItems?:number;maxItems?:number;minLength?:number;maxLength?:number;minimum?:number;maximum?:number;pattern?:string;format?:string;items?:{type?:string;pattern?:string;format?:string};enum?:unknown[]}>; required?: string[] };
+function normalizeAmazonActorInput(actorId:string, raw:unknown):Record<string,unknown> {
+  const input:Record<string,unknown>=raw&&typeof raw==='object'&&!Array.isArray(raw)?{...(raw as Record<string,unknown>)}:{};
+  const toUrlObjects=(field:string)=>{
+    if(!Array.isArray(input[field])) return;
+    input[field]=(input[field] as unknown[]).map(value=>{
+      if(typeof value==='string') return {url:value.trim()};
+      if(value&&typeof value==='object'&&!Array.isArray(value)) {
+        const item=value as Record<string,unknown>;
+        return typeof item.url==='string'?{...item,url:item.url.trim()}:item;
+      }
+      return value;
+    });
+  };
+  if(actorId==='BG3WDrGdteHgZgbPK') {
+    toUrlObjects('categoryOrProductUrls');
+    const language=String(input.language??'en').trim();
+    const aliases:Record<string,string>={english:'en',chinese:'zh_CN','traditional chinese':'zh_TW','simplified chinese':'zh_CN',japanese:'ja',korean:'ko'};
+    const allowed=['cs','da','de','en','es','fr','nl','pl','pt','sv','tr','he','ar','mrta','hi','bn','ta','te','kn','ml','ko','zh_CN','zh_TW','ja'];
+    const normalized=aliases[language.toLowerCase()]??language;
+    input.language=allowed.includes(normalized)?normalized:'en';
+    const proxy=String(input.proxyCountry??'').trim().toLowerCase();
+    if(proxy==='australia') input.proxyCountry='AU';
+    if(proxy==='united states'||proxy==='usa') input.proxyCountry='US';
+  }
+  if(actorId==='R8WeJwLuzLZ6g4Bkk') {
+    toUrlObjects('productUrls');
+    if(!['helpful','recent'].includes(String(input.sort??''))) input.sort='helpful';
+    const cutoff=String(input.reviewsCutoffDate??'');
+    const cutoffPattern=/^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])(T[0-2]\d:[0-5]\d(:[0-5]\d)?(\.\d+)?Z?)?$|^(\d+)\s*(minute|hour|day|week|month|year)s?$/;
+    if(!cutoffPattern.test(cutoff)) input.reviewsCutoffDate='1 year';
+  }
+  return input;
+}
+
 function validateActorInput(input: unknown, schema: CompactInputSchema): string[] {
   const errors:string[]=[];
   if(!input || typeof input!=='object' || Array.isArray(input)) return ['采集参数必须是 JSON 对象'];
@@ -684,9 +718,10 @@ Deno.serve(async (req: Request) => {
       if(error||!task) return json({error:'采集任务不存在'},404);
       if(task.status!=='failed'||task.ai_research_plans.status!=='approved') return json({error:'只有已批准研究计划中的失败任务可以重试'},409);
       if(!task.actor_id) return json({error:'任务缺少已确认的 Apify Actor ID，无法重试'},400);
+      const retryInput=String(task.platform_slug??'').toLowerCase()==='amazon'?normalizeAmazonActorInput(task.actor_id,task.input):task.input??{};
       const {data:retry,error:insertError}=await admin.from('collection_tasks').insert({
         user_id:userId,project_id:task.project_id,plan_id:task.plan_id,platform_slug:task.platform_slug,
-        actor_id:task.actor_id,input:task.input??{},status:'queued',
+        actor_id:task.actor_id,input:retryInput,status:'queued',
       }).select('id').single();
       if(insertError||!retry) throw insertError??new Error('创建重试任务失败');
       return json({ok:true,taskId:retry.id,sourceTaskId:task.id});
@@ -700,7 +735,9 @@ Deno.serve(async (req: Request) => {
       const {data:claimed,error:claimError}=await admin.from('collection_tasks').update({status:'running',started_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId).eq('status','queued').select('id').maybeSingle();
       if(claimError||!claimed) return json({error:'任务已被执行或状态已变化'},409);
       const actor=encodeURIComponent(task.actor_id).replace(/%2F/g,'~');
-      const executionInput:Record<string,unknown>=task.input&&typeof task.input==='object'&&!Array.isArray(task.input)?{...(task.input as Record<string,unknown>)}:{};
+      const executionInput:Record<string,unknown>=String(task.platform_slug??'').toLowerCase()==='amazon'
+        ?normalizeAmazonActorInput(task.actor_id,task.input)
+        :(task.input&&typeof task.input==='object'&&!Array.isArray(task.input)?{...(task.input as Record<string,unknown>)}:{});
       if(String(task.platform_slug??'').toLowerCase()==='amazon') {
         const amazonUrlFields=['categoryOrProductUrls','productUrls','startUrls','urls'];
         const isValidHttpUrl=(value:unknown):value is string=>{
