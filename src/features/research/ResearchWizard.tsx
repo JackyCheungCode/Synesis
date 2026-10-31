@@ -74,23 +74,21 @@ const fieldSpecs=[
  ['other_constraints','其他约束条件','填写其他必须遵守的研究限制'],
  ['other_research_notes','其他研究说明 / 自然语言补充','补充背景、研究假设、特殊关注点或其他说明'],
 ];
-function flagEmoji(code:string) {
- return [...code.toUpperCase()].map(char=>String.fromCodePoint(127397+char.charCodeAt(0))).join('');
-}
+function flagImageUrl(code:string){return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;}
 const ISO_3166_1_CODES='AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'.split(' ');
 function buildCountryOptions() {
  const names=new Intl.DisplayNames(['zh-Hant'],{type:'region'});
  return ISO_3166_1_CODES.map(code=>{
   const name=names.of(code)??code;
   const text=code==='CN'?'中国大陆':code==='HK'?'中国香港':code==='MO'?'中国澳门':code==='TW'?'中国台湾':name;
-  return {id:code,text,flag:flagEmoji(code)};
+  return {id:code,text,flag:flagImageUrl(code)};
  }).sort((a,b)=>a.text.localeCompare(b.text,'zh-Hant'));
 }
 type CountryOptionItem={id:string;text:string;flag:string};
 const countryOptions:CountryOptionItem[]=buildCountryOptions();
-function CountryOptionElement(value:CountryOptionItem):React.ReactElement {
- return <span className="research-country-option"><span className="research-country-flag" aria-hidden="true">{value.flag}</span><span>{value.text}</span></span>;
-}
+const CountryOptionElement:React.FC<CountryOptionItem> = (item) => (
+ <span className="research-country-option"><img className="research-country-flag" src={item.flag} alt="" loading="lazy"/><span>{item.text}</span></span>
+);
 const englishRegionNames=new Intl.DisplayNames(['en'],{type:'region'});
 const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson';
 function CountryMapViewport({features}:{features:any[]}) {
@@ -277,7 +275,7 @@ export function ResearchWizard(props:Props) {
      <AccordionItem title={<span className="research-accordion-title"><b>03</b> 市场与渠道受众 <small>目标客户、销售渠道与参考来源</small></span>} open={openPanels[2]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===2?!isOpen:x))}>
       <div className="research-fluid-grid">
        <div className="research-fluid-field research-fluid-span"><FluidTextInput id="intake-customers" labelText="目标客户群体" value={formValues.target_customers??''} placeholder="例如：养猫家庭、宠物店、年轻上班族" onChange={(e:any)=>{setFormValues(v=>({...v,target_customers:e.target.value}));setProfile(null);}}/></div>
-       <div className="research-fluid-field research-fluid-span"><FluidMultiSelect id="intake-sales-channels" titleText="销售渠道" label="搜索并选择销售渠道" items={toItems(channelOptions)} itemToString={(item:any)=>item?.text??''} selectedItems={toItems(splitValues(formValues.sales_channels??''))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,sales_channels:selectedItems.map((x:any)=>x.id).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen"/></div>
+       <div className="research-fluid-field research-fluid-span"><FluidMultiSelect id="intake-sales-channels" titleText="销售渠道" label="搜索并选择销售渠道" items={toItems(channelOptions)} itemToString={(item:any)=>item?.text??''} selectedItems={toItems(splitValues(formValues.sales_channels??''))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,sales_channels:(selectedItems??[]).map((x:any)=>x.id).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen"/></div>
        <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-urls" labelText="参考 URL / 社交账号" helperText="每行填写一个网址或社交账号链接。" rows={4} value={formValues.reference_urls??''} placeholder="https://example.com/product" onChange={(e:any)=>{setFormValues(v=>({...v,reference_urls:e.target.value}));setProfile(null);}}/></div>
       </div>
      </AccordionItem>
