@@ -485,7 +485,7 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--cds-spacing-04);
+  gap: var(--cds-spacing-03);
   min-width: 0;
 }
 .synesis-app .dashboard-metric,
@@ -518,7 +518,7 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   overflow-wrap: anywhere;
 }
 .synesis-app .dashboard-metric-description {
-  margin: var(--cds-spacing-04) 0 0;
+  margin: var(--cds-spacing-03) 0 0;
   color: var(--cds-text-secondary);
   font-size: 14px;
   line-height: 1.5;
@@ -542,7 +542,7 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 }
 .synesis-app .dashboard-workflow-heading p,
 .synesis-app .dashboard-workflow-note {
-  margin: var(--cds-spacing-02) 0 0;
+  margin: var(--cds-spacing-03) 0 0;
   color: var(--cds-text-secondary);
   font-size: 14px;
   line-height: 1.5;
@@ -593,14 +593,14 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   .synesis-app .dashboard-workflow-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 672px) {
-  .synesis-app .dashboard-layout { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--cds-spacing-04); }
+  .synesis-app .dashboard-layout { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--cds-spacing-03); }
   .synesis-app .dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--cds-spacing-03); }
   .synesis-app .dashboard-metric,
-  .synesis-app .dashboard-workflow-tile { padding: var(--cds-spacing-04); }
+  .synesis-app .dashboard-workflow-tile { padding: var(--cds-spacing-03); }
   .synesis-app .dashboard-metric-value { font-size: 28px; }
   .synesis-app .dashboard-metric-description { overflow-wrap: anywhere; }
   .synesis-app .dashboard-workflow-heading { align-items: stretch; flex-direction: column; }
   .synesis-app .dashboard-workflow-heading .cds--btn { width: 100%; max-width: none; }
-  .synesis-app .dashboard-workflow-steps { grid-template-columns: minmax(0, 1fr); gap: var(--cds-spacing-02); margin-top: var(--cds-spacing-05); }
+  .synesis-app .dashboard-workflow-steps { grid-template-columns: minmax(0, 1fr); gap: var(--cds-spacing-03); margin-top: var(--cds-spacing-05); }
   .synesis-app .dashboard-workflow-steps li { min-height: 48px; }
 }
