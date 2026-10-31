@@ -7,7 +7,7 @@ import {
   TableRow, TableHeader, TableBody, TableCell, Search, Loading,
 } from '@carbon/react';
 import {
-  Dashboard, Globe, Ai, Folder, ChartLine, Moon, Sun, Notification, Add, Renew, Play,
+  Dashboard, Globe, Ai, Folder, ChartLine, Add, Renew, Play,
 } from '@carbon/icons-react';
 import { BrandIcon } from './components/BrandIcon';
 import { platforms, providers, apiIntegrations } from './data/catalog';
@@ -33,7 +33,6 @@ function App() {
   const [page, setPage] = useState<Page>('dashboard');
   const navigate = (next: Page) => { setPage(next); if (window.matchMedia('(max-width: 1055px)').matches) setNavExpanded(false); };
   const [navExpanded, setNavExpanded] = useState(() => window.matchMedia('(min-width: 66rem)').matches);
-  const [dark, setDark] = useState(false);
   const [notice, setNotice] = useState<{kind:'info'|'success'|'error'|'warning'; text:string}|null>(null);
   const [busy, setBusy] = useState(false);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -163,25 +162,16 @@ function App() {
   const pageRows = tasks.filter(t => !search || t.platform_slug.includes(search.toLowerCase()));
 
   return (
-    <div className={dark ? 'synesis-app theme-dark cds--g100' : 'synesis-app cds--white'}>
+    <div className="synesis-app cds--white">
       <Header aria-label="Synesis">
         <HeaderMenuButton aria-label="切换导航" isActive={navExpanded} onClick={() => setNavExpanded(v=>!v)} />
         <HeaderName prefix="" href="#" onClick={e=>e.preventDefault()}>SYNESIS</HeaderName>
-        <HeaderGlobalBar>
-          <HeaderGlobalAction aria-label="切换主题" onClick={()=>setDark(v=>!v)}>{dark?<Sun/>:<Moon/>}</HeaderGlobalAction>
-          <HeaderGlobalAction aria-label="通知" onClick={()=>setNotice({kind:'info',text:'目前没有新的系统通知。'})}><Notification/></HeaderGlobalAction>
-        </HeaderGlobalBar>
       </Header>
       <SideNav aria-label="Synesis 主导航" expanded={navExpanded} isPersistent={true} isFixedNav>
         <SideNavItems>
           <SideNavLink renderIcon={Dashboard} isActive={page==='dashboard'} onClick={()=>navigate('dashboard')}>情报总览</SideNavLink>
-          <SideNavMenu renderIcon={Globe} title="全球外贸情报中心" defaultExpanded>
-            {platforms.map(p=><SideNavMenuItem key={p.slug} onClick={()=>navigate('dashboard')}><span className="nav-brand"><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={18}/>{p.name}</span></SideNavMenuItem>)}
-            <SideNavMenuItem onClick={()=>navigate('dashboard')}>AI 市场分析</SideNavMenuItem>
-          </SideNavMenu>
-          <SideNavMenu renderIcon={Ai} title="AI 智能中心" defaultExpanded>
-            <SideNavMenuItem onClick={()=>navigate('vault')}>Key Vault 与模型路由</SideNavMenuItem>
-          </SideNavMenu>
+          <SideNavLink renderIcon={Globe} onClick={()=>navigate('dashboard')}>全球外贸情报</SideNavLink>
+          <SideNavLink renderIcon={Ai} isActive={page==='vault'} onClick={()=>navigate('vault')}>AI 模型与 Key Vault</SideNavLink>
           <SideNavLink renderIcon={Folder} isActive={page==='projects'} onClick={()=>navigate('projects')}>研究项目中心</SideNavLink>
           <SideNavLink renderIcon={Play} isActive={page==='tasks'} onClick={()=>navigate('tasks')}>采集任务中心</SideNavLink>
           <SideNavLink renderIcon={ChartLine} isActive={page==='reports'} onClick={()=>navigate('reports')}>市场监控与报告</SideNavLink>
