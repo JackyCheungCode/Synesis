@@ -268,12 +268,23 @@ Deno.serve(async (req: Request) => {
 
       // Discover real Store Actors with compact input schemas; never ask the model to invent IDs.
       const objective=String(project.objective??'').trim();
+      const selectedPlatforms=Array.isArray((project.scope as Record<string,unknown>|null)?.selected_data_sources)
+        ?((project.scope as Record<string,unknown>).selected_data_sources as unknown[]).filter((value):value is string=>typeof value==='string'&&value.trim().length>0)
+        :[];
       const knownPlatforms=[
         ['amazon',/amazon|亚马逊/i],['ebay',/ebay/i],['walmart',/walmart/i],
-        ['alibaba',/alibaba|阿里巴巴/i],['aliexpress',/aliexpress|速卖通/i],['etsy',/etsy/i],
+        ['alibaba',/alibaba|阿里巴巴|1688/i],['aliexpress',/aliexpress|速卖通/i],['etsy',/etsy/i],
         ['tiktok',/tiktok|抖音/i],['instagram',/instagram/i],['facebook',/facebook/i],
         ['pinterest',/pinterest/i],['reddit',/reddit/i],['youtube',/youtube|油管/i],
         ['google',/google|谷歌/i],['bing',/bing/i],['shopify',/shopify/i],
+        ['shopee',/shopee/i],['lazada',/lazada/i],['temu',/temu/i],['walmart',/walmart/i],
+        ['x-twitter',/x \/ twitter|twitter/i],['linkedin',/linkedin/i],['threads',/threads/i],
+        ['douyin',/douyin|抖音/i],['xiaohongshu',/xiaohongshu|小红书|rednote/i],
+        ['weibo',/weibo|微博/i],['bilibili',/bilibili|哔哩哔哩/i],['baidu',/baidu|百度/i],
+        ['naver',/naver/i],['crunchbase',/crunchbase/i],['indeed',/indeed/i],
+        ['glassdoor',/glassdoor/i],['zillow',/zillow/i],['airbnb',/airbnb/i],
+        ['booking',/booking\.com/i],['yelp',/yelp/i],['google-play',/google play/i],
+        ['app-store',/apple app store|app store/i],['sec-edgar',/sec edgar/i],
       ] as const;
       const mentioned=knownPlatforms.filter(([,pattern])=>pattern.test(objective)).map(([slug])=>slug);
       const categoryTerms=[
@@ -286,15 +297,21 @@ Deno.serve(async (req: Request) => {
         [/全球电商|电商平台|ecommerce/i,'ecommerce product scraper'],
         [/行业数据|行业目录|贸易信息/i,'industry directory data scraper'],
       ].filter(([pattern])=>(pattern as RegExp).test(objective)).map(([,term])=>String(term));
-      const searchTerms=[...mentioned.slice(0,6).map(slug=>slug+' scraper'),...categoryTerms].slice(0,8);
+      const platformTerms=selectedPlatforms.map(platform=>platform+' scraper');
+      const searchTerms=[...new Set([...platformTerms,...mentioned.map(slug=>slug+' scraper'),...categoryTerms])].slice(0,30);
       if(!searchTerms.length) searchTerms.push('ecommerce product scraper','product reviews scraper','market research data scraper');
       const actorMap=new Map<string,Record<string,unknown>>();
-      for(const term of searchTerms) {
-        const query=new URLSearchParams({search:term,limit:'10',includeInputSchema:'true'});
-        const storeResponse=await fetch(`https://api.apify.com/v2/store?${query.toString()}`);
-        if(!storeResponse.ok) continue;
-        const storePayload=await storeResponse.json().catch(()=>({}));
-        for(const actor of (storePayload?.data?.items??[]) as Record<string,unknown>[]) {
+      for(let offset=0;offset<searchTerms.length;offset+=6) {
+        const batch=await Promise.all(searchTerms.slice(offset,offset+6).map(async term=>{
+          try {
+            const query=new URLSearchParams({search:term,limit:'10',includeInputSchema:'true'});
+            const storeResponse=await fetch(`https://api.apify.com/v2/store?${query.toString()}`);
+            if(!storeResponse.ok) return [];
+            const storePayload=await storeResponse.json().catch(()=>({}));
+            return (storePayload?.data?.items??[]) as Record<string,unknown>[];
+          } catch { return []; }
+        }));
+        for(const actors of batch) for(const actor of actors) {
           const schema=actor.inputSchema as CompactInputSchema|undefined;
           if(typeof actor.id!=='string' || !schema || schema.type!=='object' || !schema.properties || actor.notice==='UNDER_MAINTENANCE') continue;
           actorMap.set(actor.id,{
@@ -306,7 +323,7 @@ Deno.serve(async (req: Request) => {
           });
         }
       }
-      const actorCandidates=[...actorMap.values()].slice(0,20);
+      const actorCandidates=[...actorMap.values()].slice(0,40);
       const system = 'You are Synesis global trade research planner. Return valid JSON only with keys: executive_summary, research_questions (array), platform_tasks (array of objects {platform_slug, actor_id, input, purpose, estimated_items, estimated_cost_usd}), methodology, deliverables, estimated_cost_usd. Select Actors ONLY from the supplied actor_candidates and copy the exact candidate id. Never invent an Actor ID. Construct input using only fields and types in that candidate input_schema, and include all required fields. Read project.scope.collection_settings: target itemsPerPlatform is the requested record count PER PLATFORM (not a shared total); set estimated_items to that target and map it to the correct limit/count/maxResults/page-size input field only when that field exists in the selected Actor schema. Map depth light to list/core fields, standard to core fields plus available key engagement/rating/basic detail fields, and deep to detail pages, comments, and related records only when the Actor schema explicitly supports them. Never invent unsupported input fields or exceed the Actor schema. If a platform has no suitable candidate or its schema cannot support a requested depth, still explain the limitation and collect the useful supported fields; do not silently omit a selected platform. If no candidate is genuinely suitable or required fields cannot be satisfied, omit that platform task and explain the gap in research_questions or methodology. Tasks are proposed only, not executed.';
       const prompt = JSON.stringify({project,actor_candidates});
       let response: Response;
