@@ -91,7 +91,7 @@ function App() {
         supabase.from('market_reports').select('id,title,status,created_at,project_id,content').order('created_at',{ascending:false}),
       ]);
       if (p.error) throw p.error; if (pl.error) throw pl.error; if (t.error) throw t.error; if (r.error) throw r.error;
-      setProjects(p.data ?? []); setPlans(pl.data ?? []); setTasks(t.data ?? []); setCredentials(c.credentials ?? []); setReports(r.data ?? []);
+      setProjects(p.data ?? []); setPlans(pl.data ?? []); setTasks(t.data ?? []); setCredentials(c.credentials ?? []); setReports(r.data ?? []); const activeProvider=(c.credentials??[]).find((item:Credential)=>item.kind==='provider'&&item.status==='validated'); if(activeProvider) setSelectedProvider(activeProvider.slug);
     } catch (e) { setNotice({kind:'error',text: message(e)}); }
     finally { setBusy(false); }
   }
@@ -122,6 +122,7 @@ function App() {
   async function createProject(brief: string) {
     const researchBrief = brief.trim();
     if (!researchBrief) return;
+    if (!credentials.some(item=>item.kind==='provider'&&item.status==='validated')) { setNotice({kind:'warning',text:'请先在 AI 模型与 Key Vault 配置并验证一个 AI Provider。'}); return; }
     setBusy(true);
     try {
       const {data,error} = await supabase.from('research_projects').insert({
