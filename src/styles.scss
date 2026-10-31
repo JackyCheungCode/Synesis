@@ -264,3 +264,7 @@ h3 { color:#161616; font-size:15px; margin:0 0 6px; font-weight:600; }
 .pie-legend>div span:nth-child(2) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pie-dot { width:9px; height:9px; border-radius:50%; background:#0f62fe; }
 .pie-dot-1 { background:#24a148; } .pie-dot-2 { background:#ff832b; } .pie-dot-3 { background:#da1e28; } .pie-dot-4 { background:#8a3ffc; } .pie-dot-5 { background:#009d9a; }
+
+.trend-card svg { display:block; width:100%; height:auto; max-height:230px; overflow:visible; }
+.trend-axis { display:flex; justify-content:space-between; color:var(--cds-text-secondary,#525252); font-size:.72rem; }
+.trend-card p { color:var(--cds-text-secondary,#525252); font-size:.78rem; margin-top:.8rem; }
