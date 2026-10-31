@@ -889,6 +889,32 @@ Deno.serve(async (req: Request) => {
       return json({logs:raw.slice(-12000),available:Boolean(raw.trim()),truncated:raw.length>12000});
     }
 
+    if (action === 'tasks.project-results') {
+      const projectId=String(body.projectId??'').trim();
+      const limit=Math.min(250,Math.max(1,Number(body.limit)||100));
+      const offset=Math.max(0,Number(body.offset)||0);
+      if(!projectId) return json({error:'缺少研究项目 ID'},400);
+      const {data:projectTasks,error:taskError}=await admin.from('collection_tasks')
+        .select('id,platform_slug,status,result_count,result_synced_count')
+        .eq('project_id',projectId).eq('user_id',userId).order('created_at',{ascending:true});
+      if(taskError) throw taskError;
+      const tasks=projectTasks??[];
+      const taskIds=tasks.map(task=>task.id);
+      if(!taskIds.length) return json({project_id:projectId,results:[],tasks:[],total:0,limit,offset});
+      const {data:rows,error:rowsError,count}=await admin.from('collection_task_results')
+        .select('task_id,item_index,raw_data',{count:'exact'})
+        .eq('user_id',userId).in('task_id',taskIds)
+        .order('task_id',{ascending:true}).order('item_index',{ascending:true})
+        .range(offset,offset+limit-1);
+      if(rowsError) throw rowsError;
+      const platformByTask=new Map(tasks.map(task=>[task.id,task.platform_slug]));
+      return json({
+        project_id:projectId,tasks,
+        results:(rows??[]).map(row=>({task_id:row.task_id,platform_slug:platformByTask.get(row.task_id)??'unknown',item_index:row.item_index,raw_data:row.raw_data})),
+        total:count??0,limit,offset,
+      });
+    }
+
     if (action === 'tasks.results') {
       const { taskId, limit = 100, offset = 0 } = body;
       const safeLimit = Math.min(250, Math.max(1, Number(limit) || 100));
