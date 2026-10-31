@@ -35,7 +35,7 @@ export function ResearchWizard(props:Props) {
   const projectReports=reports.filter(r=>r.project_id===projectId);
   const currentStage=project?stageIndex(project,plan,projectTasks,projectReports):0;
   const proposedTasks=Array.isArray(plan?.plan?.platform_tasks)?plan.plan.platform_tasks:[];
-  const actorsReady=proposedTasks.length>0 && proposedTasks.every((task:any)=>typeof task.actor_id==='string' && task.actor_id.trim().length>0);
+  const actorsReady=proposedTasks.length>0 && proposedTasks.every((task:any)=>typeof task.actor_id==='string' && task.actor_id.trim().length>0 && task.schema_valid===true);
   const synced=projectTasks.reduce((sum,t)=>sum+Number(t.result_synced_count??0),0);
   const expected=projectTasks.reduce((sum,t)=>sum+Number(t.result_count??0),0);
   const allSynced=projectTasks.length>0 && projectTasks.every(t=>t.status==='succeeded' && Number(t.result_synced_count??0)>=Number(t.result_count??0));
@@ -52,7 +52,7 @@ export function ResearchWizard(props:Props) {
     {!projects.length&&<Tile><p>还没有研究项目。输入上方研究需求即可开始。</p></Tile>}
   </section>;
 
-  const projectStageTasks=proposedTasks.map((task:any)=>({platform:String(task.platform_slug??'平台'),purpose:String(task.purpose??task.description??'按研究需求采集相关数据')}));
+  const projectStageTasks=proposedTasks.map((task:any)=>({platform:String(task.platform_slug??'平台'),actorTitle:String(task.actor_title??'待选择采集器'),purpose:String(task.purpose??task.description??'按研究需求采集相关数据'),schemaValid:task.schema_valid===true,validationErrors:Array.isArray(task.validation_errors)?task.validation_errors:[],estimatedItems:task.estimated_items}));
   return <section className="module-stack research-workspace">
     <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><p className="eyebrow">RESEARCH PROJECT</p><h2>{project.name}</h2><p>{project.objective}</p></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
     <Tile className="research-progress-tile">
@@ -64,8 +64,8 @@ export function ResearchWizard(props:Props) {
     </Tile>
     <Tile>
       <div className="module-heading"><div><h3>第二步 · Apify 采集计划</h3><p>审核采集目标、内容和预期成本。技术参数由系统管理。</p></div><Tag type={plan?.status==='pending_approval'?'warm-gray':plan?.status==='approved'?'green':'blue'}>{plan?.status??'计划生成中'}</Tag></div>
-      {plan&&<><p>{String(plan.plan.executive_summary??'AI 已生成研究采集计划。')}</p><div className="research-plan-list">{projectStageTasks.map((task:any,index:number)=><div className="research-plan-row" key={index}><div><b>{task.platform}</b><p>{task.purpose}</p></div></div>)}</div><div className="research-plan-meta"><span>预计费用：{plan.estimated_cost===null?'暂不可估算':`$ ${Number(plan.estimated_cost).toFixed(2)}`}</span><span>采集任务：{proposedTasks.length}</span></div>
-      {plan.status==='pending_approval'&&<div className="research-approval"><p>{actorsReady?'Actor ID 已填写。批准时服务器会先检查 Actor 是否存在、可访问且未弃用，再启动采集。':'AI 尚未提供可验证的 Apify Actor ID，系统不会猜测 Actor 或启动采集。请先完善后台 Actor 目录。'}</p><Button kind="primary" disabled={!actorsReady||busy} onClick={()=>onApprove(plan)}>批准并开始自动研究</Button></div>}</>}
+      {plan&&<><p>{String(plan.plan.executive_summary??'AI 已生成研究采集计划。')}</p><div className="research-plan-list">{projectStageTasks.map((task:any,index:number)=><div className="research-plan-row" key={index}><div><b>{task.platform} · {task.actorTitle}</b><p>{task.purpose}</p>{task.schemaValid?<Tag type="green">输入参数已校验</Tag>:<Tag type="warm-gray">需要调整采集配置</Tag>}{task.validationErrors.map((error:string)=><p key={error}>{error}</p>)}</div></div>)}</div><div className="research-plan-meta"><span>预计费用：{plan.estimated_cost===null?'暂不可估算':`$ ${Number(plan.estimated_cost).toFixed(2)}`}</span><span>采集任务：{proposedTasks.length}</span></div>
+      {plan.status==='pending_approval'&&<div className="research-approval"><p>{actorsReady?'采集器来自 Apify Store，输入参数已按对应 Actor Schema 校验；批准时服务器还会重新检查 Actor 是否可访问。':'未找到符合研究需求且输入参数通过 Schema 校验的 Apify Actor，系统不会猜测 Actor 或启动采集。可调整研究需求后重新生成计划。'}</p><Button kind="primary" disabled={!actorsReady||busy} onClick={()=>onApprove(plan)}>批准并开始自动研究</Button></div>}</>}
       {!plan&&<p>AI 正在生成采集计划。</p>}
     </Tile>
     <Tile>
