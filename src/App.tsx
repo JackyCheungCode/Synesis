@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspaceRoute, type WorkspacePage } from './lib/router';
 import { WorkspaceNavigation } from './components/WorkspaceNavigation';
 import { ResearchWizard } from './features/research/ResearchWizard';
@@ -143,9 +143,9 @@ function App() {
       const {data:queued,error}=await supabase.from('collection_tasks')
         .select('id').eq('plan_id',plan.id).eq('status','queued').eq('user_id',session?.user.id);
       if(error) throw error;
-      for (const task of queued ?? []) await api('tasks.execute',{taskId:task.id});
+      const starts = await Promise.allSettled((queued ?? []).map(task=>api('tasks.execute',{taskId:task.id})));
       setApprovalPlan(null);
-      setNotice({kind:'success',text:`采集计划已批准，已自动启动 ${queued?.length ?? 0} 个 Apify 任务。后续同步和分析将在项目内跟踪。`});
+      setNotice({kind:starts.some(item=>item.status==='rejected')?'warning':'success',text:`采集计划已批准，已提交 ${queued?.length ?? 0} 个 Apify 任务。系统将自动跟踪运行和结果同步。`});
       await loadAll(); navigate('projects',plan.project_id);
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
@@ -266,6 +266,58 @@ function App() {
     finally { setBusy(false); }
   }
 
+  const autoReportProjects = useRef(new Set<string>());
+  async function generateResearchReport(projectId: string) {
+    if (!session?.user.id) return;
+    const project = projects.find(item=>item.id===projectId);
+    const projectTasks = tasks.filter(item=>item.project_id===projectId);
+    if (!project || !projectTasks.length || projectTasks.some(item=>item.status!=='succeeded' || Number(item.result_synced_count??0)<Number(item.result_count??0))) return;
+    const analyses = await Promise.all(projectTasks.map(async task=>({platform:task.platform_slug,taskId:task.id,analysis:await api('tasks.analytics',{taskId:task.id})})));
+    const response = await api('ai.invoke',{provider:selectedProvider,model:providerModels[selectedProvider],messages:[
+      {role:'system',content:'你是 Synesis 的跨境市场研究分析师。请只根据提供的实际采集统计数据撰写中文研究报告。区分事实、推断和建议；不得推断未提供的销量、市场规模或利润。返回 JSON，字段包括 executive_summary、market_insights、competitive_analysis、price_analysis、customer_feedback、opportunities、risks、recommendations、limitations。'},
+      {role:'user',content:JSON.stringify({research_objective:project.objective,target_regions:project.target_regions,platforms:project.platform_slugs,data:analyses})}
+    ]});
+    const raw = extractAIText(response.result,selectedProvider);
+    let content:Record<string,unknown>;
+    try { content=JSON.parse(raw); } catch { content={executive_summary:raw,analysis_format:'plain_text'}; }
+    const {error}=await supabase.from('market_reports').insert({
+      user_id:session.user.id,project_id:projectId,title:`${project.name} · AI 研究报告`,
+      report_type:'market_research',content,evidence:analyses.map(item=>({task_id:item.taskId,platform_slug:item.platform})),
+      status:'generated',generated_at:new Date().toISOString(),
+    });
+    if(error) throw error;
+    await supabase.from('research_projects').update({status:'completed'}).eq('id',projectId).eq('user_id',session.user.id);
+    await loadAll();
+    setNotice({kind:'success',text:'数据已完整同步，AI 研究报告已生成并保存。'});
+  }
+
+  useEffect(() => {
+    const active = tasks.filter(task=>task.status==='running' || (task.status==='succeeded' && Number(task.result_synced_count??0)<Number(task.result_count??0)));
+    if (!active.length) return;
+    const timer = window.setInterval(async()=>{
+      for (const task of active) {
+        try { await api('tasks.sync',{taskId:task.id}); } catch { /* transient sync conflicts are retried on the next poll */ }
+      }
+      await loadAll();
+    },12000);
+    return ()=>window.clearInterval(timer);
+  },[tasks,token]);
+
+  useEffect(() => {
+    const ready = projects.filter(project=>{
+      const projectTasks=tasks.filter(task=>task.project_id===project.id);
+      return projectTasks.length>0 && projectTasks.every(task=>task.status==='succeeded' && Number(task.result_synced_count??0)>=Number(task.result_count??0))
+        && !reports.some(report=>report.project_id===project.id) && !autoReportProjects.current.has(project.id);
+    });
+    for (const project of ready) {
+      autoReportProjects.current.add(project.id);
+      void generateResearchReport(project.id).catch(error=>{
+        autoReportProjects.current.delete(project.id);
+        setNotice({kind:'error',text:`数据已汇总，但 AI 报告生成失败：${message(error)}。检查 AI Provider 配置后可重试。`});
+      });
+    }
+  },[projects,tasks,reports]);
+
   async function exportTaskResults(task: Task) {
     setBusy(true);
     try {
@@ -347,7 +399,7 @@ function App() {
             onView={(task)=>void viewTaskResults(task)}
             onAnalyze={(task)=>void loadAnalytics(task.id)}
           />}
-          {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存分析结果到当前研究项目</Button></section>}
+          {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
           {page==='products' && <section className="module-stack">
             <Tile>
               <div className="module-heading"><div><h2>跨平台商品目录</h2><p>统一查看采集任务中识别的商品主档、来源平台与历史价格。原始采集记录仍独立保留。</p></div><Tag type="blue">{productTotal.toLocaleString()} 件商品</Tag></div>
@@ -443,6 +495,13 @@ function AnalyticsDashboard({data}:{data:any}) {
 function RankList({rows}:{rows:any[]}) {
   const max=Math.max(1,...rows.map((r:any)=>r.count));
   return <div className="rank-list">{rows.length?rows.map((r:any)=><div className="rank-row" key={r.label}><span title={r.label}>{r.label}</span><div className="bar-track"><div className="bar-fill" style={{width:`${r.count/max*100}%`}}/></div><b>{r.count}</b></div>):<p>暂无可识别字段</p>}</div>;
+}
+
+function extractAIText(result:any,provider:string):string {
+  if (provider==='googlegemini') return String(result?.candidates?.[0]?.content?.parts?.[0]?.text??'');
+  if (provider==='anthropic') return String(result?.content?.[0]?.text??'');
+  if (provider==='cloudflare') return String(result?.result?.response??'');
+  return String(result?.choices?.[0]?.message?.content??'');
 }
 
 function message(e: unknown) { return e instanceof Error ? e.message : '发生未知错误，请稍后重试。'; }
