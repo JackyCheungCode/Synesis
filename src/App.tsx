@@ -492,7 +492,7 @@ function App() {
       </Modal>}
       {resultTask && <Modal open modalHeading={`采集结果 · ${resultTask.platform_slug}`} passiveModal primaryButtonText="关闭" onRequestClose={()=>setResultTask(null)}>
         <p>任务 ID：{resultTask.id} · 当前页显示 {taskResults.length} 条；总计 {resultTotal.toLocaleString()} 条，已同步 {resultSynced.toLocaleString()} 条。</p>
-        <div className="card-actions"><Button kind="secondary" size="sm" disabled={resultPage===0} onClick={()=>void viewTaskResults(resultTask,resultPage-1)}>上一页</Button><Tag type="blue">第 {resultPage+1} / {Math.max(1,Math.ceil(resultTotal/100))} 页</Tag><Button kind="secondary" size="sm" disabled={(resultPage+1)*100>=resultSynced} onClick={()=>void viewTaskResults(resultTask,resultPage+1)}>下一页</Button><Button kind="tertiary" size="sm" onClick={()=>void exportTaskResults(resultTask)}>导出已接收 CSV</Button></div><RawResultsTable rows={taskResults}/><Accordion><AccordionItem title="查看完整原始 JSON"><pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre></AccordionItem></Accordion>
+        <div className="card-actions"><Button kind="secondary" size="sm" disabled={resultPage===0} onClick={()=>void viewTaskResults(resultTask,resultPage-1)}>上一页</Button><Tag type="blue">第 {resultPage+1} / {Math.max(1,Math.ceil(resultTotal/100))} 页</Tag><Button kind="secondary" size="sm" disabled={(resultPage+1)*100>=resultSynced} onClick={()=>void viewTaskResults(resultTask,resultPage+1)}>下一页</Button><Button kind="tertiary" size="sm" onClick={()=>void exportTaskResults(resultTask)}>导出已接收 CSV</Button></div><PlatformResultsTable platform={resultTask.platform_slug} rows={taskResults}/><Accordion><AccordionItem title="查看完整原始 JSON（保留 Apify 原始字段）"><pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre></AccordionItem></Accordion>
       </Modal>}
       {approvalPlan && <Modal open modalHeading="确认 Apify 数据采集" primaryButtonText="批准并自动开始采集" secondaryButtonText="返回" onRequestClose={()=>setApprovalPlan(null)} onRequestSubmit={()=>void approvePlan(approvalPlan)} primaryButtonDisabled={busy}>
         <p>{String(approvalPlan.plan.executive_summary??'请确认本次研究计划的采集范围。批准后 Synesis 将自动启动已验证的 Apify 任务，并继续执行数据同步。')}</p>
@@ -507,12 +507,148 @@ function App() {
 
 
 
-function RawResultsTable({rows}:{rows:unknown[]}) {
-  const records=rows.filter((row):row is Record<string,unknown>=>typeof row==='object'&&row!==null&&!Array.isArray(row));
-  const columns=Array.from(new Set(records.flatMap(row=>Object.keys(row))));
-  const format=(value:unknown)=>value!==null&&typeof value==='object'?JSON.stringify(value):String(value??'—');
-  if(!records.length) return <p>当前页暂无结果记录。</p>;
-  return <div className="raw-results-wrap"><table className="raw-results-table"><thead><tr>{columns.map(key=><th key={key}>{key}</th>)}</tr></thead><tbody>{records.map((row,index)=><tr key={index}>{columns.map(key=><td key={key} title={format(row[key])}>{format(row[key])}</td>)}</tr>)}</tbody></table></div>;
+type ResultField = { label:string; patterns:RegExp[] };
+type ResultProfile = { title:string; description:string; fields:ResultField[] };
+const resultProfiles:Record<string,ResultProfile> = {
+ ecommerce:{title:'商品与零售数据',description:'商品标识、价格、品牌、卖家、评分与库存等电商字段。',fields:[
+  {label:'商品名称',patterns:[/^(title|name|product.?name|item.?name)$/i]},
+  {label:'品牌',patterns:[/^brand(name)?$/i]},
+  {label:'商品分类',patterns:[/^(category|department|product.?type)$/i]},
+  {label:'当前价格',patterns:[/^(price|sale.?price|current.?price|amount|listing.?price)$/i]},
+  {label:'原价',patterns:[/^(original.?price|list.?price|regular.?price|was.?price)$/i]},
+  {label:'币种',patterns:[/^(currency|currency.?code|price.?currency)$/i]},
+  {label:'评分',patterns:[/^(rating|stars|average.?rating|review.?rating)$/i]},
+  {label:'评论数',patterns:[/^(review.?count|reviews.?count|number.?of.?reviews|ratings.?count)$/i]},
+  {label:'卖家 / 店铺',patterns:[/^(seller|seller.?name|merchant|store.?name|shop.?name)$/i]},
+  {label:'库存 / 状态',patterns:[/^(availability|stock|stock.?status|in.?stock|condition)$/i]},
+  {label:'商品链接',patterns:[/^(url|product.?url|link|canonical.?url)$/i]},
+ ]},
+ social:{title:'社交媒体与内容数据',description:'内容、创作者、发布时间、播放与互动表现。',fields:[
+  {label:'内容 / 标题',patterns:[/^(text|caption|title|description|post.?text|content)$/i]},
+  {label:'创作者',patterns:[/^(author|author.?name|owner.?username|username|user.?name|creator|channel.?name)$/i]},
+  {label:'发布时间',patterns:[/^(timestamp|created.?at|published.?at|date|posted.?at)$/i]},
+  {label:'播放量',patterns:[/^(views|view.?count|play.?count|video.?views)$/i]},
+  {label:'点赞数',patterns:[/^(likes|like.?count|digg.?count|favorite.?count)$/i]},
+  {label:'评论数',patterns:[/^(comments|comment.?count|reply.?count)$/i]},
+  {label:'分享数',patterns:[/^(shares|share.?count|repost.?count)$/i]},
+  {label:'粉丝数',patterns:[/^(followers|follower.?count|subscriber.?count)$/i]},
+  {label:'话题 / 标签',patterns:[/^(hashtags|tags|topics)$/i]},
+  {label:'内容链接',patterns:[/^(url|post.?url|video.?url|permalink|link)$/i]},
+ ]},
+ search:{title:'搜索与 SEO 数据',description:'关键词排名、搜索标题、摘要、域名及结果链接。',fields:[
+  {label:'搜索标题',patterns:[/^(title|name|heading)$/i]},
+  {label:'排名位置',patterns:[/^(position|rank|ranking|organic.?position)$/i]},
+  {label:'网址',patterns:[/^(url|link|href|destination.?url)$/i]},
+  {label:'显示域名',patterns:[/^(displayed.?url|domain|site|hostname)$/i]},
+  {label:'摘要',patterns:[/^(description|snippet|summary|text|body)$/i]},
+  {label:'关键词',patterns:[/^(keyword|query|search.?term)$/i]},
+  {label:'来源 / 类型',patterns:[/^(source|type|result.?type|engine)$/i]},
+  {label:'日期',patterns:[/^(date|published.?at|timestamp)$/i]},
+ ]},
+ b2b:{title:'企业与商业线索',description:'企业主体、行业、联系人、联系方式、规模与技术信息。',fields:[
+  {label:'企业名称',patterns:[/^(company|company.?name|business.?name|organization|name|title)$/i]},
+  {label:'行业',patterns:[/^(industry|sector|category|business.?type)$/i]},
+  {label:'网站',patterns:[/^(website|domain|url|company.?url)$/i]},
+  {label:'联系人',patterns:[/^(contact.?name|person.?name|full.?name|first.?name)$/i]},
+  {label:'职位',patterns:[/^(job.?title|position|role|headline)$/i]},
+  {label:'邮箱',patterns:[/^(email|email.?address)$/i]},
+  {label:'电话',patterns:[/^(phone|phone.?number|telephone)$/i]},
+  {label:'所在地',patterns:[/^(address|location|city|country|headquarters)$/i]},
+  {label:'员工规模',patterns:[/^(employees|employee.?count|staff.?count|company.?size)$/i]},
+  {label:'LinkedIn',patterns:[/^linkedin.?url$/i,/^linkedin$/i]},
+ ]},
+ jobs:{title:'招聘与职位数据',description:'职位名称、雇主、地点、薪酬、技能与发布时间。',fields:[
+  {label:'职位名称',patterns:[/^(title|job.?title|position)$/i]},
+  {label:'招聘企业',patterns:[/^(company|company.?name|employer)$/i]},
+  {label:'工作地点',patterns:[/^(location|city|country|workplace)$/i]},
+  {label:'薪酬',patterns:[/^(salary|salary.?range|compensation|pay)$/i]},
+  {label:'雇佣类型',patterns:[/^(employment.?type|job.?type|contract.?type)$/i]},
+  {label:'工作模式',patterns:[/^(remote|work.?mode|workplace.?type)$/i]},
+  {label:'发布时间',patterns:[/^(date|posted.?at|published.?at|created.?at)$/i]},
+  {label:'技能要求',patterns:[/^(skills|requirements|qualifications)$/i]},
+  {label:'职位链接',patterns:[/^(url|job.?url|link)$/i]},
+ ]},
+ realestate:{title:'房产、住宿与本地服务数据',description:'房源、价格、位置、面积、房型及服务评价。',fields:[
+  {label:'房源 / 商家名称',patterns:[/^(title|name|listing.?name|property.?name)$/i]},
+  {label:'价格',patterns:[/^(price|rent|nightly.?price|amount)$/i]},
+  {label:'地址 / 地点',patterns:[/^(address|location|street|city|neighborhood)$/i]},
+  {label:'房产类型',patterns:[/^(property.?type|room.?type|listing.?type)$/i]},
+  {label:'卧室数',patterns:[/^(bedrooms|beds|bed.?count)$/i]},
+  {label:'卫浴数',patterns:[/^(bathrooms|baths|bath.?count)$/i]},
+  {label:'面积',patterns:[/^(area|size|square.?feet|sqft|floor.?area)$/i]},
+  {label:'评分',patterns:[/^(rating|review.?score|stars)$/i]},
+  {label:'评论数',patterns:[/^(review.?count|reviews.?count)$/i]},
+  {label:'房源链接',patterns:[/^(url|listing.?url|link)$/i]},
+ ]},
+ news:{title:'新闻与研究内容数据',description:'新闻标题、媒体来源、作者、发布时间与摘要。',fields:[
+  {label:'标题',patterns:[/^(title|headline|name)$/i]},
+  {label:'媒体来源',patterns:[/^(source|publisher|publication|domain)$/i]},
+  {label:'作者',patterns:[/^(author|byline|creator)$/i]},
+  {label:'发布时间',patterns:[/^(published.?at|date|timestamp|created.?at)$/i]},
+  {label:'摘要',patterns:[/^(description|summary|snippet|excerpt)$/i]},
+  {label:'主题 / 分类',patterns:[/^(category|categories|topic|section)$/i]},
+  {label:'文章链接',patterns:[/^(url|link|article.?url)$/i]},
+ ]},
+ publicdata:{title:'公共数据与政府记录',description:'政府机构、记录编号、监管状态、金额、辖区与日期。',fields:[
+  {label:'记录名称',patterns:[/^(title|name|record.?title|case.?name)$/i]},
+  {label:'记录编号',patterns:[/^(id|identifier|record.?id|case.?number|document.?number)$/i]},
+  {label:'机构 / 部门',patterns:[/^(agency|department|organization|issuer)$/i]},
+  {label:'记录状态',patterns:[/^(status|filing.?type|case.?status)$/i]},
+  {label:'金额',patterns:[/^(amount|value|award.?amount|contract.?value)$/i]},
+  {label:'辖区',patterns:[/^(jurisdiction|country|state|region)$/i]},
+  {label:'日期',patterns:[/^(date|filed.?at|filing.?date|published.?at)$/i]},
+  {label:'来源链接',patterns:[/^(url|link|source.?url|document.?url)$/i]},
+ ]},
+ apps:{title:'应用商店数据',description:'应用名称、开发者、评分、评论、安装量与版本。',fields:[
+  {label:'应用名称',patterns:[/^(title|app.?name|name)$/i]},
+  {label:'开发者',patterns:[/^(developer|developer.?name|publisher)$/i]},
+  {label:'评分',patterns:[/^(rating|score|average.?rating)$/i]},
+  {label:'评论数',patterns:[/^(review.?count|ratings.?count|reviews)$/i]},
+  {label:'安装量',patterns:[/^(installs|downloads|download.?count)$/i]},
+  {label:'当前版本',patterns:[/^(version|current.?version|app.?version)$/i]},
+  {label:'价格',patterns:[/^(price|currency)$/i]},
+  {label:'更新时间',patterns:[/^(updated.?at|released.?at|release.?date)$/i]},
+  {label:'应用链接',patterns:[/^(url|app.?url|link)$/i]},
+ ]},
+};
+function classifyResultPlatform(platform:string):{key:string;profile:ResultProfile} {
+ const value=platform.toLowerCase();
+ const rules:[string,RegExp][]=[
+  ['ecommerce',/amazon|ebay|walmart|etsy|aliexpress|shopify|tiktok.?shop|temu|shopee|lazada|tokopedia|allegro|idealo|craigslist|meta.?ad|淘宝|天猫|1688|京东|拼多多|闲鱼|rakuten|乐天|mercari|qoo10|商城/],
+  ['social',/tiktok|instagram|youtube|twitter|^x$|linkedin|facebook|reddit|threads|bluesky|pinterest|snapchat|twitch|douyin|抖音|小红书|xiaohongshu|weibo|微博|bilibili|知乎|豆瓣|雪球|line/],
+  ['search',/google|bing|baidu|百度|yandex|naver|yahoo|duckduckgo|brave|搜狗|360搜索|autocomplete|trends/],
+  ['b2b',/crunchbase|opencorporates|companies.?house|sunbiz|business.?entity|builtwith|wappalyzer|similarweb|企查查|天眼查|爱企查|企业信用|法人番号|dart|公司注册|google.?maps|商家|linkedin.?company|企业/],
+  ['jobs',/indeed|glassdoor|ziprecruiter|wellfound|monster|careerbuilder|remote.?ok|we.?work|himalayas|boss|直聘|51job|智联|猎聘|拉勾|doda|mynavi|jobkorea|saramin|jobstreet|jobs|招聘/],
+  ['realestate',/zillow|redfin|realtor|apartments|marketplace|rightmove|zoopla|suumo|home.?s|airbnb|booking|trip\.com|expedia|agoda|vrbo|yelp|tripadvisor|trustpilot|大众点评|美团|openrice|hotpepper|房产|住宿/],
+  ['news',/news|bbc|reuters|techcrunch|wired|times|guardian|financial.?times|bloomberg|hacker.?news|espn|新浪新闻|网易新闻|腾讯新闻|澎湃|36氪|虎嗅|界面|财新|arxiv|huggingface|europe.?pmc|rss/],
+  ['publicdata',/sec|edgar|usaspending|grants|fec|epa|clinicaltrials|openfda|nhtsa|ofac|court|cms|irs|ted|gleif|政府|公共数据/],
+  ['apps',/google.?play|play.?store|app.?store|apple.?store|应用商店/],
+ ];
+ const found=rules.find(([,pattern])=>pattern.test(value));
+ const key=found?.[0]??'general';
+ return {key,profile:resultProfiles[key]??{title:'平台原始数据',description:'根据当前 Actor 实际返回字段自动生成列；未识别字段会保留在扩展字段中。',fields:[]}};
+}
+function PlatformResultsTable({platform,rows}:{platform:string;rows:unknown[]}) {
+ const records=rows.filter((row):row is Record<string,unknown>=>typeof row==='object'&&row!==null&&!Array.isArray(row));
+ const {key,profile}=classifyResultPlatform(platform);
+ const allKeys=Array.from(new Set(records.flatMap(row=>Object.keys(row))));
+ const used=new Set<string>();
+ const columns:{key:string;label:string}[]=[];
+ for(const field of profile.fields) {
+  const match=allKeys.find(name=>!used.has(name)&&field.patterns.some(pattern=>pattern.test(name)));
+  if(match){used.add(match);columns.push({key:match,label:field.label});}
+ }
+ const extras=allKeys.filter(name=>!used.has(name)).slice(0,10);
+ columns.push(...extras.map(name=>({key:name,label:name})));
+ const format=(value:unknown)=>value===null||value===undefined||value===''?'—':typeof value==='object'?JSON.stringify(value):String(value);
+ if(!records.length) return <div className="platform-results-empty"><p>当前页暂无结果记录。</p><small>请等待采集同步完成，或检查任务运行状态。</small></div>;
+ const filled=records.reduce((sum,row)=>sum+columns.filter(column=>row[column.key]!==null&&row[column.key]!==undefined&&row[column.key]!=='').length,0);
+ const completeness=columns.length?Math.round(filled/(records.length*columns.length)*100):0;
+ return <section className="platform-results">
+  <div className="platform-results-heading"><div><Tag type="blue">{profile.title}</Tag><h4>{platform} · 结构化结果</h4><p>{profile.description}</p></div><div className="platform-results-metrics"><b>{records.length.toLocaleString()}</b><span>本页记录</span><b>{columns.length}</b><span>展示字段</span><b>{completeness}%</b><span>字段完整率</span></div></div>
+  <div className="platform-results-table-wrap"><table className="platform-results-table"><thead><tr><th className="platform-results-index">#</th>{columns.map(column=><th key={column.key}>{column.label}</th>)}</tr></thead><tbody>{records.map((row,index)=><tr key={index}><td className="platform-results-index">{index+1}</td>{columns.map(column=><td key={column.key} title={format(row[column.key])}>{format(row[column.key])}</td>)}</tr>)}</tbody></table></div>
+  {extras.length>0&&<p className="platform-results-footnote">已自动识别 {columns.length-extras.length} 个分类字段，并保留 {extras.length} 个 Actor 扩展字段。完整字段及嵌套对象可在下方原始 JSON 中查看。</p>}
+ </section>;
 }
 
 function AnalyticsDashboard({data}:{data:any}) {
