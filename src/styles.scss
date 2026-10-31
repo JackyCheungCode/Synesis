@@ -1795,3 +1795,8 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
  .cross-platform-dataset-heading,.cross-platform-dataset-pagination { flex-direction:column; align-items:flex-start; }
  .cross-platform-results-wrap { max-height:44vh; }
 }
+
+.cross-platform-normalization-note { padding:8px 10px; color:var(--cds-text-secondary,#525252); background:var(--cds-layer-02,#f4f4f4); font-size:11px; line-height:1.5; }
+.normalization-quality-good,.normalization-quality-warning { display:inline-flex; align-items:center; border-radius:12px; padding:3px 7px; font-size:11px; font-weight:600; white-space:nowrap; }
+.normalization-quality-good { color:var(--cds-support-success,#198038); background:var(--cds-support-success-inverse,#defbe6); }
+.normalization-quality-warning { color:var(--cds-support-warning,#8a3800); background:var(--cds-support-warning-inverse,#fff1c7); }
