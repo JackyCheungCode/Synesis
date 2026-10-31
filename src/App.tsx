@@ -47,7 +47,7 @@ function App() {
   }
 
   return (
-    <div className={`synesis-shell ${dark ? 'theme-dark' : 'theme-light'}`}>
+    <div className={`synesis-shell ${dark ? 'theme-dark cds--g100' : 'theme-light cds--white'}`}>
       <aside className={`side-nav ${mobileNav ? 'side-nav--open' : ''}`}>
         <div className="brand-lockup">
           <div className="brand-symbol"><span /></div>
