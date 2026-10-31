@@ -23,7 +23,7 @@ export type ResearchTask = { id:string; project_id:string; platform_slug:string;
 export type ResearchReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; report_type?:string; evidence?:Array<{task_id?:string;platform_slug?:string}>; content:Record<string,any> };
 type Props = {
  projects:ResearchProject[]; plans:ResearchPlan[]; tasks:ResearchTask[]; reports:ResearchReport[];
- projectId?:string; busy:boolean; onParse:(brief:string)=>Promise<ResearchProfile>; onCreate:(brief:string,profile:ResearchProfile,projectId?:string)=>void;
+ projectId?:string; busy:boolean; projectResultRows?:Array<{task_id:string;platform_slug:string;item_index:number;raw_data:unknown}>; projectResultTotal?:number; projectResultOffset?:number; onLoadProjectResults:(projectId:string,offset?:number)=>void; onParse:(brief:string)=>Promise<ResearchProfile>; onCreate:(brief:string,profile:ResearchProfile,projectId?:string)=>void;
  onSaveDraft:(draft:{brief:string;formValues:Record<string,string>;profile:ResearchProfile|null;activeStep:number;selectedSources:string[]},projectId?:string)=>void;
  onOpen:(id:string)=>void; onBack:()=>void; onGeneratePlan:(project:ResearchProject,categories:string[])=>void;
  onApprove:(plan:ResearchPlan)=>void; onCancel:(task:ResearchTask)=>void;
@@ -161,6 +161,29 @@ function ResearchProgress({activeStep,maxUnlockedStep,stepReady}:{activeStep:num
   </ProgressIndicator>
  </Tile>;
 }
+type UnifiedResultRow={task_id:string;platform_slug:string;item_index:number;raw_data:unknown};
+const unifiedColumns:{label:string;patterns:RegExp[]}[]=[
+ {label:'标题 / 主体名称',patterns:[/^(title|name|product.?name|item.?name|headline|job.?title|company.?name|app.?name|property.?name)$/i]},
+ {label:'品牌 / 作者 / 来源',patterns:[/^(brand(name)?|author|creator|publisher|source|seller.?name|developer.?name|company)$/i]},
+ {label:'描述 / 内容',patterns:[/^(description|summary|snippet|caption|text|content|excerpt)$/i]},
+ {label:'价格 / 金额',patterns:[/^(price|sale.?price|current.?price|amount|salary|award.?amount|contract.?value)$/i]},
+ {label:'评分',patterns:[/^(rating|stars|score|average.?rating|review.?score)$/i]},
+ {label:'评论数',patterns:[/^review.?count$/i,/^reviews.?count$/i,/^comments?(?:.?count)?$/i,/^replies?(?:.?count)?$/i]},
+ {label:'浏览 / 播放量',patterns:[/^views?(?:.?count)?$/i,/^play.?count$/i,/^video.?views?$/i,/^installs$/i,/^downloads$/i]},
+ {label:'点赞数',patterns:[/^likes?(?:.?count)?$/i,/^digg.?count$/i,/^favorite.?count$/i]},
+ {label:'地区 / 地址',patterns:[/^(location|address|city|country|region|headquarters)$/i]},
+ {label:'日期',patterns:[/^(published.?at|created.?at|posted.?at|timestamp|date|updated.?at)$/i]},
+ {label:'来源链接',patterns:[/^(url|link|permalink|source.?url|product.?url|article.?url|job.?url)$/i]},
+];
+function CrossPlatformResultsTable({rows}:{rows:UnifiedResultRow[]}) {
+ const records=rows.map(row=>({meta:row,record:row.raw_data&&typeof row.raw_data==='object'&&!Array.isArray(row.raw_data)?row.raw_data as Record<string,unknown>:{}}));
+ const columns=unifiedColumns.map(field=>({label:field.label,pattern:field.patterns})).filter(field=>records.some(({record})=>Object.keys(record).some(key=>field.pattern.some(pattern=>pattern.test(key)))));
+ const read=(record:Record<string,unknown>,patterns:RegExp[])=>{const key=Object.keys(record).find(name=>patterns.some(pattern=>pattern.test(name)));return key?record[key]:null;};
+ const format=(value:unknown)=>value===null||value===undefined||value===''?'—':typeof value==='object'?JSON.stringify(value):String(value);
+ if(!records.length)return <div className="platform-results-empty"><p>当前项目还没有已同步的记录。</p><small>采集任务同步数据后，这里会自动汇总所有平台的共性字段。</small></div>;
+ return <div className="cross-platform-results-wrap"><table className="cross-platform-results-table"><thead><tr><th>数据来源</th><th>记录序号</th>{columns.map(column=><th key={column.label}>{column.label}</th>)}</tr></thead><tbody>{records.map(({meta,record})=><tr key={meta.task_id+'-'+meta.item_index}><td><Tag type="blue">{meta.platform_slug}</Tag></td><td>{meta.item_index+1}</td>{columns.map(column=><td key={column.label} title={format(read(record,column.pattern))}>{format(read(record,column.pattern))}</td>)}</tr>)}</tbody></table></div>;
+}
+
 function ResearchAnalyticsView({data}:{data:any}) {
  const metrics=data?.metrics??{}, distributions=data?.distributions??{};
  const sections=[
@@ -210,6 +233,7 @@ export function ResearchWizard(props:Props) {
  const expected=projectTasks.reduce((sum,t)=>sum+Number(t.result_count??0),0);
  const allSynced=projectTasks.length>0&&projectTasks.every(t=>t.status==='succeeded'&&Number(t.result_synced_count??0)>=Number(t.result_count??0));
  React.useEffect(()=>{if(project){if(project.scope?.workflow_state==='draft'){setActiveStep(0);setBrief(String(project.scope?.original_brief??project.objective??''));setFormValues((project.scope?.intake_form??{}) as Record<string,string>);setProfile((project.scope?.research_profile??null) as ResearchProfile|null);}else{const savedStep=Number(project.scope?.active_step);setActiveStep(Number.isInteger(savedStep)&&savedStep>=0&&savedStep<=4?savedStep:stageIndex(plan,projectTasks,projectReports));}const stored=project.scope?.selected_data_sources;if(Array.isArray(stored))setSelectedSources(stored as string[]);}else{setActiveStep(0);setSelectedSources([]);setBrief('');setFormValues({});setProfile(null);}},[projectId,project?.id,project?.scope?.workflow_state,plan?.id,projectTasks.length,projectReports.length]);
+ React.useEffect(()=>{if(projectId&&activeStep===3)onLoadProjectResults(projectId,0);},[projectId,activeStep]);
  const runningTaskKey=projectTasks.map(task=>task.id+':'+task.status+':'+String(task.external_run_id??'')).join('|');
  React.useEffect(()=>{
   if(!projectId||activeStep!==2||!projectTasks.some(task=>task.external_run_id))return;
@@ -391,10 +415,15 @@ export function ResearchWizard(props:Props) {
    <div className="research-dimension-group"><h4>动态运行事件</h4>{taskEvents.length?taskEvents.map((event,index)=><div className="research-event-row" key={index}><time>{new Date(event.time).toLocaleString()}</time><b>{event.label}</b><span>{event.detail}</span></div>):<p className="research-profile-hint">尚无采集事件。完成第二步平台选择并批准后，运行状态将在这里显示。</p>}</div>
    {allSynced&&<Button kind="primary" onClick={()=>setActiveStep(3)}>数据已同步，进入统计分析 <ArrowRight size={16}/></Button>}
   </Tile>}
-  {activeStep===3&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 4 / BUSINESS INTELLIGENCE</p><h3>数据统计与多维可视化</h3><p>选择已完成同步的采集任务，生成价格、品牌、类目、评价字段和关键词统计。</p></div><Tag type={allSynced?'green':'warm-gray'}>{allSynced?'数据已就绪':'等待数据完整同步'}</Tag></div>
+  {activeStep===3&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 4 / BUSINESS INTELLIGENCE</p><h3>跨平台数据整理与统计分析</h3><p>先将不同平台的同类字段统一映射，再按数据源查看平台专属统计；原始记录始终独立保留。</p></div><Tag type={allSynced?'green':'warm-gray'}>{allSynced?'数据已就绪':'部分数据同步中'}</Tag></div>
+   <div className="research-run-kpis"><div><strong>{projectTasks.length}</strong><span>数据来源</span></div><div><strong>{Number(projectResultTotal??0).toLocaleString()}</strong><span>已汇总记录</span></div><div><strong>{projectTasks.reduce((sum,task)=>sum+Number(task.result_synced_count??0),0).toLocaleString()}</strong><span>已同步记录</span></div><div><strong>{projectTasks.filter(task=>task.status==='succeeded').length}</strong><span>完成平台</span></div></div>
    {projectTasks.map(task=><div className="research-task-row" key={task.id}><div><b>{task.platform_slug}</b><p>{Number(task.result_synced_count??0).toLocaleString()} / {Number(task.result_count??0).toLocaleString()} 条已同步</p></div><Button size="sm" kind="tertiary" renderIcon={ChartLine} disabled={busy||task.status!=='succeeded'||Number(task.result_synced_count??0)<Number(task.result_count??0)} onClick={()=>onAnalyze(task)}>生成该数据源统计</Button></div>)}
+   <section className="cross-platform-dataset"><div className="cross-platform-dataset-heading"><div><h4>跨平台统一数据集</h4><p>把商品、内容、企业、职位、新闻等来源映射到统一字段，便于横向检索和比较。</p></div><Tag type="blue">{Number(projectResultTotal??0).toLocaleString()} 条</Tag></div>
+    <CrossPlatformResultsTable rows={projectResultRows??[]}/>
+    <div className="cross-platform-dataset-pagination"><span>显示第 {projectResultTotal?projectResultOffset+1:0}–{Math.min(projectResultOffset+(projectResultRows?.length??0),projectResultTotal??0)} 条，共 {Number(projectResultTotal??0).toLocaleString()} 条</span><div><Button size="sm" kind="tertiary" disabled={projectResultOffset<=0||busy} onClick={()=>projectId&&onLoadProjectResults(projectId,Math.max(0,projectResultOffset-100))}>上一页</Button><Button size="sm" kind="tertiary" disabled={projectResultOffset+100>=Number(projectResultTotal??0)||busy} onClick={()=>projectId&&onLoadProjectResults(projectId,projectResultOffset+100)}>下一页</Button><Button size="sm" kind="ghost" onClick={()=>projectId&&onLoadProjectResults(projectId,projectResultOffset)} disabled={busy}>刷新</Button></div></div>
+   </section>
    {analytics&&analyticsTaskId&&projectTasks.some(task=>task.id===analyticsTaskId)&&<ResearchAnalyticsView data={analytics}/>}{analytics&&analyticsTaskId&&projectTasks.some(task=>task.id===analyticsTaskId)&&<div className="research-analytics-save"><span>{analyticsSavedForCurrentTask?"该数据源统计快照已保存。":"保存该数据源的统计快照后，才能进入第五步。"}</span><Button kind="primary" disabled={busy||analyticsSavedForCurrentTask} onClick={onSaveAnalytics}>保存统计快照</Button></div>}
-   <p className="research-profile-hint">统计图表只展示数据源真实提供且可识别的字段。国家分布、评价词云、评分分布和价格区间均以实际返回字段为依据；缺少字段时会明确显示暂无可用数据。</p>
+   <p className="research-profile-hint">通用数据集只映射真实存在的共性字段，不会将不同业务含义的数据强行合并；平台专属字段和完整嵌套数据仍可在第三步的原始结果中查看。</p>
    {!projectTasks.length&&<p>尚无采集结果，请先完成第二、三步。</p>}
   </Tile>}
   {activeStep===4&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 5 / AI STRATEGY & REPORT</p><h3>AI 深度分析与商业策略报告</h3><p>基于已同步数据和统计结果，形成可追溯的市场研究报告。</p></div><Tag type={projectReports.length?'green':'blue'}>{projectReports.length?'报告已保存':'等待分析'}</Tag></div>
