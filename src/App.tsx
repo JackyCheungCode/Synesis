@@ -373,7 +373,6 @@ function App() {
       setNotice({kind:'success',text:`项目统计完成：新增 ${rows.length} 个数据源统计快照。可进入第五步生成 AI 报告。`});
     } catch(e) {
       setNotice({kind:'error',text:'项目统计失败：'+message(e)});
-      throw e;
     } finally {
       setBusy(false);
     }
