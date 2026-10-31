@@ -31,6 +31,7 @@ const providerModels: Record<string, string> = {
 function App() {
   const { session, signOut } = useAuth();
   const [page, setPage] = useState<Page>('dashboard');
+  const navigate = (next: Page) => { setPage(next); if (window.matchMedia('(max-width: 1055px)').matches) setNavExpanded(false); };
   const [navExpanded, setNavExpanded] = useState(() => window.matchMedia('(min-width: 66rem)').matches);
   const [dark, setDark] = useState(false);
   const [notice, setNotice] = useState<{kind:'info'|'success'|'error'|'warning'; text:string}|null>(null);
@@ -113,7 +114,7 @@ function App() {
       setProjectName(''); setObjective('');
       await api('plans.generate',{projectId:data.id,provider:selectedProvider});
       setNotice({kind:'success',text:'研究项目已创建，AI 研究计划已生成并进入待人工审批状态。'});
-      setPage('projects'); await loadAll();
+      navigate('projects'); await loadAll();
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
@@ -123,7 +124,7 @@ function App() {
       const approvedPlan = JSON.parse(approvalPlanText);
       await api('plans.approve',{planId:plan.id, plan:approvedPlan});
       setApprovalPlan(null); setNotice({kind:'success',text:'计划已由你批准。系统已创建待执行采集任务；任务仍需单独启动。'});
-      await loadAll(); setPage('tasks');
+      await loadAll(); navigate('tasks');
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
@@ -171,19 +172,19 @@ function App() {
           <HeaderGlobalAction aria-label="通知" onClick={()=>setNotice({kind:'info',text:'目前没有新的系统通知。'})}><Notification/></HeaderGlobalAction>
         </HeaderGlobalBar>
       </Header>
-      <SideNav aria-label="Synesis 主导航" expanded={navExpanded} isPersistent={false} isFixedNav>
+      <SideNav aria-label="Synesis 主导航" expanded={navExpanded} isPersistent={true} isFixedNav>
         <SideNavItems>
-          <SideNavLink renderIcon={Dashboard} isActive={page==='dashboard'} onClick={()=>setPage('dashboard')}>情报总览</SideNavLink>
+          <SideNavLink renderIcon={Dashboard} isActive={page==='dashboard'} onClick={()=>navigate('dashboard')}>情报总览</SideNavLink>
           <SideNavMenu renderIcon={Globe} title="全球外贸情报中心" defaultExpanded>
-            {platforms.map(p=><SideNavMenuItem key={p.slug} onClick={()=>setPage('dashboard')}><span className="nav-brand"><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={18}/>{p.name}</span></SideNavMenuItem>)}
-            <SideNavMenuItem onClick={()=>setPage('dashboard')}>AI 市场分析</SideNavMenuItem>
+            {platforms.map(p=><SideNavMenuItem key={p.slug} onClick={()=>navigate('dashboard')}><span className="nav-brand"><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={18}/>{p.name}</span></SideNavMenuItem>)}
+            <SideNavMenuItem onClick={()=>navigate('dashboard')}>AI 市场分析</SideNavMenuItem>
           </SideNavMenu>
           <SideNavMenu renderIcon={Ai} title="AI 智能中心" defaultExpanded>
-            <SideNavMenuItem onClick={()=>setPage('vault')}>Key Vault 与模型路由</SideNavMenuItem>
+            <SideNavMenuItem onClick={()=>navigate('vault')}>Key Vault 与模型路由</SideNavMenuItem>
           </SideNavMenu>
-          <SideNavLink renderIcon={Folder} isActive={page==='projects'} onClick={()=>setPage('projects')}>研究项目中心</SideNavLink>
-          <SideNavLink renderIcon={Play} isActive={page==='tasks'} onClick={()=>setPage('tasks')}>采集任务中心</SideNavLink>
-          <SideNavLink renderIcon={ChartLine} isActive={page==='reports'} onClick={()=>setPage('reports')}>市场监控与报告</SideNavLink>
+          <SideNavLink renderIcon={Folder} isActive={page==='projects'} onClick={()=>navigate('projects')}>研究项目中心</SideNavLink>
+          <SideNavLink renderIcon={Play} isActive={page==='tasks'} onClick={()=>navigate('tasks')}>采集任务中心</SideNavLink>
+          <SideNavLink renderIcon={ChartLine} isActive={page==='reports'} onClick={()=>navigate('reports')}>市场监控与报告</SideNavLink>
         </SideNavItems>
       </SideNav>
       <Content className="synesis-content">
@@ -200,7 +201,7 @@ function App() {
             <Tile><div className="metric-label">待审批研究计划</div><div className="metric-value">{pendingPlans.length}</div><p>人工批准前不会启动采集</p></Tile>
             <Tile><div className="metric-label">采集任务</div><div className="metric-value">{tasks.length}</div><p>Apify 任务运行记录</p></Tile>
             <Tile><div className="metric-label">已配置凭证</div><div className="metric-value">{credentials.length}</div><p>密钥仅在后端加密保存</p></Tile>
-            <Tile className="wide-tile"><h3>研究流程</h3><div className="flow-steps"><Tag type="blue">创建项目</Tag><span>→</span><Tag type="blue">AI 生成计划</Tag><span>→</span><Tag type="warm-gray">人工审批</Tag><span>→</span><Tag type="cool-gray">Apify 采集</Tag><span>→</span><Tag type="cool-gray">报告</Tag></div><p>只有明确批准的研究计划，才能创建采集任务；任务执行接口还会再次检查批准状态。</p><Button kind="primary" renderIcon={Add} onClick={()=>setPage('projects')}>创建研究项目</Button></Tile>
+            <Tile className="wide-tile"><h3>研究流程</h3><div className="flow-steps"><Tag type="blue">创建项目</Tag><span>→</span><Tag type="blue">AI 生成计划</Tag><span>→</span><Tag type="warm-gray">人工审批</Tag><span>→</span><Tag type="cool-gray">Apify 采集</Tag><span>→</span><Tag type="cool-gray">报告</Tag></div><p>只有明确批准的研究计划，才能创建采集任务；任务执行接口还会再次检查批准状态。</p><Button kind="primary" renderIcon={Add} onClick={()=>navigate('projects')}>创建研究项目</Button></Tile>
           </div>}
           {page==='vault' && <section className="module-stack">
             <div className="module-heading"><div><h2>AI Provider API Keys</h2><p>输入后立即发送到认证后端，采用 AES-GCM 加密保存。不会写入 localStorage、sessionStorage 或前端环境变量。</p></div><Tag type="green">BYOK</Tag></div>
@@ -228,7 +229,7 @@ function App() {
               <Button kind="primary" renderIcon={Ai} onClick={()=>void createProject()} disabled={!projectName.trim()||!objective.trim()||busy}>创建项目并生成 AI 计划</Button>
             </div></Tile>
             <h2>项目列表</h2>
-            {projects.map(p=><Tile key={p.id} className="list-tile"><div><h3>{p.name}</h3><p>{p.objective}</p><div className="tag-row">{p.target_regions.map(r=><Tag key={r}>{r}</Tag>)}<Tag type="blue">{p.status}</Tag></div></div><Button kind="ghost" onClick={()=>setPage('tasks')}>查看任务</Button></Tile>)}
+            {projects.map(p=><Tile key={p.id} className="list-tile"><div><h3>{p.name}</h3><p>{p.objective}</p><div className="tag-row">{p.target_regions.map(r=><Tag key={r}>{r}</Tag>)}<Tag type="blue">{p.status}</Tag></div></div><Button kind="ghost" onClick={()=>navigate('tasks')}>查看任务</Button></Tile>)}
             <h2>等待人工审批的 AI 研究计划</h2>
             {pendingPlans.map(p=><Tile key={p.id} className="list-tile"><div><h3>研究计划 · {projects.find(x=>x.id===p.project_id)?.name ?? p.project_id}</h3><p>{JSON.stringify(p.plan).slice(0,500)}</p><Tag type="warm-gray">待人工审批</Tag></div><Button kind="primary" onClick={()=>{setApprovalPlan(p);setApprovalPlanText(JSON.stringify(p.plan,null,2));}}>审阅并审批</Button></Tile>)}
           </section>}
