@@ -660,7 +660,7 @@ const unifiedResultFields:ResultField[]=[
 function PlatformResultsTable({platform,rows}:{platform:string;rows:unknown[]}) {
  const records=rows.filter((row):row is Record<string,unknown>=>typeof row==='object'&&row!==null&&!Array.isArray(row));
  const {profile}=classifyResultPlatform(platform);
- const [viewMode,setViewMode]=React.useState<'unified'|'platform'>('unified');
+ const [viewMode,setViewMode]=useState<'unified'|'platform'>('unified');
  const allKeys=Array.from(new Set(records.flatMap(row=>Object.keys(row))));
  const selectedFields=viewMode==='unified'?unifiedResultFields:profile.fields;
  const used=new Set<string>();
