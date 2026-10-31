@@ -16,7 +16,7 @@ type Props = {
 };
 const stages=['需求输入与解析','数据平台选择','数据汇总整理','AI 深度分析','研究报告'];
 const statusLabel:Record<ResearchDimension['status'],string>={provided:'用户已提供',suggested:'AI 建议',needs_confirmation:'待补充确认',user_confirmed:'用户已确认'};
-const statusType:Record<ResearchDimension['status'],string>={provided:'green',suggested:'blue',needs_confirmation:'warm-gray',user_confirmed:'green'};
+const statusType:Record<ResearchDimension['status'],'green'|'blue'|'warm-gray'>={provided:'green',suggested:'blue',needs_confirmation:'warm-gray',user_confirmed:'green'};
 const dimensionGroups=[
  {title:'市场与地域',description:'确定研究覆盖的国家、地区和语言。',keys:['keywords','languages','countries','regions','time_range']},
  {title:'商品与品牌',description:'定义研究对象、产品范围和竞品边界。',keys:['product_categories','product_attributes','brands','models_identifiers','price_range','usage_scenarios','certifications']},
@@ -87,7 +87,7 @@ export function ResearchWizard(props:Props) {
  const projectStageTasks=proposedTasks.map((task:any)=>({platform:String(task.platform_slug??'平台'),actorTitle:String(task.actor_title??'待选择采集器'),purpose:String(task.purpose??task.description??'按研究需求采集相关数据'),schemaValid:task.schema_valid===true,validationErrors:Array.isArray(task.validation_errors)?task.validation_errors:[],estimatedItems:task.estimated_items,pricingModel:String(task.pricing_model??'未提供'),rating:task.actor_rating}));
  const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
  const isStepOneSaved=!plan&&!projectTasks.length&&!projectReports.length&&Boolean(savedProfile);
- if(isStepOneSaved)return <section className="module-stack research-workspace">
+ if(isStepOneSaved&&savedProfile)return <section className="module-stack research-workspace">
   <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><p className="eyebrow">RESEARCH PROJECT · STEP 1 COMPLETE</p><h2>{project.name}</h2><p>{savedProfile.summary}</p></div><Tag type="green">第一步已完成</Tag></div>
   <Tile><h3>五步研究流程</h3><div className="research-stepper">{stages.map((label,index)=><div className={'research-step'+(index===0?' is-complete':index===1?' is-current':'')} key={label}><span>{index===0?<CheckmarkFilled size={18}/>:index+1}</span><b>{label}</b></div>)}</div><p className="research-profile-hint">研究条件已保存。下一步将根据这些条件发现可用数据平台，并由你选择采集渠道。</p></Tile>
   <Tile><h3>已确认的研究条件</h3><p>{savedProfile.summary}</p><div className="research-profile-stats"><Tag type="green">{savedProfile.dimensions.filter(item=>item.status==='provided'||item.status==='user_confirmed').length} 项已确认</Tag><Tag type="blue">{savedProfile.dimensions.filter(item=>item.status==='suggested').length} 项 AI 建议</Tag><Tag type="warm-gray">{savedProfile.dimensions.filter(item=>item.status==='needs_confirmation').length} 项待补充</Tag></div>{savedProfile.dimensions.filter(item=>item.values.length).map(item=><div className="research-saved-row" key={item.key}><b>{item.label}</b><p>{item.values.join(' · ')}</p></div>)}</Tile>
