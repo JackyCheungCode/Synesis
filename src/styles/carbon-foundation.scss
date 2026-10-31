@@ -149,6 +149,7 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   outline: 2px solid var(--cds-focus);
   outline-offset: 2px;
 }
+.synesis-app :where(.product-image,.research-approval,.research-dimension,.research-source-card,.research-step-button,.research-run-kpis > div,.research-report-topics span,.normalization-quality-good,.normalization-quality-warning,.synesis-nav-group > summary,.synesis-nav-leaf) { border-radius: 0; }
 .synesis-app :where(.cds--btn,.cds--text-input,.cds--text-area,.cds--select-input,.cds--dropdown,.cds--list-box,.cds--tile) {
   border-radius: 0;
 }
@@ -164,6 +165,15 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   min-width: 0;
   gap: var(--synesis-grid-gap);
 }
+.synesis-app .platform-picker,
+.synesis-app .research-intake-grid,
+.synesis-app .research-platform-options,
+.synesis-app .collection-depth-descriptions,
+.synesis-app .research-normalization-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.synesis-app .analytics-kpis,
+.synesis-app .research-analytics-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .synesis-app .synesis-layout-grid {
   display: grid;
   grid-template-columns: repeat(16, minmax(0, 1fr));
