@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
+import { resolveProductIdentity } from './product-identity.js';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -382,43 +383,65 @@ Deno.serve(async (req: Request) => {
           if (insertError) throw insertError;
 
           // Normalize platform records while preserving the untouched raw payload above.
-          const readField = (value:unknown, names:RegExp[], depth=0):unknown => {
-            if (!value || typeof value !== 'object' || depth > 5) return null;
-            if (Array.isArray(value)) {
-              for (const item of value) { const found=readField(item,names,depth+1); if(found!==null) return found; }
-              return null;
-            }
-            const obj=value as Record<string,unknown>;
-            for (const [key,nested] of Object.entries(obj)) if(names.some(pattern=>pattern.test(key))) return nested;
-            for (const nested of Object.values(obj)) { const found=readField(nested,names,depth+1); if(found!==null) return found; }
-            return null;
-          };
           const normalized = items.map((raw,index) => {
             const record=raw as Record<string,unknown>;
-            const external=readField(record,[/^(asin|sku|upc|ean|gtin|product.?id|item.?id)$/i]);
-            const sourceUrl=readField(record,[/^(url|link|product.?url|item.?url|canonical.?url)$/i]);
-            // Canonicalize URLs only when no platform identifier is available.
-            // Keep product IDs case-preserving and never merge records by title.
-            const normalizeSourceUrl=(value:unknown):string|null=>{
-              if(value===null||value===undefined) return null;
-              try {
-                const parsed=new URL(String(value).trim());
-                if(!['http:','https:'].includes(parsed.protocol)) return null;
-                parsed.hash='';
-                parsed.hostname=parsed.hostname.toLowerCase();
-                for(const key of [...parsed.searchParams.keys()]) {
-                  if(/^utm_/i.test(key)||/^(fbclid|gclid|msclkid|yclid|ref|ref_|source|campaign)$/i.test(key)) parsed.searchParams.delete(key);
-                }
-                parsed.searchParams.sort();
-                if((parsed.protocol==='https:'&&parsed.port==='443')||(parsed.protocol==='http:'&&parsed.port==='80')) parsed.port='';
-                if(parsed.pathname.length>1) parsed.pathname=parsed.pathname.replace(/\/+$/,'');
-                return parsed.toString();
-              } catch { return null; }
-            };
-            const normalizedUrl=normalizeSourceUrl(sourceUrl);
-            const identity=external!==null && String(external).trim()
-              ? String(external).trim()
-              : normalizedUrl;
+            const identity=resolveProductIdentity(task.platform_slug,record);
+            const priceRaw=readField(record,[/^(price|sale.?price|current.?price|amount|cost|listing.?price|unit.?price)$/i]);
+            const priceText=typeof priceRaw==='number'?String(priceRaw):typeof priceRaw==='string'?priceRaw.replace(/,/g,''):'';
+            const priceMatch=priceText.match(/-?\d+(?:\.\d+)?/);
+            const price=priceMatch?Number(priceMatch[0]):null;
+            const currencyRaw=readField(record,[/^(currency|currency.?code|price.?currency)$/i]);
+            const currency=currencyRaw?String(currencyRaw).trim().toUpperCase():null;
+            return {record,index,identity:identity?.externalProductId??null,
+              sourceUrl:identity?.sourceUrl??null,sku:identity?.sourceSku??null,
+              canonicalKey:identity?.canonicalKey??null,matchType:identity?.matchType??null,
+              title:readField(record,[/^(title|name|product.?name|item.?name)$/i]),
+              brand:readField(record,[/^brand(name)?$/i]),
+              category:readField(record,[/^(category|department|product.?type)$/i]),
+              description:readField(record,[/^(description|product.?description|about)$/i]),
+              image:readField(record,[/^(image|image.?url|thumbnail|picture)$/i]),
+              price:price!==null&&Number.isFinite(price)&&price>=0?price:null,currency};
+          }).filter(item=>item.identity);
+          const uniqueNormalized = [...new Map(normalized.map(item=>[item.identity!,item])).values()];
+          if (uniqueNormalized.length) {
+            const asText=(value:unknown)=>value===null||value===undefined||typeof value==='object'?'':String(value).trim();
+            const productRows=uniqueNormalized.map(item=>({
+              user_id:userId,canonical_key:item.canonicalKey!,
+              ...(asText(item.title)?{title:asText(item.title)}:{}),
+              ...(asText(item.brand)?{brand:asText(item.brand)}:{}),
+              ...(asText(item.category)?{category:asText(item.category)}:{}),
+              ...(asText(item.description)?{description:asText(item.description)}:{}),
+              ...(asText(item.image)?{image_url:asText(item.image)}:{}),
+              updated_at:new Date().toISOString(),
+            }));
+            const {data:products,error:productError}=await admin.from('products')
+              .upsert(productRows,{onConflict:'user_id,canonical_key'})
+              .select('id,canonical_key');
+            if(productError) throw productError;
+            const productIds=new Map((products??[]).map(product=>[product.canonical_key,product.id]));
+            const sourceRows=uniqueNormalized.map(item=>({
+              user_id:userId,product_id:productIds.get(item.canonicalKey!),
+              platform_slug:task.platform_slug,external_product_id:item.identity!,
+              source_url:item.sourceUrl,source_sku:item.sku,raw_data:item.record,last_seen_at:new Date().toISOString(),
+            })).filter(item=>item.product_id);
+            const {data:sources,error:sourceError}=await admin.from('product_source_records')
+              .upsert(sourceRows,{onConflict:'user_id,platform_slug,external_product_id'})
+              .select('id,external_product_id,product_id');
+            if(sourceError) throw sourceError;
+            const sourceIds=new Map((sources??[]).map(source=>[source.external_product_id,source]));
+            const priceRows=uniqueNormalized.filter(item=>item.price!==null&&item.currency&&sourceIds.has(item.identity!))
+              .map(item=>{
+                const source=sourceIds.get(item.identity!)!;
+                return {user_id:userId,product_id:source.product_id,source_record_id:source.id,
+                  source_task_id:taskId,source_item_index:pageOffset+item.index,
+                  price:item.price!,currency:item.currency!,observed_at:new Date().toISOString()};
+              });
+            if(priceRows.length) {
+              const {error:priceError}=await admin.from('product_price_history')
+                .upsert(priceRows,{onConflict:'source_record_id,source_task_id,source_item_index'});
+              if(priceError) throw priceError;
+            }
+          }
             const priceRaw=readField(record,[/^(price|sale.?price|current.?price|amount|cost|listing.?price|unit.?price)$/i]);
             const priceText=typeof priceRaw==='number'?String(priceRaw):typeof priceRaw==='string'?priceRaw.replace(/,/g,''):'';
             const priceMatch=priceText.match(/-?\d+(?:\.\d+)?/);
