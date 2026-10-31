@@ -88,5 +88,7 @@ test('Carbon UI shell uses official background, selection, and icon tokens', () 
   assert.match(foundation, /background: var\(--cds-background-selected\)/);
   assert.match(foundation, /border-left: 4px solid var\(--cds-border-interactive\)/);
   assert.match(foundation, /var\(--cds-icon-secondary\)/);
+  assert.match(styles, /fill: var\(--cds-icon-secondary\)/);
+  assert.match(styles, /fill: var\(--cds-icon-primary\)/);
   assert.match(foundation, /var\(--cds-background-hover\)/);
 });
