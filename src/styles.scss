@@ -1823,3 +1823,8 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
  .research-project-analytics-action,.research-report-evidence { align-items:flex-start; flex-direction:column; }
  .research-normalization-summary { grid-template-columns:1fr; }
 }
+
+.research-cross-platform-comparison { margin:18px 0; padding:16px; border:1px solid var(--cds-border-subtle,#e0e0e0); background:var(--cds-layer-01,#fff); }
+.research-cross-platform-comparison .module-heading { margin-bottom:12px; }
+.research-cross-platform-comparison .module-heading h4 { margin:0; font-size:15px; }
+.research-cross-platform-comparison .module-heading p { margin:5px 0 0; color:var(--cds-text-secondary,#525252); font-size:12px; }
