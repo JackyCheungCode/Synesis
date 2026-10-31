@@ -40,13 +40,14 @@ function App() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [keyValues, setKeyValues] = useState<Record<string,string>>({});
-  const [visibleKeys, setVisibleKeys] = useState<Record<string,boolean>>({});
   const [projectName, setProjectName] = useState('');
   const [objective, setObjective] = useState('');
   const [regions, setRegions] = useState('美国, 欧洲');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['amazon','ebay']);
   const [selectedProvider, setSelectedProvider] = useState('openai');
   const [approvalPlan, setApprovalPlan] = useState<Plan|null>(null);
+  const [approvalPlanText, setApprovalPlanText] = useState('');
+  const [cloudflareAccountId, setCloudflareAccountId] = useState('');
   const [search, setSearch] = useState('');
 
   const token = session?.access_token ?? '';
@@ -80,7 +81,7 @@ function App() {
     if (!value) return;
     setBusy(true);
     try {
-      await api('credentials.save', { slug, name, kind, apiKey:value });
+      await api('credentials.save', { slug, name, kind, apiKey:value, accountId: slug === 'cloudflare' ? cloudflareAccountId.trim() : undefined });
       setKeyValues(v => ({...v,[slug]:''}));
       setNotice({kind:'success',text:`${name} 凭证已加密保存。现在可以执行连接测试。`});
       await loadAll();
@@ -116,7 +117,8 @@ function App() {
   async function approvePlan(plan: Plan) {
     setBusy(true);
     try {
-      await api('plans.approve',{planId:plan.id});
+      const approvedPlan = JSON.parse(approvalPlanText);
+      await api('plans.approve',{planId:plan.id, plan:approvedPlan});
       setApprovalPlan(null); setNotice({kind:'success',text:'计划已由你批准。系统已创建待执行采集任务；任务仍需单独启动。'});
       await loadAll(); setPage('tasks');
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
@@ -180,7 +182,8 @@ function App() {
             <div className="module-heading"><div><h2>AI Provider API Keys</h2><p>输入后立即发送到认证后端，采用 AES-GCM 加密保存。不会写入 localStorage、sessionStorage 或前端环境变量。</p></div><Tag type="green">BYOK</Tag></div>
             <Tabs><Tab label="AI 模型"><div className="vault-grid">{providers.map(p=><Tile key={p.slug} className="vault-card">
               <div className="card-head"><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={34}/><div><h3>{p.name}</h3><p>{providerModels[p.slug] ?? '模型可在路由配置中指定'}</p></div><Tag type={credentials.some(c=>c.slug===p.slug)?'green':'cool-gray'}>{credentials.find(c=>c.slug===p.slug)?.status==='validated'?'已验证':credentials.some(c=>c.slug===p.slug)?'已保存':'未配置'}</Tag></div>
-              <PasswordInput id={`key-${p.slug}`} labelText="API Key" placeholder="粘贴 API Key" value={keyValues[p.slug]??''} onChange={e=>setKeyValues(v=>({...v,[p.slug]:e.target.value}))} autoComplete="off"/>
+              <PasswordInput id={`key-${p.slug}`} labelText={p.slug==='cloudflare'?'Cloudflare API Token':'API Key'} placeholder="粘贴 API Key" value={keyValues[p.slug]??''} onChange={e=>setKeyValues(v=>({...v,[p.slug]:e.target.value}))} autoComplete="off"/>
+              {p.slug==='cloudflare' && <TextInput id="cloudflare-account-id" labelText="Cloudflare Account ID" placeholder="输入 Account ID" value={cloudflareAccountId} onChange={e=>setCloudflareAccountId(e.target.value)} />} 
               <div className="card-actions"><Button kind="tertiary" size="sm" onClick={()=>void saveCredential(p.slug,p.name,'provider')} disabled={!keyValues[p.slug]?.trim()}>加密保存</Button><Button kind="secondary" size="sm" renderIcon={Renew} onClick={()=>void testConnection(p.slug,'provider')} disabled={!credentials.some(c=>c.slug===p.slug)}>连接测试</Button></div>
             </Tile>)}</div></Tab>
             <Tab label="平台与外部 API"><div className="vault-grid">{apiIntegrations.map(s=><Tile key={s.slug} className="vault-card">
@@ -202,7 +205,7 @@ function App() {
             <h2>项目列表</h2>
             {projects.map(p=><Tile key={p.id} className="list-tile"><div><h3>{p.name}</h3><p>{p.objective}</p><div className="tag-row">{p.target_regions.map(r=><Tag key={r}>{r}</Tag>)}<Tag type="blue">{p.status}</Tag></div></div><Button kind="ghost" onClick={()=>setPage('tasks')}>查看任务</Button></Tile>)}
             <h2>等待人工审批的 AI 研究计划</h2>
-            {pendingPlans.map(p=><Tile key={p.id} className="list-tile"><div><h3>研究计划 · {projects.find(x=>x.id===p.project_id)?.name ?? p.project_id}</h3><p>{JSON.stringify(p.plan).slice(0,500)}</p><Tag type="warm-gray">待人工审批</Tag></div><Button kind="primary" onClick={()=>setApprovalPlan(p)}>审阅并审批</Button></Tile>)}
+            {pendingPlans.map(p=><Tile key={p.id} className="list-tile"><div><h3>研究计划 · {projects.find(x=>x.id===p.project_id)?.name ?? p.project_id}</h3><p>{JSON.stringify(p.plan).slice(0,500)}</p><Tag type="warm-gray">待人工审批</Tag></div><Button kind="primary" onClick={()=>{setApprovalPlan(p);setApprovalPlanText(JSON.stringify(p.plan,null,2));}}>审阅并审批</Button></Tile>)}
           </section>}
           {page==='tasks' && <section className="module-stack"><div className="module-heading"><div><h2>Apify 采集任务</h2><p>只有通过人工审批的研究计划才会产生可执行任务。</p></div><Button kind="tertiary" renderIcon={Renew} onClick={()=>void loadAll()}>刷新</Button></div>
             <DataTable rows={pageRows.map(t=>({...t,id:t.id.slice(0,8),fullId:t.id}))} headers={[{key:'platform_slug',header:'平台'},{key:'status',header:'状态'},{key:'actor_id',header:'Apify Actor'},{key:'created_at',header:'创建时间'},{key:'actions',header:'操作'}]}>
@@ -213,7 +216,7 @@ function App() {
         </div>
       </Content>
       {approvalPlan && <Modal open modalHeading="审批 AI 研究计划" primaryButtonText="批准并创建采集任务" secondaryButtonText="返回审阅" onRequestClose={()=>setApprovalPlan(null)} onRequestSubmit={()=>void approvePlan(approvalPlan)} primaryButtonDisabled={busy}>
-        <p>批准后系统会根据计划创建待执行任务。Apify 不会立即运行；每个任务仍需在采集任务中心单独启动。</p><pre className="plan-preview">{JSON.stringify(approvalPlan.plan,null,2)}</pre>
+        <p>请审阅研究范围与采集任务。AI 不会猜测 Apify Actor ID；请在下方 JSON 的 platform_tasks[].actor_id 填入你确认的 Actor ID。批准后只创建待执行任务，不会自动启动 Apify。</p><TextArea id="approval-plan-json" labelText="研究计划（可编辑 JSON）" rows={14} value={approvalPlanText} onChange={e=>setApprovalPlanText(e.target.value)} />
       </Modal>}
     </div>
   );
