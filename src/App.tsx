@@ -1,177 +1,223 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Add, Analytics, ArrowRight, ChartLine, ChevronDown, ChevronRight, Cloud,
-  Dashboard, DataBase, Document, Folder, Globe, Menu, Moon, Notification,
-  Search, Settings, Sun, Task, Ai, Close, Api,
+  Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction,
+  SideNav, SideNavItems, SideNavLink, SideNavMenu, SideNavMenuItem, Content,
+  Button, InlineNotification, Tag, TextInput, PasswordInput, Tile, Tabs, Tab,
+  Toggle, Select, SelectItem, TextArea, Modal, DataTable, Table, TableHead,
+  TableRow, TableHeader, TableBody, TableCell, Search, Loading, Layer,
+} from '@carbon/react';
+import {
+  Dashboard, Globe, Ai, Folder, ChartLine, Document, Api, Moon, Sun,
+  Notification, Add, Renew, Play, Checkmark, Menu as MenuIcon, Cloud,
 } from '@carbon/icons-react';
-import { Button, InlineNotification, Tag, TextInput, Tile } from '@carbon/react';
 import { BrandIcon } from './components/BrandIcon';
-import { platforms, providers, services, apiIntegrations } from './data/catalog';
+import { platforms, providers, apiIntegrations } from './data/catalog';
 import { useAuth } from './auth/AuthProvider';
+import { supabase } from './lib/supabase';
 
-type Page = 'dashboard' | 'platforms' | 'ai-models' | 'projects' | 'market-watch' | 'reports';
+type Page = 'dashboard' | 'vault' | 'projects' | 'tasks' | 'reports';
+type Credential = { slug: string; name: string; kind: 'provider' | 'integration'; status: string; key_last4?: string; last_validated_at?: string };
+type Project = { id: string; name: string; objective: string; status: string; target_regions: string[]; platform_slugs: string[] };
+type Plan = { id: string; project_id: string; status: string; plan: Record<string, unknown>; estimated_cost: number | null; created_at: string };
+type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string };
 
-const navPlatformItems = platforms;
-const initialKeys: Record<string, string> = {};
+const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/synesis-api`;
+const providerModels: Record<string, string> = {
+  openai: 'gpt-4.1-mini', googlegemini: 'gemini-2.5-flash', deepseek: 'deepseek-chat',
+  anthropic: 'claude-3-7-sonnet-latest', cloudflare: '@cf/meta/llama-3.3-70b-instruct',
+  mistral: 'mistral-small-latest', x: 'grok-3-mini',
+};
 
 function App() {
   const { session, signOut } = useAuth();
-  const [theme, setTheme] = useState<'white' | 'g100'>(() => {
-    const saved = localStorage.getItem('synesis-theme');
-    return saved === 'g100' ? 'g100' : 'white';
-  });
   const [page, setPage] = useState<Page>('dashboard');
-  const [expanded, setExpanded] = useState({ intelligence: true, ai: true });
+  const [navExpanded, setNavExpanded] = useState(true);
+  const [dark, setDark] = useState(false);
+  const [notice, setNotice] = useState<{kind:'info'|'success'|'error'|'warning'; text:string}|null>(null);
+  const [busy, setBusy] = useState(false);
+  const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [keyValues, setKeyValues] = useState<Record<string,string>>({});
+  const [visibleKeys, setVisibleKeys] = useState<Record<string,boolean>>({});
+  const [projectName, setProjectName] = useState('');
+  const [objective, setObjective] = useState('');
+  const [regions, setRegions] = useState('美国, 欧洲');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['amazon','ebay']);
+  const [selectedProvider, setSelectedProvider] = useState('openai');
+  const [approvalPlan, setApprovalPlan] = useState<Plan|null>(null);
   const [search, setSearch] = useState('');
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>(initialKeys);
-  const [integrationKeys, setIntegrationKeys] = useState<Record<string, string>>({});
-  const [showKey, setShowKey] = useState<Record<string, boolean>>({});
-  const [notice, setNotice] = useState('');
-  const [mobileNav, setMobileNav] = useState(false);
 
-  const dark = theme === 'g100';
-  const activeTitle = useMemo(() => ({
-    dashboard: '全球外贸情报总览',
-    platforms: '平台数据中心',
-    'ai-models': 'AI 模型与 API 管理',
-    projects: '研究项目中心',
-    'market-watch': '市场监控',
-    reports: '市场研究报告',
-  } satisfies Record<Page, string>)[page], [page]);
+  const token = session?.access_token ?? '';
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
 
-  function switchTheme() {
-    const next = dark ? 'white' : 'g100';
-    setTheme(next);
-    localStorage.setItem('synesis-theme', next);
+  async function api(action: string, payload: Record<string,unknown> = {}) {
+    const response = await fetch(fnUrl, { method:'POST', headers, body: JSON.stringify({ action, ...payload }) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
+    return data;
   }
 
-  function saveKey(provider: string) {
-    setNotice(`${provider}：前端输入界面已就绪。安全凭证 API 尚未部署，密钥没有发送或保存。`);
+  async function loadAll() {
+    setBusy(true);
+    try {
+      const [p, pl, t, c] = await Promise.all([
+        supabase.from('research_projects').select('id,name,objective,status,target_regions,platform_slugs').order('updated_at',{ascending:false}),
+        supabase.from('ai_research_plans').select('id,project_id,status,plan,estimated_cost,created_at').order('created_at',{ascending:false}),
+        supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at').order('created_at',{ascending:false}),
+        api('credentials.list'),
+      ]);
+      if (p.error) throw p.error; if (pl.error) throw pl.error; if (t.error) throw t.error;
+      setProjects(p.data ?? []); setPlans(pl.data ?? []); setTasks(t.data ?? []); setCredentials(c.credentials ?? []);
+    } catch (e) { setNotice({kind:'error',text: message(e)}); }
+    finally { setBusy(false); }
+  }
+  useEffect(() => { void loadAll(); }, []);
+
+  async function saveCredential(slug: string, name: string, kind: 'provider'|'integration') {
+    const value = keyValues[slug]?.trim();
+    if (!value) return;
+    setBusy(true);
+    try {
+      await api('credentials.save', { slug, name, kind, apiKey:value });
+      setKeyValues(v => ({...v,[slug]:''}));
+      setNotice({kind:'success',text:`${name} 凭证已加密保存。现在可以执行连接测试。`});
+      await loadAll();
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+  async function testConnection(slug: string, kind: 'provider'|'integration') {
+    setBusy(true);
+    try {
+      const result = await api('connection.test',{slug,kind,model:providerModels[slug]});
+      setNotice({kind:'success',text:`${slug} 连接成功：${result.message ?? '凭证有效，服务可调用'}`});
+      await loadAll();
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+  async function createProject() {
+    if (!projectName.trim() || !objective.trim()) return;
+    setBusy(true);
+    try {
+      const {data,error} = await supabase.from('research_projects').insert({
+        name:projectName.trim(), objective:objective.trim(),
+        target_regions:regions.split(',').map(x=>x.trim()).filter(Boolean),
+        platform_slugs:selectedPlatforms, status:'draft',
+      }).select().single();
+      if(error) throw error;
+      setProjectName(''); setObjective('');
+      await api('plans.generate',{projectId:data.id,provider:selectedProvider});
+      setNotice({kind:'success',text:'研究项目已创建，AI 研究计划已生成并进入待人工审批状态。'});
+      setPage('projects'); await loadAll();
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+  async function approvePlan(plan: Plan) {
+    setBusy(true);
+    try {
+      await api('plans.approve',{planId:plan.id});
+      setApprovalPlan(null); setNotice({kind:'success',text:'计划已由你批准。系统已创建待执行采集任务；任务仍需单独启动。'});
+      await loadAll(); setPage('tasks');
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+  async function runTask(task: Task) {
+    setBusy(true);
+    try {
+      await api('tasks.execute',{taskId:task.id});
+      setNotice({kind:'success',text:'Apify 采集任务已提交。'}); await loadAll();
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
   }
 
-  function saveIntegration(name: string) {
-    setNotice(`${name}：安全凭证 API 尚未部署，密钥没有发送或保存。`);
-  }
+  const title: Record<Page,string> = {dashboard:'全球外贸情报总览',vault:'Key Vault 与连接管理',projects:'研究项目中心',tasks:'采集任务中心',reports:'市场研究报告'};
+  const pendingPlans = plans.filter(p => p.status === 'pending_approval');
+  const pageRows = tasks.filter(t => !search || t.platform_slug.includes(search.toLowerCase()));
 
   return (
-    <div className={`synesis-shell ${dark ? 'theme-dark cds--g100' : 'theme-light cds--white'}`}>
-      <aside className={`side-nav ${mobileNav ? 'side-nav--open' : ''}`}>
-        <div className="brand-lockup">
-          <div className="brand-symbol"><span /></div>
-          <span className="brand-word">SYNESIS</span>
-          <button className="mobile-close" onClick={() => setMobileNav(false)} aria-label="Close navigation"><Close size={20} /></button>
+    <div className={dark ? 'synesis-app theme-dark' : 'synesis-app'}>
+      <Header aria-label="Synesis">
+        <HeaderMenuButton aria-label="切换导航" isActive={navExpanded} onClick={() => setNavExpanded(v=>!v)} />
+        <HeaderName prefix="" href="#" onClick={e=>e.preventDefault()}>SYNESIS</HeaderName>
+        <HeaderGlobalBar>
+          <HeaderGlobalAction aria-label="切换主题" onClick={()=>setDark(v=>!v)}>{dark?<Sun/>:<Moon/>}</HeaderGlobalAction>
+          <HeaderGlobalAction aria-label="通知" onClick={()=>setNotice({kind:'info',text:'目前没有新的系统通知。'})}><Notification/></HeaderGlobalAction>
+        </HeaderGlobalBar>
+      </Header>
+      <SideNav aria-label="Synesis 主导航" expanded={navExpanded} isPersistent={false} isFixedNav>
+        <SideNavItems>
+          <SideNavLink renderIcon={Dashboard} isActive={page==='dashboard'} onClick={()=>setPage('dashboard')}>情报总览</SideNavLink>
+          <SideNavMenu renderIcon={Globe} title="全球外贸情报中心" defaultExpanded>
+            {platforms.map(p=><SideNavMenuItem key={p.slug} onClick={()=>setPage('dashboard')}><span className="nav-brand"><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={18}/>{p.name}</span></SideNavMenuItem>)}
+            <SideNavMenuItem onClick={()=>setPage('dashboard')}>AI 市场分析</SideNavMenuItem>
+          </SideNavMenu>
+          <SideNavMenu renderIcon={Ai} title="AI 智能中心" defaultExpanded>
+            <SideNavMenuItem onClick={()=>setPage('vault')}>Key Vault 与模型路由</SideNavMenuItem>
+          </SideNavMenu>
+          <SideNavLink renderIcon={Folder} isActive={page==='projects'} onClick={()=>setPage('projects')}>研究项目中心</SideNavLink>
+          <SideNavLink renderIcon={Play} isActive={page==='tasks'} onClick={()=>setPage('tasks')}>采集任务中心</SideNavLink>
+          <SideNavLink renderIcon={ChartLine} isActive={page==='reports'} onClick={()=>setPage('reports')}>市场监控与报告</SideNavLink>
+        </SideNavItems>
+      </SideNav>
+      <Content className="synesis-content">
+        <div className="workspace-bar">
+          <Search size="lg" labelText="全局搜索" placeholder="搜索平台、商品、项目与情报" value={search} onChange={e=>setSearch(e.target.value)}/>
+          <div className="workspace-user"><span>{session?.user.email}</span><Button kind="ghost" size="sm" onClick={()=>void signOut()}>登出</Button></div>
         </div>
-        <nav className="nav-scroll" aria-label="Primary navigation">
-          <button className={`nav-link ${page === 'dashboard' ? 'is-active' : ''}`} onClick={() => setPage('dashboard')}><Dashboard size={20}/><span>Dashboard</span></button>
-          <button className="nav-link nav-link--parent" onClick={() => setExpanded(v => ({ ...v, intelligence: !v.intelligence }))}>
-            <Globe size={20}/><span>全球外贸情报中心</span>{expanded.intelligence ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
-          </button>
-          {expanded.intelligence && <div className="nav-submenu">
-            {navPlatformItems.map(item => <button key={item.name} className="nav-link nav-link--child" onClick={() => setPage('platforms')}><BrandIcon slug={item.slug} label={item.name} fallback={item.fallback} size={20}/><span>{item.name}</span></button>)}
-            <button className="nav-link nav-link--child" onClick={() => setPage('platforms')}><Ai size={19}/><span>AI 市场分析</span></button>
+        <div className="page-wrap">
+          <div className="page-title-row"><div><p className="eyebrow">SYNESIS / WORKSPACE</p><h1>{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue">个人工作空间</Tag></div>
+          {notice && <InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
+          {busy && <Loading small withOverlay={false} description="处理中"/>}
+          {page==='dashboard' && <div className="carbon-grid">
+            <Tile><div className="metric-label">研究项目</div><div className="metric-value">{projects.length}</div><p>已建立的研究项目</p></Tile>
+            <Tile><div className="metric-label">待审批研究计划</div><div className="metric-value">{pendingPlans.length}</div><p>人工批准前不会启动采集</p></Tile>
+            <Tile><div className="metric-label">采集任务</div><div className="metric-value">{tasks.length}</div><p>Apify 任务运行记录</p></Tile>
+            <Tile><div className="metric-label">已配置凭证</div><div className="metric-value">{credentials.length}</div><p>密钥仅在后端加密保存</p></Tile>
+            <Tile className="wide-tile"><h3>研究流程</h3><div className="flow-steps"><Tag type="blue">创建项目</Tag><span>→</span><Tag type="blue">AI 生成计划</Tag><span>→</span><Tag type="warm-gray">人工审批</Tag><span>→</span><Tag type="cool-gray">Apify 采集</Tag><span>→</span><Tag type="cool-gray">报告</Tag></div><p>只有明确批准的研究计划，才能创建采集任务；任务执行接口还会再次检查批准状态。</p><Button kind="primary" renderIcon={Add} onClick={()=>setPage('projects')}>创建研究项目</Button></Tile>
           </div>}
-          <button className="nav-link nav-link--parent" onClick={() => setExpanded(v => ({ ...v, ai: !v.ai }))}>
-            <Ai size={20}/><span>AI 智能中心</span>{expanded.ai ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
-          </button>
-          {expanded.ai && <div className="nav-submenu">
-            <button className={`nav-link nav-link--child ${page === 'ai-models' ? 'is-active' : ''}`} onClick={() => setPage('ai-models')}><Api size={18}/><span>模型与 API 管理</span></button>
-            <button className="nav-link nav-link--child" onClick={() => setNotice('AI 任务中心将在后续模块迭代中接入。')}><Task size={18}/><span>AI 任务中心</span></button>
-            <button className="nav-link nav-link--child" onClick={() => setNotice('模型智能路由将在后续模块迭代中接入。')}><Analytics size={18}/><span>模型智能路由</span></button>
-            <button className="nav-link nav-link--child" onClick={() => setNotice('AI 工作流将在后续模块迭代中接入。')}><Cloud size={18}/><span>AI 工作流</span></button>
-          </div>}
-          <button className={`nav-link ${page === 'projects' ? 'is-active' : ''}`} onClick={() => setPage('projects')}><Folder size={20}/><span>研究项目中心</span></button>
-          <button className={`nav-link ${page === 'market-watch' ? 'is-active' : ''}`} onClick={() => setPage('market-watch')}><ChartLine size={20}/><span>Market Watch</span></button>
-          <button className={`nav-link ${page === 'reports' ? 'is-active' : ''}`} onClick={() => setPage('reports')}><Document size={20}/><span>市场研究报告</span></button>
-          <button className="nav-link" onClick={() => setNotice('基础设施连接状态将在系统设置模块接入。')}><DataBase size={20}/><span>数据与连接</span></button>
-          <button className="nav-link" onClick={() => setNotice('系统设置将在后续模块迭代中接入。')}><Settings size={20}/><span>系统设置</span></button>
-        </nav>
-        <div className="side-footer"><span className="status-dot" />Synesis · Initial build <small>Global Trade Intelligence</small></div>
-      </aside>
-
-      <main className="main-area">
-        <header className="topbar">
-          <button className="mobile-menu" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu size={22}/></button>
-          <div className="global-search"><Search size={20}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索平台、商品、品牌、研究项目与情报…" /><kbd>⌘ K</kbd></div>
-          <div className="top-actions">
-            <button className="icon-button" onClick={switchTheme} aria-label="Toggle theme">{dark ? <Sun size={20}/> : <Moon size={20}/>}</button>
-            <button className="icon-button notification-button" onClick={() => setNotice('目前没有新的系统通知。')} aria-label="Notifications"><Notification size={20}/><i /></button>
-            <div className="user-chip"><span className="user-avatar">S</span><span>{session?.user.email ?? 'Workspace'}</span><Button kind="ghost" size="sm" onClick={() => void signOut()}>登出</Button></div>
-          </div>
-        </header>
-
-        <div className="page-content">
-          <div className="page-heading">
-            <div><div className="eyebrow">SYNESIS / WORKSPACE</div><h1>{activeTitle}</h1><p>全球商业数据 · 跨平台情报 · AI 驱动研究</p></div>
-            <div className="heading-actions"><Tag type="blue">个人工作空间</Tag><Button kind="primary" renderIcon={Add} onClick={() => setNotice('研究项目创建流程将在下一阶段接入。')}>新建研究项目</Button></div>
-          </div>
-
-          {notice && <InlineNotification kind="info" lowContrast title="提示" subtitle={notice} onCloseButtonClick={() => setNotice('')} />}
-
-          {page === 'ai-models' ? (
-            <section className="section-stack">
-              <div className="section-intro"><div><h2>AI Provider 连接</h2><p>由你填写各服务的 API Key。凭证将通过后端安全接口保存，不会写入浏览器存储。</p></div><Tag type="cool-gray">BYOK · Bring Your Own Key</Tag></div>
-              <InlineNotification kind="warning" lowContrast title="安全接入阶段" subtitle="当前为前端配置界面原型。后端加密凭证存储、用户身份验证和连通性测试完成前，保存操作不会发送或持久化任何密钥。" hideCloseButton />
-              <div className="provider-grid">
-                {providers.map(provider => <Tile key={provider.name} className="provider-tile">
-                  <div className="provider-top"><BrandIcon slug={provider.slug} label={provider.name} fallback={provider.fallback} size={36}/><div><h3>{provider.name}</h3><span>API Provider</span></div><Tag type="cool-gray">未连接</Tag></div>
-                  <div className="provider-form">
-                    <TextInput id={`key-${provider.slug}`} type={showKey[provider.slug] ? 'text' : 'password'} labelText="API Key" placeholder="填写你的 API Key" value={apiKeys[provider.slug] ?? ''} onChange={e => setApiKeys(v => ({ ...v, [provider.slug]: e.target.value }))} autoComplete="off"/>
-                    <div className="key-actions"><Button kind="ghost" size="sm" onClick={() => setShowKey(v => ({ ...v, [provider.slug]: !v[provider.slug] }))}>{showKey[provider.slug] ? '隐藏' : '显示'}</Button><Button kind="tertiary" size="sm" onClick={() => saveKey(provider.name)} disabled={!apiKeys[provider.slug]?.trim()}>保存并验证</Button></div>
-                  </div>
-                </Tile>)}
-              </div>
-              <div className="section-intro integration-heading"><div><h2>外部 API 与数据采集连接</h2><p>平台数据采集与外部服务的凭证也统一在这里管理。</p></div><Tag type="cool-gray">API Connections</Tag></div>
-              <div className="provider-grid">
-                {apiIntegrations.map(service => <Tile key={service.name} className="provider-tile">
-                  <div className="provider-top"><BrandIcon slug={service.slug} label={service.name} fallback={service.fallback} size={36}/><div><h3>{service.name}</h3><span>{service.credentialLabel}</span></div><Tag type="cool-gray">未连接</Tag></div>
-                  <div className="provider-form">
-                    <TextInput id={`integration-${service.slug}`} type="password" labelText={service.credentialLabel} placeholder={service.placeholder} value={integrationKeys[service.slug] ?? ''} onChange={e => setIntegrationKeys(v => ({ ...v, [service.slug]: e.target.value }))} autoComplete="off"/>
-                    <div className="key-actions"><Button kind="tertiary" size="sm" onClick={() => saveIntegration(service.name)} disabled={!integrationKeys[service.slug]?.trim()}>保存并验证</Button></div>
-                  </div>
-                </Tile>)}
-              </div>
-              <Tile className="provider-tile cloudflare-tile">
-                <div className="provider-top"><BrandIcon slug="cloudflare" label="Cloudflare" fallback="C" size={36}/><div><h3>Cloudflare Workers AI</h3><span>AI Runtime · AI Gateway</span></div><Tag type="cool-gray">待配置</Tag></div>
-                <div className="cloudflare-fields"><TextInput id="cf-account" labelText="Cloudflare Account ID" placeholder="Account ID"/><TextInput id="cf-token" type="password" labelText="Cloudflare API Token" placeholder="填写 Cloudflare API Token" autoComplete="off"/></div>
-                <p className="helper-text">Cloudflare 凭证与模型 Provider Key 分开管理；正式接入时只授予必要权限。</p>
-              </Tile>
-            </section>
-          ) : page === 'dashboard' ? (
-            <DashboardPage />
-          ) : page === 'platforms' ? (
-            <section className="section-stack"><div className="section-intro"><div><h2>平台数据中心</h2><p>每个平台独立管理商品、评论、关键词、排名及竞争者数据。</p></div><Tag type="blue">9 个平台模块</Tag></div><div className="platform-grid">{platforms.map(p => <Tile key={p.name} className="platform-tile"><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={34}/><div><h3>{p.name}</h3><p>数据模块 · 待接入</p></div><ChevronRight size={18}/></Tile>)}</div></section>
-          ) : (
-            <section className="empty-module"><div className="empty-icon"><Folder size={28}/></div><h2>{activeTitle}</h2><p>模块边界和主导航已建立。此业务模块将在后续迭代中独立开发、测试和接入。</p><Tag type="cool-gray">模块骨架已建立</Tag></section>
-          )}
-
-          <footer className="app-footer"><span>Synesis v0.1.0</span><span>Built on IBM Carbon Design System</span><span>Platform icons · Provider icons · API registry</span></footer>
+          {page==='vault' && <section className="module-stack">
+            <div className="module-heading"><div><h2>AI Provider API Keys</h2><p>输入后立即发送到认证后端，采用 AES-GCM 加密保存。不会写入 localStorage、sessionStorage 或前端环境变量。</p></div><Tag type="green">BYOK</Tag></div>
+            <Tabs><Tab label="AI 模型"><div className="vault-grid">{providers.map(p=><Tile key={p.slug} className="vault-card">
+              <div className="card-head"><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={34}/><div><h3>{p.name}</h3><p>{providerModels[p.slug] ?? '模型可在路由配置中指定'}</p></div><Tag type={credentials.some(c=>c.slug===p.slug)?'green':'cool-gray'}>{credentials.find(c=>c.slug===p.slug)?.status==='validated'?'已验证':credentials.some(c=>c.slug===p.slug)?'已保存':'未配置'}</Tag></div>
+              <PasswordInput id={`key-${p.slug}`} labelText="API Key" placeholder="粘贴 API Key" value={keyValues[p.slug]??''} onChange={e=>setKeyValues(v=>({...v,[p.slug]:e.target.value}))} autoComplete="off"/>
+              <div className="card-actions"><Button kind="tertiary" size="sm" onClick={()=>void saveCredential(p.slug,p.name,'provider')} disabled={!keyValues[p.slug]?.trim()}>加密保存</Button><Button kind="secondary" size="sm" renderIcon={Renew} onClick={()=>void testConnection(p.slug,'provider')} disabled={!credentials.some(c=>c.slug===p.slug)}>连接测试</Button></div>
+            </Tile>)}</div></Tab>
+            <Tab label="平台与外部 API"><div className="vault-grid">{apiIntegrations.map(s=><Tile key={s.slug} className="vault-card">
+              <div className="card-head"><BrandIcon slug={s.slug} label={s.name} fallback={s.fallback} size={34}/><div><h3>{s.name}</h3><p>{s.credentialLabel}</p></div><Tag type={credentials.some(c=>c.slug===s.slug)?'green':'cool-gray'}>{credentials.some(c=>c.slug===s.slug)?'已保存':'未配置'}</Tag></div>
+              <PasswordInput id={`key-${s.slug}`} labelText={s.credentialLabel} placeholder={s.placeholder} value={keyValues[s.slug]??''} onChange={e=>setKeyValues(v=>({...v,[s.slug]:e.target.value}))} autoComplete="off"/>
+              <div className="card-actions"><Button kind="tertiary" size="sm" onClick={()=>void saveCredential(s.slug,s.name,'integration')} disabled={!keyValues[s.slug]?.trim()}>加密保存</Button><Button kind="secondary" size="sm" onClick={()=>void testConnection(s.slug,'integration')} disabled={!credentials.some(c=>c.slug===s.slug)}>连接测试</Button></div>
+            </Tile>)}</div></Tab></Tabs>
+            <Tile><h3>统一 AI 模型路由</h3><p>系统通过单一后端入口路由至 OpenAI、Gemini、DeepSeek、Claude、Workers AI。各供应商凭证独立保存，按用户隔离。</p><Select id="default-provider" labelText="默认模型 Provider" value={selectedProvider} onChange={e=>setSelectedProvider(e.target.value)}>{providers.map(p=><SelectItem key={p.slug} value={p.slug} text={p.name}/>)}</Select></Tile>
+          </section>}
+          {page==='projects' && <section className="module-stack">
+            <Tile><h2>创建研究项目</h2><div className="project-form">
+              <TextInput id="project-name" labelText="项目名称" placeholder="例如：美国站家居收纳市场机会研究" value={projectName} onChange={e=>setProjectName(e.target.value)}/>
+              <TextArea id="project-objective" labelText="研究目标与问题" placeholder="描述目标市场、产品品类、竞争格局、目标客户与需要回答的问题…" value={objective} onChange={e=>setObjective(e.target.value)} rows={4}/>
+              <TextInput id="project-regions" labelText="目标市场（逗号分隔）" value={regions} onChange={e=>setRegions(e.target.value)}/>
+              <fieldset className="platform-picker"><legend>研究平台</legend>{platforms.map(p=><Toggle key={p.slug} id={`platform-${p.slug}`} labelText={p.name} toggled={selectedPlatforms.includes(p.slug)} onToggle={on=>setSelectedPlatforms(v=>on?[...v,p.slug]:v.filter(x=>x!==p.slug))}/>)}</fieldset>
+              <Select id="plan-provider" labelText="生成研究计划的 AI Provider" value={selectedProvider} onChange={e=>setSelectedProvider(e.target.value)}>{providers.map(p=><SelectItem key={p.slug} value={p.slug} text={p.name}/>)}</Select>
+              <Button kind="primary" renderIcon={Ai} onClick={()=>void createProject()} disabled={!projectName.trim()||!objective.trim()||busy}>创建项目并生成 AI 计划</Button>
+            </div></Tile>
+            <h2>项目列表</h2>
+            {projects.map(p=><Tile key={p.id} className="list-tile"><div><h3>{p.name}</h3><p>{p.objective}</p><div className="tag-row">{p.target_regions.map(r=><Tag key={r}>{r}</Tag>)}<Tag type="blue">{p.status}</Tag></div></div><Button kind="ghost" onClick={()=>setPage('tasks')}>查看任务</Button></Tile>)}
+            <h2>等待人工审批的 AI 研究计划</h2>
+            {pendingPlans.map(p=><Tile key={p.id} className="list-tile"><div><h3>研究计划 · {projects.find(x=>x.id===p.project_id)?.name ?? p.project_id}</h3><p>{JSON.stringify(p.plan).slice(0,500)}</p><Tag type="warm-gray">待人工审批</Tag></div><Button kind="primary" onClick={()=>setApprovalPlan(p)}>审阅并审批</Button></Tile>)}
+          </section>}
+          {page==='tasks' && <section className="module-stack"><div className="module-heading"><div><h2>Apify 采集任务</h2><p>只有通过人工审批的研究计划才会产生可执行任务。</p></div><Button kind="tertiary" renderIcon={Renew} onClick={()=>void loadAll()}>刷新</Button></div>
+            <DataTable rows={pageRows.map(t=>({...t,id:t.id.slice(0,8),fullId:t.id}))} headers={[{key:'platform_slug',header:'平台'},{key:'status',header:'状态'},{key:'actor_id',header:'Apify Actor'},{key:'created_at',header:'创建时间'},{key:'actions',header:'操作'}]}>
+              {({rows,headers,getHeaderProps,getRowProps,getTableProps})=><Table {...getTableProps()}><TableHead><TableRow>{headers.map(h=><TableHeader {...getHeaderProps({header:h})} key={h.key}>{h.header}</TableHeader>)}</TableRow></TableHead><TableBody>{rows.map(row=><TableRow {...getRowProps({row})} key={row.id}>{row.cells.map(cell=><TableCell key={cell.id}>{cell.info.header==='actions'?<Button size="sm" kind="tertiary" renderIcon={Play} disabled={row.cells.find(c=>c.info.header==='status')?.value!=='queued'} onClick={()=>{const t=tasks.find(x=>x.id===row.fullId);if(t)void runTask(t)}}>执行</Button>:String(cell.value??'—')}</TableCell>)}</TableRow>)}</TableBody></Table>}
+            </DataTable>
+          </section>}
+          {page==='reports' && <section className="module-stack"><Tile><h2>市场研究报告</h2><p>研究项目、采集证据与 AI 分析完成后，在此生成可追溯的市场报告。</p><Tag type="cool-gray">报告模块骨架</Tag></Tile></section>}
         </div>
-      </main>
+      </Content>
+      {approvalPlan && <Modal open modalHeading="审批 AI 研究计划" primaryButtonText="批准并创建采集任务" secondaryButtonText="返回审阅" onRequestClose={()=>setApprovalPlan(null)} onRequestSubmit={()=>void approvePlan(approvalPlan)} primaryButtonDisabled={busy}>
+        <p>批准后系统会根据计划创建待执行任务。Apify 不会立即运行；每个任务仍需在采集任务中心单独启动。</p><pre className="plan-preview">{JSON.stringify(approvalPlan.plan,null,2)}</pre>
+      </Modal>}
     </div>
   );
 }
 
-function DashboardPage() {
-  return <>
-    <div className="kpi-grid">
-      <Kpi icon={<Folder size={22}/>} label="研究项目" value="—" note="等待建立首个项目" tone="blue"/>
-      <Kpi icon={<DataBase size={22}/>} label="追踪商品" value="—" note="平台数据尚未接入" tone="teal"/>
-      <Kpi icon={<Analytics size={22}/>} label="市场信号" value="—" note="等待数据采集" tone="purple"/>
-      <Kpi icon={<Task size={22}/>} label="运行任务" value="0" note="暂无执行中的任务" tone="green"/>
-    </div>
-    <div className="dashboard-grid">
-      <Tile className="panel market-panel"><div className="panel-heading"><div><h2><Globe size={18}/> 全球市场活动</h2><p>跨平台市场情报覆盖区域</p></div><Tag type="blue">数据接入后启用</Tag></div><div className="world-placeholder"><div className="world-grid"/><div className="world-copy"><Globe size={42}/><strong>Global Intelligence Layer</strong><span>等待首批平台数据进入 Synesis</span></div></div></Tile>
-      <Tile className="panel ai-panel"><div className="panel-heading"><div><h2><Ai size={18}/> AI 智能中心</h2><p>多模型服务连接状态</p></div><Tag type="cool-gray">配置中</Tag></div><div className="provider-mini-grid">{providers.slice(0,5).map(p => <div key={p.name}><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={28}/><span>{p.name.replace('Google ', '')}</span></div>)}</div><div className="panel-bottom-note">填写 API Key 后启用模型连接与智能路由</div></Tile>
-      <Tile className="panel trend-panel"><div className="panel-heading"><div><h2><ChartLine size={18}/> 市场趋势</h2><p>历史趋势分析 · 按平台比较</p></div><Tag type="cool-gray">暂无数据</Tag></div><div className="chart-placeholder"><div className="chart-lines"><span/><span/><span/><span/></div><div className="chart-empty">采集数据后生成趋势分析</div></div></Tile>
-      <Tile className="panel connections-panel"><div className="panel-heading"><div><h2><Api size={18}/> 数据连接</h2><p>项目基础设施与外部服务</p></div></div>{services.map(s => <div className="connection-row" key={s.name}><BrandIcon slug={s.slug} label={s.name} fallback={s.fallback} size={23}/><span>{s.name}</span><Tag type="cool-gray">待接入</Tag></div>)}</Tile>
-    </div>
-    <div className="panel-heading recent-heading"><div><h2><Document size={18}/> 最近研究项目</h2><p>研究项目中心创建后显示在这里</p></div><Button kind="ghost" size="sm" renderIcon={ArrowRight}>查看全部</Button></div>
-    <Tile className="empty-table"><Folder size={26}/><span>尚未创建研究项目</span><small>建立研究项目，开始组织跨平台采集与市场分析。</small></Tile>
-  </>;
-}
-
-function Kpi({ icon, label, value, note, tone }: { icon: ReactNode; label: string; value: string; note: string; tone: string }) {
-  return <Tile className="kpi-card"><div className={`kpi-icon ${tone}`}>{icon}</div><div><span>{label}</span><strong>{value}</strong><small>{note}</small></div></Tile>;
-}
-
+function message(e: unknown) { return e instanceof Error ? e.message : '发生未知错误，请稍后重试。'; }
 export default App;
