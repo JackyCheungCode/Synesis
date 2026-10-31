@@ -373,9 +373,12 @@ Deno.serve(async (req: Request) => {
         if (error) throw error;
         records.push(...(data ?? []).map(row => row.raw_data as Record<string, unknown>));
       }
+      const fieldCache = new WeakMap<object, Array<[string, unknown]>>();
       const pick = (row: Record<string, unknown>, patterns: RegExp[]) => {
-        const fields: Array<[string, unknown]> = [];
-        const visit = (value: unknown, path: string, depth: number) => {
+        let fields = fieldCache.get(row);
+        if (!fields) {
+          fields = [];
+          const visit = (value: unknown, path: string, depth: number) => {
           if (value === null || value === undefined || depth > 5) return;
           if (Array.isArray(value)) {
             if (value.every(item => item === null || ['string','number','boolean'].includes(typeof item))) {
@@ -390,8 +393,10 @@ Deno.serve(async (req: Request) => {
             return;
           }
           if (value !== '') fields.push([path, value]);
-        };
-        visit(row, '', 0);
+          };
+          visit(row, '', 0);
+          fieldCache.set(row, fields);
+        }
         for (const [path, value] of fields) {
           const leaf = path.split('.').pop() ?? path;
           if (patterns.some(pattern => pattern.test(leaf) || pattern.test(path))) return value;
