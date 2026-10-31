@@ -308,7 +308,7 @@ function App() {
         setNotice({kind:'error',text:`数据已汇总，但 AI 报告生成失败：${message(error)}。检查 AI Provider 配置后可重试。`});
       });
     }
-  },[projects,tasks,reports]);
+  },[projects,tasks,reports,selectedProvider,session?.user.id]);
 
   async function exportTaskResults(task: Task) {
     setBusy(true);
