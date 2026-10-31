@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspaceRoute, type WorkspacePage } from './lib/router';
 import { WorkspaceNavigation } from './components/WorkspaceNavigation';
 import { ResearchWizard, type ResearchProfile } from './features/research/ResearchWizard';
@@ -57,6 +57,8 @@ function App() {
   const [analytics, setAnalytics] = useState<any>(null);
   const [keyValues, setKeyValues] = useState<Record<string,string>>({});
   const [providerModelsList,setProviderModelsList]=useState<Record<string,Array<{id:string;name?:string;task?:string}>>>({});
+  const loadedProviderModels=useRef(new Set<string>());
+  const providerModelLoads=useRef(new Set<string>());
   const [selectedProviderModels,setSelectedProviderModels]=useState<Record<string,string>>({});
   const [selectedProvider, setSelectedProvider] = useState('openai');
   const [collectionSettings, setCollectionSettings] = useState<CollectionSettings>({ itemsPerPlatform:100, depth:'standard' });
@@ -101,6 +103,7 @@ function App() {
     finally { setBusy(false); }
   }
   useEffect(() => { void loadAll(); }, []);
+  useEffect(() => { if(page==='vault') credentials.filter(item=>item.kind==='provider').forEach(item=>void loadProviderModels(item.slug)); }, [page,credentials]);
   useEffect(() => { window.localStorage.setItem('synesis-theme', theme); }, [theme]);
   useEffect(() => {
     const saved = session?.user.user_metadata?.research_collection_settings;
@@ -131,16 +134,19 @@ function App() {
       setKeyValues(v => ({...v,[slug]:''}));
       setNotice({kind:'success',text:`${name} 凭证已加密保存，正在自动获取可用模型…`});
       await loadAll();
-      if(kind==='provider') await loadProviderModels(slug);
+      if(kind==='provider') await loadProviderModels(slug,true);
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
-  async function loadProviderModels(slug:string) {
+  async function loadProviderModels(slug:string,force=false) {
+    if(providerModelLoads.current.has(slug)||(!force&&loadedProviderModels.current.has(slug))) return;
+    providerModelLoads.current.add(slug);
     setBusy(true);
     try {
       const result=await api('models.list',{slug});
       const available=(result.models??[]) as Array<{id:string;name?:string;task?:string}>;
       setProviderModelsList(v=>({...v,[slug]:available}));
+      loadedProviderModels.current.add(slug);
       const current=String(result.selected_model??'');
       const next=available.some(item=>item.id===current)?current:(available[0]?.id??'');
       if(next) {
@@ -152,7 +158,7 @@ function App() {
         setNotice({kind:'warning',text:available.length?'模型列表已获取，请在“默认模型”下拉框中选择。':'已连接模型目录，但没有返回可用模型。请检查该 Provider 的模型权限、账户可用模型或模型目录响应。'});
       }
     } catch(e) { setNotice({kind:'error',text:`自动获取模型失败：${message(e)}。可修正凭证后重新保存，或点击“刷新模型列表”。`}); }
-    finally { setBusy(false); }
+    finally { providerModelLoads.current.delete(slug); setBusy(false); }
   }
   async function saveProviderModel(slug:string,model:string) {
     if(!model) return;
