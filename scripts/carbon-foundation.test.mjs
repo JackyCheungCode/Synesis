@@ -52,8 +52,9 @@ test('workspace theme and navigation expose accessible state', () => {
   assert.match(app, /cds--\$\{theme\}/);
   assert.match(app, /aria-expanded=\{navExpanded\}/);
   assert.match(navigation, /aria-current=\{page === target \? 'page' : undefined\}/);
-  assert.match(navigation, /event\.key === 'Escape'/);
-  assert.match(navigation, /inert=\{!open\}/);
+  assert.match(navigation, /<SideNav/);
+  assert.match(navigation, /isPersistent=\{false\}/);
+  assert.match(navigation, /onOverlayClick=\{onClose\}/);
 });
 
 test('custom selection and async controls expose selected and busy states', () => {
