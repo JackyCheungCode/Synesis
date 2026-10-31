@@ -29,7 +29,12 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
       expanded={open}
       isPersistent={false}
       onOverlayClick={closeAndFocusTrigger}
-      onToggle={(_event, value) => { if (!value) closeAndFocusTrigger(); }}
+      onToggle={(event, value) => {
+        if (!value) {
+          if (typeof event !== 'boolean' && event.type === 'keydown') closeAndFocusTrigger();
+          else onClose();
+        }
+      }}
     >
       <SideNavItems>
         <SideNavMenu
