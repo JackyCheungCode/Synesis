@@ -1,25 +1,30 @@
-# Synesis Design System — Modern Trade Intelligence Workbench
+# Synesis 独立设计系统
 
-## Approved direction
-Direction A · Light default · Dark supported · Balanced density. Synesis is a cross-border market intelligence workspace. Page titles are left aligned; navigation is deep-navy overlay; workspace surfaces use a neutral canvas, white panels, restrained borders and moderate radius. Electric blue is reserved for primary actions, with teal/amber/red for meaningful data states. DM Sans is the interface face; IBM Plex Mono is reserved for identifiers and raw data.
+## 产品体验
+Synesis 是综合型跨境商业智能工作台，围绕研究项目、数据采集、跨平台分析、商品情报和凭证管理组织任务。
 
-## Five-layer implementation
-1. Global Shell — header, overlay navigation, workspace canvas, theme preference and skip navigation.
-2. Page layouts — left-aligned title, task-first content, consistent spacing and responsive grids.
-3. Components — cards, inputs, buttons, tables, filters, notifications, dialogs and progress.
-4. Interaction states — loading, empty, error, success, disabled and busy feedback.
-5. Accessibility — visible focus, labels, keyboard reachability, live status, focus restoration and reduced motion.
+## 视觉语言
+- 默认浅色主题，支持深色主题。
+- 深海军蓝作为工作区品牌色，亮蓝用于主要操作，青绿/琥珀/红色仅表达状态。
+- DM Sans 用于界面文字，Manrope 用于标题；不加载 IBM 字体或第三方企业设计系统。
+- 页面标题左对齐；内容宽度充分利用视口，采用响应式栅格。
+- 导航为叠加式抽屉，不占用页面固定列宽。
+- 卡片使用轻边框、柔和阴影和一致圆角；避免过度装饰。
 
-## Page inventory
-| Area | Implementation |
-|---|---|
-| Global shell | Navy header, overlay navigation, light/dark theme tokens, skip link |
-| Intelligence overview | Welcome task panel, four KPIs, empty state, five-stage workflow |
-| Research workspace | Five-step workflow, intake accordion, profile confirmation, source tasks, result tables and analytics styled in new visual language |
-| Product library | Search toolbar, product cards, price-history table and pagination |
-| Collection settings | Defaults, record-count presets, depth choices, save action |
-| AI model & Key Vault | Provider and integration cards, encrypted credential workflow, default model routing |
-| Authentication | Existing authentication flow styled through Synesis surfaces |
+## 统一交互
+- 控件、表单、通知、弹窗、进度、表格使用 Synesis 自有原生组件。
+- 每个异步流程提供加载、成功、失败和空状态。
+- 所有交互支持键盘焦点、语义标签和 reduced-motion。
+- 视口覆盖 320、375、768、1024、1440 像素。
 
-## Acceptance
-CI and deployment must pass before marking deployed. Real browser visual, responsive and keyboard verification remains pending. Research wizard regression ID `0510ceeb-2942-4aec-af0c-949bc499f371` remains a required browser test; preserve the record.
+## 页面范围
+1. 登录与注册
+2. 情报总览
+3. 研究项目列表与五步研究流程
+4. 数据采集任务、日志、结果、跨平台分析与报告
+5. 标准化商品库与价格历史
+6. AI 模型凭证与数据平台连接
+7. 采集设置、全局搜索、审批和取消确认
+
+## 验收原则
+仅当源代码、依赖、样式、组件、图标、文档和自动化检查均不含历史 UI 框架或 IBM 字体依赖，且 CI 与部署成功后，才标记拆除完成。浏览器视觉验收需另行记录真实证据。

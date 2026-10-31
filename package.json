@@ -10,18 +10,15 @@
     "typecheck": "tsc -b",
     "deploy": "npm run build && wrangler deploy",
     "test:product-identity": "node --test scripts/product-identity.test.mjs",
-    "test:carbon-foundation": "node --test scripts/carbon-foundation.test.mjs"
+    "test:design-system": "node --test scripts/design-system.test.mjs"
   },
   "dependencies": {
-    "@carbon/icons-react": "11.91.0",
-    "@carbon/react": "1.119.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "@supabase/supabase-js": "2.118.0",
     "@types/leaflet": "^1.9.20",
     "leaflet": "^1.9.4",
-    "react-leaflet": "^5.0.0",
-    "@carbon/charts-react": "1.27.24"
+    "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
     "@types/react": "19.2.7",
