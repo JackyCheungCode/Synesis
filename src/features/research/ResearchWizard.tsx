@@ -183,6 +183,7 @@ function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:Res
  return 0;
 }
 const splitValues=(value:string)=>value.split(/\n|,/).map(v=>v.trim()).filter(Boolean);
+const formatPriceRange=(min:string|undefined,max:string|undefined,currency:string|undefined)=>{const values=[min,max].filter((value):value is string=>Boolean(value?.trim()));return values.length?values.join(' - ')+' '+(currency||'USD'):'';};
 export function ResearchWizard(props:Props) {
  const {projects,plans,tasks,reports,projectId,busy,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs,onSaveAnalytics,onGenerateReport,onSaveDraft}=props;
  const [brief,setBrief]=React.useState('');
@@ -226,7 +227,8 @@ export function ResearchWizard(props:Props) {
  const suggestedCount=profile?.dimensions.filter(item=>item.status==='suggested').length??0;
  const missingCount=profile?.dimensions.filter(item=>item.status==='needs_confirmation').length??0;
  const requiredReady=Boolean(formValues.keywords?.trim()&&formValues.countries?.trim()&&formValues.languages?.trim());
- const filledFieldCount=fieldSpecs.filter(([key])=>String(formValues[key]??(key==='other_research_notes'?brief:'' )).trim().length>0).length;
+ const getFieldValue=(key:string)=>key==='other_research_notes'?(brief.trim()||formValues[key]||''):(formValues[key]??'');
+ const filledFieldCount=fieldSpecs.filter(([key])=>getFieldValue(key).trim().length>0).length;
  const completeness=Math.round(filledFieldCount/fieldSpecs.length*100);
  const selectedLabels=splitValues(formValues.countries??'');
  const selectedCountryItems=countryOptions.filter(item=>selectedLabels.includes(item.text)||selectedLabels.includes(item.legacyText??'')||selectedLabels.includes(item.id));
@@ -235,7 +237,7 @@ export function ResearchWizard(props:Props) {
   ? selectedCountryItems.slice(0,3).map(item=>item.text).join('、')+(selectedCountryItems.length>3?' 等 '+selectedCountryItems.length+' 个地区':'')
   : '搜索并选择国家或地区';
  function createProfileFromForm():ResearchProfile {
-  const dimensions=fieldSpecs.filter(([key])=>String(formValues[key]??(key==='other_research_notes'?brief:'' )).trim()).map(([key,label])=>({key,label,values:splitValues(String(formValues[key]??(key==='other_research_notes'?brief:''))),status:'provided' as const}));
+  const dimensions=fieldSpecs.filter(([key])=>getFieldValue(key).trim()).map(([key,label])=>({key,label,values:splitValues(getFieldValue(key)),status:'provided' as const}));
   return {summary:'根据用户填写的结构化研究需求建立的研究画像。',dimensions,research_goals:splitValues(formValues.business_goals??''),assumptions:[],missing_information:[]};
  }
  function proceedToSources(){
@@ -278,9 +280,9 @@ export function ResearchWizard(props:Props) {
        <div className="research-fluid-field"><FluidTextInput id="intake-brands" labelText="品牌" value={formValues.brands??''} placeholder="输入品牌名称" onChange={(e:any)=>{setFormValues(v=>({...v,brands:e.target.value}));setProfile(null);}}/></div>
        <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-models" labelText="型号 / SKU / UPC / EAN" helperText="支持多行输入，每行填写一个型号或商品标识符。" rows={3} value={formValues.models_identifiers??''} onChange={(e:any)=>{setFormValues(v=>({...v,models_identifiers:e.target.value}));setProfile(null);}}/></div>
        <div className="research-fluid-field research-fluid-span"><label className="cds--label">价格范围与币种</label><div className="research-price-range">
-        <FluidNumberInput id="intake-price-min" label="最低价格" min={0} step={1} value={formValues.price_min??''} onChange={(e:any)=>{setFormValues(v=>({...v,price_min:e.target.value,price_range:[e.target.value,v.price_max].filter(Boolean).join(' - ')+(v.price_currency?' '+v.price_currency:'')}));setProfile(null);}}/>
-        <FluidNumberInput id="intake-price-max" label="最高价格" min={0} step={1} value={formValues.price_max??''} onChange={(e:any)=>{setFormValues(v=>({...v,price_max:e.target.value,price_range:[v.price_min,e.target.value].filter(Boolean).join(' - ')+(v.price_currency?' '+v.price_currency:'')}));setProfile(null);}}/>
-        <FluidDropdown id="intake-price-currency" titleText="币种" label="币种" items={toItems(['USD','EUR','CNY'])} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(['USD','EUR','CNY']).find(x=>x.id===(formValues.price_currency??'USD'))??toItems(['USD','EUR','CNY'])[0]} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,price_currency:selectedItem?.id??'USD',price_range:[v.price_min,v.price_max].filter(Boolean).join(' - ')+(selectedItem?.id?' '+selectedItem.id:'')}));setProfile(null);}}/>
+        <FluidNumberInput id="intake-price-min" label="最低价格" min={0} step={1} value={formValues.price_min??''} onChange={(e:any)=>{setFormValues(v=>({...v,price_min:e.target.value,price_range:formatPriceRange(e.target.value,v.price_max,v.price_currency)}));setProfile(null);}}/>
+        <FluidNumberInput id="intake-price-max" label="最高价格" min={0} step={1} value={formValues.price_max??''} onChange={(e:any)=>{setFormValues(v=>({...v,price_max:e.target.value,price_range:formatPriceRange(v.price_min,e.target.value,v.price_currency)}));setProfile(null);}}/>
+        <FluidDropdown id="intake-price-currency" titleText="币种" label="币种" items={toItems(['USD','EUR','CNY'])} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(['USD','EUR','CNY']).find(x=>x.id===(formValues.price_currency??'USD'))??toItems(['USD','EUR','CNY'])[0]} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,price_currency:selectedItem?.id??'USD',price_range:formatPriceRange(v.price_min,v.price_max,selectedItem?.id??'USD')}));setProfile(null);}}/>
        </div></div>
        <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-competitors" labelText="竞争对手" helperText="可按回车换行，也可使用逗号分隔品牌或企业名称。" rows={3} value={formValues.competitors??''} onChange={(e:any)=>{setFormValues(v=>({...v,competitors:e.target.value}));setProfile(null);}}/></div>
       </div>
