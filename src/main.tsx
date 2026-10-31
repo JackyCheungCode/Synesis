@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.scss';
+import '@carbon/charts-react/dist/styles.css';
 import './styles/carbon-foundation.scss';
 import App from './App';
 import { AuthProvider } from './auth/AuthProvider';
