@@ -161,28 +161,56 @@ function ResearchProgress({activeStep,maxUnlockedStep,stepReady}:{activeStep:num
   </ProgressIndicator>
  </Tile>;
 }
-type UnifiedResultRow={task_id:string;platform_slug:string;item_index:number;raw_data:unknown};
-const unifiedColumns:{label:string;patterns:RegExp[]}[]=[
- {label:'标题 / 主体名称',patterns:[/^(title|name|product.?name|item.?name|headline|job.?title|company.?name|app.?name|property.?name)$/i]},
- {label:'品牌 / 作者 / 来源',patterns:[/^(brand(name)?|author|creator|publisher|source|seller.?name|developer.?name|company)$/i]},
- {label:'描述 / 内容',patterns:[/^(description|summary|snippet|caption|text|content|excerpt)$/i]},
- {label:'价格 / 金额',patterns:[/^(price|sale.?price|current.?price|amount|salary|award.?amount|contract.?value)$/i]},
- {label:'评分',patterns:[/^(rating|stars|score|average.?rating|review.?score)$/i]},
- {label:'评论数',patterns:[/^review.?count$/i,/^reviews.?count$/i,/^comments?(?:.?count)?$/i,/^replies?(?:.?count)?$/i]},
- {label:'浏览 / 播放量',patterns:[/^views?(?:.?count)?$/i,/^play.?count$/i,/^video.?views?$/i,/^installs$/i,/^downloads$/i]},
- {label:'点赞数',patterns:[/^likes?(?:.?count)?$/i,/^digg.?count$/i,/^favorite.?count$/i]},
- {label:'地区 / 地址',patterns:[/^(location|address|city|country|region|headquarters)$/i]},
- {label:'日期',patterns:[/^(published.?at|created.?at|posted.?at|timestamp|date|updated.?at)$/i]},
- {label:'来源链接',patterns:[/^(url|link|permalink|source.?url|product.?url|article.?url|job.?url)$/i]},
+type UnifiedResultRow={task_id:string;platform_slug:string;item_index:number;raw_data:unknown;normalized?:{entity_type:string;canonical_key:string|null;normalized_data:Record<string,unknown>;field_sources:Record<string,string>;quality_score:number;warnings:string[];normalization_version:number}|null};
+const unifiedColumns:{label:string;key:string}[]=[
+ {label:'标题 / 主体名称',key:'title'},
+ {label:'品牌 / 来源',key:'brand'},
+ {label:'创作者',key:'creator'},
+ {label:'描述 / 内容',key:'description'},
+ {label:'商品类目 / 行业',key:'category'},
+ {label:'价格 / 薪酬',key:'price'},
+ {label:'币种',key:'currency'},
+ {label:'评分',key:'rating'},
+ {label:'评论数',key:'review_count'},
+ {label:'浏览 / 播放 / 下载',key:'views'},
+ {label:'点赞数',key:'likes'},
+ {label:'评论 / 回复数',key:'comments'},
+ {label:'分享数',key:'shares'},
+ {label:'地区 / 地址',key:'location'},
+ {label:'发布时间 / 日期',key:'published_at'},
+ {label:'来源链接',key:'source_url'},
+ {label:'来源记录 ID',key:'external_id'},
 ];
 function CrossPlatformResultsTable({rows}:{rows:UnifiedResultRow[]}) {
- const records=rows.map(row=>({meta:row,record:row.raw_data&&typeof row.raw_data==='object'&&!Array.isArray(row.raw_data)?row.raw_data as Record<string,unknown>:{}}));
- const columns=unifiedColumns.map(field=>({label:field.label,pattern:field.patterns})).filter(field=>records.some(({record})=>Object.keys(record).some(key=>field.pattern.some(pattern=>pattern.test(key)))));
- const read=(record:Record<string,unknown>,patterns:RegExp[])=>{const key=Object.keys(record).find(name=>patterns.some(pattern=>pattern.test(name)));return key?record[key]:null;};
+ const records=rows.map(row=>({
+  meta:row,
+  record:row.normalized?.normalized_data??(row.raw_data&&typeof row.raw_data==='object'&&!Array.isArray(row.raw_data)?row.raw_data as Record<string,unknown>:{}),
+ }));
+ const columns=unifiedColumns.filter(field=>records.some(({record})=>record[field.key]!==undefined&&record[field.key]!==null&&record[field.key]!==''));
  const format=(value:unknown)=>value===null||value===undefined||value===''?'—':typeof value==='object'?JSON.stringify(value):String(value);
  if(!records.length)return <div className="platform-results-empty"><p>当前项目还没有已同步的记录。</p><small>采集任务同步数据后，这里会自动汇总所有平台的共性字段。</small></div>;
- return <div className="cross-platform-results-wrap"><table className="cross-platform-results-table"><thead><tr><th>数据来源</th><th>记录序号</th>{columns.map(column=><th key={column.label}>{column.label}</th>)}</tr></thead><tbody>{records.map(({meta,record})=><tr key={meta.task_id+'-'+meta.item_index}><td><Tag type="blue">{meta.platform_slug}</Tag></td><td>{meta.item_index+1}</td>{columns.map(column=><td key={column.label} title={format(read(record,column.pattern))}>{format(read(record,column.pattern))}</td>)}</tr>)}</tbody></table></div>;
+ return <div className="cross-platform-results-wrap">
+  <div className="cross-platform-normalization-note">优先展示标准化字段 · 原始数据完整保留 · 悬停字段值可查看原始字段名</div>
+  <table className="cross-platform-results-table"><thead><tr><th>数据来源</th><th>实体类型</th><th>记录序号</th><th>数据质量</th>{columns.map(column=><th key={column.key}>{column.label}</th>)}</tr></thead>
+   <tbody>{records.map(({meta,record})=>{
+    const normalized=meta.normalized;
+    const warnings=normalized?.warnings??[];
+    return <tr key={meta.task_id+'-'+meta.item_index}>
+     <td><Tag type="blue">{meta.platform_slug}</Tag></td>
+     <td>{normalized?.entity_type??'待标准化'}</td>
+     <td>{meta.item_index+1}</td>
+     <td><span title={warnings.join('；')||'字段映射无警告'} className={warnings.length?'normalization-quality-warning':'normalization-quality-good'}>{normalized?normalized.quality_score+'%':'原始'}</span></td>
+     {columns.map(column=>{
+      const value=record[column.key];
+      const source=normalized?.field_sources?.[column.key];
+      return <td key={column.key} title={source?'原始字段：'+source+'\n'+format(value):format(value)}>{format(value)}</td>;
+     })}
+    </tr>;
+   })}</tbody>
+  </table>
+ </div>;
 }
+
 
 function ResearchAnalyticsView({data}:{data:any}) {
  const metrics=data?.metrics??{}, distributions=data?.distributions??{};
