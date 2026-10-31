@@ -7,7 +7,7 @@ import { CredentialVault } from './features/settings/CredentialVault';
 import { CollectionSettingsPage, type CollectionSettings } from './features/settings/CollectionSettingsPage';
 import { ProductLibrary } from './features/products/ProductLibrary';
 import {
-  Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content,
+  Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content, Grid, Column,
   Breadcrumb, BreadcrumbItem, Button, InlineNotification, Tag, TextInput, Tile,
   Modal, Loading, Accordion, AccordionItem,
 } from '@carbon/react';
@@ -566,8 +566,8 @@ function App() {
       </Header>
       <WorkspaceNavigation page={page} open={navExpanded} onNavigate={(target)=>navigate(target)} onClose={()=>setNavExpanded(false)}/>
       <Content id="main-content" tabIndex={-1} className="synesis-content">
-        <div className="page-wrap">
-          <div className="page-title-row">{page==='projects'&&projectId?<Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb>:<div><h1 className="cds--type-heading-04">{title[page]}</h1><p className="subheading">{pageDescription[page]}</p></div>}</div>
+        <Grid fullWidth className="synesis-page-grid"><Column sm={4} md={8} lg={16} xlg={16}><div className="page-wrap">
+          <div className="page-title-row">{page==='projects'&&projectId?<Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb>:<div className="page-heading-copy"><h1 className="cds--type-heading-04">{title[page]}</h1><p className="subheading">{pageDescription[page]}</p></div>}</div>
           {notice && <InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
           {busy && <Loading small withOverlay={false} description="处理中"/>}
           {page==='dashboard' && <WorkspaceDashboard projectCount={projects.length} pendingPlanCount={pendingPlans.length} taskCount={tasks.length} credentialCount={credentials.length} onCreateResearch={()=>navigate('projects')}/>}
@@ -614,7 +614,7 @@ function App() {
             onLoadHistory={(product,offset)=>void loadProductHistory(product,offset)}
             onSelectProduct={setSelectedProduct} onClearHistory={()=>setProductHistory([])}
           />}
-          </div>
+          </div></Column></Grid>
       </Content>
       {searchOpen && <Modal open modalHeading="全局搜索" primaryButtonText="完成" secondaryButtonText="清除" onRequestClose={()=>setSearchOpen(false)} onRequestSubmit={()=>setSearchOpen(false)} onSecondarySubmit={()=>setSearch('')}>
         <TextInput id="global-search" labelText="搜索项目、平台任务和已加载商品" placeholder="输入关键词" value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&search.trim()){setProductSearch(search.trim());setSearchOpen(false);navigate('products');void loadProducts(0,search.trim());}}}/>

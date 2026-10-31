@@ -635,3 +635,31 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   .synesis-app .module-heading { align-items: flex-start; flex-wrap: wrap; }
   .synesis-app .module-heading p { max-width: none; }
 }
+
+
+/* Carbon five-layer rebuild — shared page frame and left-aligned productive header. */
+.synesis-app .synesis-page-grid { width:100%; max-width:none; margin:0; }
+.synesis-app .synesis-page-grid > .cds--col { min-width:0; }
+.synesis-app .page-wrap {
+  width:100%; max-width:none; min-width:0; margin:0;
+  padding:var(--cds-spacing-05) 16px var(--cds-spacing-09);
+  text-align:left;
+}
+.synesis-app .page-title-row {
+  display:flex; width:100%; min-width:0; justify-content:flex-start;
+  align-items:flex-start; margin:0 0 var(--cds-spacing-07); text-align:left;
+}
+.synesis-app .page-heading-copy { width:100%; min-width:0; text-align:left; }
+.synesis-app .page-heading-copy h1 { margin:0; text-align:left; }
+.synesis-app .page-heading-copy .subheading {
+  max-width:48rem; margin:var(--cds-spacing-03) 0 0; text-align:left;
+}
+.synesis-app .page-wrap > :where(.module-stack,.dashboard-layout,.research-workspace,.product-library) {
+  width:100%; min-width:0; text-align:left;
+}
+@media (min-width:1056px) { .synesis-app .page-wrap { padding-inline:16px; } }
+@media (min-width:673px) and (max-width:1055px) { .synesis-app .page-wrap { padding-inline:8px; } }
+@media (max-width:672px) {
+  .synesis-app .page-wrap { padding-inline:0; }
+  .synesis-app .page-title-row { margin-bottom:var(--cds-spacing-05); }
+}
