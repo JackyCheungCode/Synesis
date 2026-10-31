@@ -604,7 +604,7 @@ function App() {
             onStepChange={(id,step)=>void updateResearchWorkflowStep(id,step)}
             onExportProjectResults={(id)=>void exportProjectResults(id)}
           />}
-          {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics} theme={theme}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
+          {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics} theme={theme === "dark" ? "g100" : "white"}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
           {page==='products' && <ProductLibrary
             products={products} productTotal={productTotal} productOffset={productOffset}
             productSearch={productSearch} setProductSearch={setProductSearch} busy={busy}
