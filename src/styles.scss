@@ -1376,7 +1376,7 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
 .synesis-app .research-country-option{display:flex;align-items:center;gap:9px;min-width:0;color:#161616}
 .synesis-app .research-country-flag{display:inline-grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border-radius:50%;overflow:hidden;font-size:18px;line-height:1}
 .synesis-app .research-country-map .leaflet-overlay-pane path{fill:#0f62fe!important;fill-opacity:.34!important;stroke:#0f62fe!important;stroke-width:2!important;stroke-opacity:1!important}
-.synesis-app .research-intake-actions{position:sticky!important;bottom:0!important}
+.synesis-app .research-intake-actions{position:static!important;inset:auto!important;top:auto!important;bottom:auto!important}
 
 /* Step 01 corrections: country values are rendered as explicit removable chips,
    while Carbon's internal selection tags are visually suppressed to avoid
@@ -1459,4 +1459,91 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
   }
   .synesis-app .research-selected-countries { gap: 6px; }
   .synesis-app .research-selected-country { max-width: 100%; }
+}
+
+/* Final regression fixes: selected country tokens remain readable and actions scroll with the document. */
+.synesis-app .research-intake-actions,
+.synesis-app .research-step-footer.research-intake-actions {
+  position: static !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: auto !important;
+  box-shadow: none !important;
+}
+.synesis-app .research-fluid-form .cds--multi-select .cds--list-box__field {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 4px !important;
+  min-height: 3rem !important;
+  height: auto !important;
+  padding: 6px 40px 6px 12px !important;
+  overflow: visible !important;
+  background: #ffffff !important;
+  color: #161616 !important;
+}
+.synesis-app .research-fluid-form .cds--multi-select .cds--tag,
+.synesis-app .research-fluid-form .cds--multi-select .cds--tag--filter {
+  display: inline-flex !important;
+  align-items: center !important;
+  max-width: 100% !important;
+  min-height: 24px !important;
+  margin: 2px !important;
+  padding: 2px 6px !important;
+  overflow: visible !important;
+  background: #e0e0e0 !important;
+  color: #161616 !important;
+  border: 1px solid #a8a8a8 !important;
+  border-radius: 0 !important;
+  opacity: 1 !important;
+}
+.synesis-app .research-fluid-form .cds--multi-select .cds--tag__label {
+  display: inline-block !important;
+  max-width: 100% !important;
+  color: #161616 !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  white-space: nowrap !important;
+  opacity: 1 !important;
+}
+.synesis-app .research-fluid-form .cds--multi-select .cds--tag__close-icon,
+.synesis-app .research-fluid-form .cds--multi-select .cds--tag__close-icon svg {
+  color: #161616 !important;
+  fill: #161616 !important;
+  opacity: 1 !important;
+}
+.synesis-app .research-country-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: #161616 !important;
+}
+.synesis-app .research-country-option .research-country-flag,
+.synesis-app .research-selected-country img {
+  display: block;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1px solid #d1d1d1;
+}
+@media (max-width: 672px) {
+  .synesis-app .research-intake-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    padding: 16px 0 20px !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border-top: 1px solid var(--cds-border-subtle);
+  }
+  .synesis-app .research-intake-actions .cds--btn {
+    width: 100%;
+    min-width: 0;
+  }
 }
