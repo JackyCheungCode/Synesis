@@ -224,7 +224,7 @@ export function ResearchWizard(props:Props) {
  const selectedCountryItems=countryOptions.filter(item=>selectedLabels.includes(item.text));
  const selectedCountryCodes=selectedCountryItems.map(item=>item.id);
  const selectedCountrySummary=selectedCountryItems.length
-  ? selectedCountryItems.slice(0,3).map(item=>item.flag+' '+item.text).join('、')+(selectedCountryItems.length>3?' 等 '+selectedCountryItems.length+' 个地区':'')
+  ? selectedCountryItems.slice(0,3).map(item=>item.text).join('、')+(selectedCountryItems.length>3?' 等 '+selectedCountryItems.length+' 个地区':'')
   : '搜索并选择国家或地区';
  function createProfileFromForm():ResearchProfile {
   const dimensions=fieldSpecs.filter(([key])=>String(formValues[key]??(key==='other_research_notes'?brief:'' )).trim()).map(([key,label])=>({key,label,values:splitValues(String(formValues[key]??(key==='other_research_notes'?brief:''))),status:'provided' as const}));
