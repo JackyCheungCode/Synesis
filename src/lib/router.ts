@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type WorkspacePage = 'dashboard' | 'projects' | 'products' | 'vault';
+export type WorkspacePage = 'dashboard' | 'projects' | 'products' | 'vault' | 'settings';
 export type WorkspaceRoute = { page: WorkspacePage; projectId?: string };
 
 function parseHash(): WorkspaceRoute {
@@ -8,7 +8,7 @@ function parseHash(): WorkspaceRoute {
   const page = parts[0];
   if (page === 'research' && parts[1]) return { page: 'projects', projectId: decodeURIComponent(parts[1]) };
   if (page === 'projects') return { page: 'projects' };
-  if (page === 'products' || page === 'vault') return { page };
+  if (page === 'products' || page === 'vault' || page === 'settings') return { page };
   return { page: 'dashboard' };
 }
 
