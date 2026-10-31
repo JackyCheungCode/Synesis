@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, SideNav, SideNavItems, SideNavLink, Content,
   Button, InlineNotification, Tag, TextInput, PasswordInput, Tile,
-  Toggle, Select, SelectItem, TextArea, Modal, Loading,
+  Toggle, Select, SelectItem, TextArea, Modal, Loading, Accordion, AccordionItem, Link,
 } from '@carbon/react';
 import {
-  Dashboard, Globe, Ai, Folder, ChartLine, Add, Renew, Play, Search as SearchIcon, UserAvatar,
+  Dashboard, Globe, Ai, Folder, ChartLine, Add, Renew, Play, Search as SearchIcon, UserAvatar, Close,
 } from '@carbon/icons-react';
 import { BrandIcon } from './components/BrandIcon';
 import { platforms, providers, apiIntegrations } from './data/catalog';
@@ -307,7 +307,7 @@ function App() {
           <SideNavLink renderIcon={Folder} isActive={page==='products'} onClick={()=>{navigate('products');void loadProducts(0);}}>标准化商品库</SideNavLink>
         </SideNavItems>
       </SideNav>
-      {navExpanded && <button className="nav-dismiss-overlay" aria-label="关闭导航菜单" onClick={()=>setNavExpanded(false)} />}
+      {navExpanded && <Button className="nav-dismiss-overlay" kind="ghost" hasIconOnly renderIcon={Close} iconDescription="关闭导航菜单" onClick={()=>setNavExpanded(false)} /> }
       <Content className="synesis-content">
         <div className="page-wrap">
           <div className="page-title-row"><div><p className="eyebrow">SYNESIS / WORKSPACE</p><h1>{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue">个人工作空间</Tag></div>
@@ -346,9 +346,9 @@ function App() {
               <Button kind="primary" renderIcon={Ai} onClick={()=>void createProject()} disabled={!projectName.trim()||!objective.trim()||busy}>创建项目并生成 AI 计划</Button>
             </div></Tile>
             <h2>项目列表</h2>
-            {projects.map(p=><Tile key={p.id} className="list-tile"><div><h3>{p.name}</h3><p>{p.objective}</p><div className="tag-row">{p.target_regions.map(r=><Tag key={r}>{r}</Tag>)}<Tag type="blue">{p.status}</Tag></div></div><Button kind="ghost" onClick={()=>navigate('tasks')}>查看任务</Button></Tile>)}
+            <div className="project-card-grid">{projects.map(p=><Tile key={p.id} className="list-tile"><div><h3>{p.name}</h3><p>{p.objective}</p><div className="tag-row">{p.target_regions.map(r=><Tag key={r}>{r}</Tag>)}<Tag type="blue">{p.status}</Tag></div></div><Button kind="ghost" onClick={()=>navigate('tasks')}>查看任务</Button></Tile>)}</div>
             <h2>等待人工审批的 AI 研究计划</h2>
-            {pendingPlans.map(p=><Tile key={p.id} className="list-tile"><div><h3>研究计划 · {projects.find(x=>x.id===p.project_id)?.name ?? p.project_id}</h3><p>{JSON.stringify(p.plan).slice(0,500)}</p><Tag type="warm-gray">待人工审批</Tag></div><Button kind="primary" onClick={()=>{setApprovalPlan(p);setApprovalPlanText(JSON.stringify(p.plan,null,2));}}>审阅并审批</Button></Tile>)}
+            <div className="project-card-grid">{pendingPlans.map(p=><Tile key={p.id} className="list-tile"><div><h3>研究计划 · {projects.find(x=>x.id===p.project_id)?.name ?? p.project_id}</h3><p>{JSON.stringify(p.plan).slice(0,500)}</p><Tag type="warm-gray">待人工审批</Tag></div><Button kind="primary" onClick={()=>{setApprovalPlan(p);setApprovalPlanText(JSON.stringify(p.plan,null,2));}}>审阅并审批</Button></Tile>)}</div>
           </section>}
           {page==='tasks' && <section className="module-stack"><div className="module-heading"><div><h2>Apify 采集任务</h2><p>只有通过人工审批的研究计划才会产生可执行任务。</p></div><Button kind="tertiary" renderIcon={Renew} onClick={()=>void loadAll()}>刷新</Button></div>
             <div className="task-table-wrap"><table className="task-table"><thead><tr><th>平台</th><th>状态</th><th>进度</th><th>结果接收</th><th>Apify Actor</th><th>创建时间</th><th>操作</th></tr></thead><tbody>
@@ -372,7 +372,7 @@ function App() {
             </Tile>)}</div>
             <div className="card-actions"><Button kind="secondary" size="sm" disabled={productOffset===0||busy} onClick={()=>void loadProducts(Math.max(0,productOffset-25))}>上一页</Button><Tag type="blue">{productTotal?Math.floor(productOffset/25)+1:0} / {Math.max(1,Math.ceil(productTotal/25))}</Tag><Button kind="secondary" size="sm" disabled={productOffset+25>=productTotal||busy} onClick={()=>void loadProducts(productOffset+25)}>下一页</Button></div>
             {selectedProduct&&<Tile className="history-tile"><div className="module-heading"><div><h2>{selectedProduct.title||'商品'} · 价格历史</h2><p>{selectedProduct.canonical_key}</p></div><Button kind="ghost" onClick={()=>{setSelectedProduct(null);setProductHistory([]);}}>关闭</Button></div>
-              {productHistory.length?<><div className="history-table-wrap"><table className="task-table"><thead><tr><th>采集时间</th><th>价格</th><th>币种</th><th>来源平台</th><th>平台商品 ID</th></tr></thead><tbody>{productHistory.map(item=><tr key={item.id}><td>{new Date(item.observed_at).toLocaleString()}</td><td>{Number(item.price).toLocaleString(undefined,{maximumFractionDigits:4})}</td><td>{item.currency}</td><td>{item.source?.platform_slug||'—'}</td><td>{item.source?.source_url?<a href={item.source.source_url} target="_blank" rel="noreferrer">{item.source.external_product_id}</a>:item.source?.external_product_id||'—'}</td></tr>)}</tbody></table></div>
+              {productHistory.length?<><div className="history-table-wrap"><table className="task-table"><thead><tr><th>采集时间</th><th>价格</th><th>币种</th><th>来源平台</th><th>平台商品 ID</th></tr></thead><tbody>{productHistory.map(item=><tr key={item.id}><td>{new Date(item.observed_at).toLocaleString()}</td><td>{Number(item.price).toLocaleString(undefined,{maximumFractionDigits:4})}</td><td>{item.currency}</td><td>{item.source?.platform_slug||'—'}</td><td>{item.source?.source_url?<Link href={item.source.source_url} target="_blank">{item.source.external_product_id}</Link>:item.source?.external_product_id||'—'}</td></tr>)}</tbody></table></div>
               <div className="card-actions"><Button kind="secondary" size="sm" disabled={productHistoryOffset===0||busy} onClick={()=>void loadProductHistory(selectedProduct,Math.max(0,productHistoryOffset-50))}>上一页</Button><Tag>{productHistoryOffset+1}–{Math.min(productHistoryOffset+50,productHistoryTotal)} / {productHistoryTotal}</Tag><Button kind="secondary" size="sm" disabled={productHistoryOffset+50>=productHistoryTotal||busy} onClick={()=>void loadProductHistory(selectedProduct,productHistoryOffset+50)}>下一页</Button></div></>:<p>暂无价格快照。需要采集记录包含可识别的价格与币种。</p>}
             </Tile>}
             {!products.length&&<Tile><p>暂时没有标准化商品。完成采集任务并成功同步结果后，符合身份识别条件的商品会自动进入商品库。</p></Tile>}
@@ -392,7 +392,7 @@ function App() {
       </Modal>}
       {resultTask && <Modal open modalHeading={`采集结果 · ${resultTask.platform_slug}`} passiveModal primaryButtonText="关闭" onRequestClose={()=>setResultTask(null)}>
         <p>任务 ID：{resultTask.id} · 当前页显示 {taskResults.length} 条；总计 {resultTotal.toLocaleString()} 条，已同步 {resultSynced.toLocaleString()} 条。</p>
-        <div className="card-actions"><Button kind="secondary" size="sm" disabled={resultPage===0} onClick={()=>void viewTaskResults(resultTask,resultPage-1)}>上一页</Button><Tag type="blue">第 {resultPage+1} / {Math.max(1,Math.ceil(resultTotal/100))} 页</Tag><Button kind="secondary" size="sm" disabled={(resultPage+1)*100>=resultSynced} onClick={()=>void viewTaskResults(resultTask,resultPage+1)}>下一页</Button><Button kind="tertiary" size="sm" onClick={()=>void exportTaskResults(resultTask)}>导出已接收 CSV</Button></div><RawResultsTable rows={taskResults}/><details className="raw-json-details"><summary>查看完整原始 JSON</summary><pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre></details>
+        <div className="card-actions"><Button kind="secondary" size="sm" disabled={resultPage===0} onClick={()=>void viewTaskResults(resultTask,resultPage-1)}>上一页</Button><Tag type="blue">第 {resultPage+1} / {Math.max(1,Math.ceil(resultTotal/100))} 页</Tag><Button kind="secondary" size="sm" disabled={(resultPage+1)*100>=resultSynced} onClick={()=>void viewTaskResults(resultTask,resultPage+1)}>下一页</Button><Button kind="tertiary" size="sm" onClick={()=>void exportTaskResults(resultTask)}>导出已接收 CSV</Button></div><RawResultsTable rows={taskResults}/><Accordion><AccordionItem title="查看完整原始 JSON"><pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre></AccordionItem></Accordion>
       </Modal>}
       {approvalPlan && <Modal open modalHeading="审批 AI 研究计划" primaryButtonText="批准并创建采集任务" secondaryButtonText="返回审阅" onRequestClose={()=>setApprovalPlan(null)} onRequestSubmit={()=>void approvePlan(approvalPlan)} primaryButtonDisabled={busy}>
         <p>请审阅研究范围与采集任务。AI 不会猜测 Apify Actor ID；请在下方 JSON 的 platform_tasks[].actor_id 填入你确认的 Actor ID。批准后只创建待执行任务，不会自动启动 Apify。</p><TextArea id="approval-plan-json" labelText="研究计划（可编辑 JSON）" rows={14} value={approvalPlanText} onChange={e=>setApprovalPlanText(e.target.value)} />
