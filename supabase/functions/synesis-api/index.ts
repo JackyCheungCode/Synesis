@@ -411,7 +411,7 @@ Deno.serve(async (req: Request) => {
                 }
                 parsed.searchParams.sort();
                 if((parsed.protocol==='https:'&&parsed.port==='443')||(parsed.protocol==='http:'&&parsed.port==='80')) parsed.port='';
-                if(parsed.pathname.length>1) parsed.pathname=parsed.pathname.replace(/\\/+$/,'');
+                if(parsed.pathname.length>1) parsed.pathname=parsed.pathname.replace(/\/+$/,'');
                 return parsed.toString();
               } catch { return null; }
             };
