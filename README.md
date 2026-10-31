@@ -42,7 +42,8 @@ Global Trade Intelligence Platform.
 - Existing Worker script name: `synesis`.
 - Existing workers.dev host: `https://synesis.xg-y.workers.dev`.
 - No custom domain or DNS zone was created.
-- The current deployed Worker still serves the earlier standalone preview shell. The React/Carbon app and authenticated backend are in GitHub/Supabase; the React build has not yet been deployed to the existing Worker.
+- The Worker source now serves the Vite build through the existing `ASSETS` binding; the deployment workflow targets the same `synesis` Worker and keeps `workers_dev` enabled without creating a custom domain.
+- GitHub Actions deploys after a successful build only when repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are configured. Without those secrets, deployment is explicitly skipped and the current live preview remains unchanged.
 
 ## Local development
 1. Copy `.env.example` to `.env.local` (the existing public Supabase project values are also used as build fallbacks).
