@@ -472,3 +472,135 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   .auth-card h1 { font-size: 42px; }
   .auth-side-copy { display: none; }
 }
+
+
+/* L-02 Dashboard — page-scoped Carbon layout and semantic workflow. */
+.synesis-app .dashboard-layout {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: var(--cds-spacing-05);
+  min-width: 0;
+}
+.synesis-app .dashboard-metrics {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--cds-spacing-04);
+  min-width: 0;
+}
+.synesis-app .dashboard-metric,
+.synesis-app .dashboard-workflow-tile {
+  min-width: 0;
+  padding: var(--cds-spacing-05);
+  color: var(--cds-text-primary);
+  background: var(--cds-layer-01);
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 0;
+  box-shadow: none;
+}
+.synesis-app .dashboard-metric dl { margin: 0; }
+.synesis-app .dashboard-metric-label {
+  margin: 0;
+  color: var(--cds-text-secondary);
+  font-size: 12px;
+  line-height: 1.33;
+  font-weight: 400;
+  letter-spacing: 0.32px;
+}
+.synesis-app .dashboard-metric-value {
+  margin: var(--cds-spacing-03) 0 0;
+  color: var(--cds-text-primary);
+  font-size: 42px;
+  line-height: 1.2;
+  font-weight: 300;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.synesis-app .dashboard-metric-description {
+  margin: var(--cds-spacing-04) 0 0;
+  color: var(--cds-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  letter-spacing: 0.16px;
+}
+.synesis-app .dashboard-workflow { grid-column: 1 / -1; min-width: 0; }
+.synesis-app .dashboard-workflow-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cds-spacing-05);
+}
+.synesis-app .dashboard-workflow-heading h2 {
+  margin: 0;
+  color: var(--cds-text-primary);
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.synesis-app .dashboard-workflow-heading p,
+.synesis-app .dashboard-workflow-note {
+  margin: var(--cds-spacing-02) 0 0;
+  color: var(--cds-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  letter-spacing: 0.16px;
+}
+.synesis-app .dashboard-workflow-heading .cds--btn {
+  min-height: 48px;
+  border-radius: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0.16px;
+}
+.synesis-app .dashboard-workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--cds-spacing-03);
+  margin: var(--cds-spacing-06) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.synesis-app .dashboard-workflow-steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--cds-spacing-03);
+  min-width: 0;
+  min-height: 56px;
+  padding: var(--cds-spacing-03);
+  color: var(--cds-text-primary);
+  background: var(--cds-background);
+  border: 1px solid var(--cds-border-subtle);
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: 0.16px;
+  overflow-wrap: anywhere;
+}
+.synesis-app .dashboard-step-index {
+  flex: 0 0 auto;
+  color: var(--cds-text-secondary);
+  font-size: 12px;
+  line-height: 1.33;
+  letter-spacing: 0.32px;
+  font-variant-numeric: tabular-nums;
+}
+.synesis-app .dashboard-workflow-note { margin-top: var(--cds-spacing-05); }
+@media (max-width: 1055px) {
+  .synesis-app .dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .synesis-app .dashboard-workflow-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 672px) {
+  .synesis-app .dashboard-layout { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--cds-spacing-04); }
+  .synesis-app .dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--cds-spacing-03); }
+  .synesis-app .dashboard-metric,
+  .synesis-app .dashboard-workflow-tile { padding: var(--cds-spacing-04); }
+  .synesis-app .dashboard-metric-value { font-size: 28px; }
+  .synesis-app .dashboard-metric-description { overflow-wrap: anywhere; }
+  .synesis-app .dashboard-workflow-heading { align-items: stretch; flex-direction: column; }
+  .synesis-app .dashboard-workflow-heading .cds--btn { width: 100%; max-width: none; }
+  .synesis-app .dashboard-workflow-steps { grid-template-columns: minmax(0, 1fr); gap: var(--cds-spacing-02); margin-top: var(--cds-spacing-05); }
+  .synesis-app .dashboard-workflow-steps li { min-height: 48px; }
+}
