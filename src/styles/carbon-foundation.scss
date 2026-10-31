@@ -29,6 +29,46 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 .synesis-app :where(p,small,.subheading,.eyebrow,.metric-label,.collection-setting-heading p,.collection-depth-descriptions p) {
   color: var(--cds-text-secondary);
 }
+.synesis-app .synesis-nav-panel {
+  color: var(--cds-text-primary);
+  background: var(--cds-layer);
+  border-right: 1px solid var(--cds-border-subtle);
+  box-shadow: none;
+}
+.synesis-app .synesis-nav-heading {
+  color: var(--cds-text-primary);
+  border-bottom: 1px solid var(--cds-border-subtle);
+}
+.synesis-app .synesis-nav-heading svg { color: var(--cds-icon-primary); }
+.synesis-app .synesis-nav-leaf {
+  display: flex;
+  width: 100%;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: var(--cds-spacing-03) var(--cds-spacing-05);
+  border: 0;
+  border-radius: 0;
+  color: var(--cds-text-secondary);
+  background: transparent;
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+.synesis-app .synesis-nav-leaf:hover {
+  color: var(--cds-text-primary);
+  background: var(--cds-layer-hover);
+}
+.synesis-app .synesis-nav-leaf.is-active {
+  color: var(--cds-text-primary);
+  background: var(--cds-layer-selected);
+  box-shadow: inset 3px 0 var(--cds-interactive);
+  font-weight: 600;
+}
+.synesis-app .synesis-nav-leaf:focus-visible { outline: 2px solid var(--cds-focus); outline-offset: -2px; }
+.synesis-app .synesis-nav-backdrop { background: rgba(0,0,0,.32); }
+.synesis-app.cds--g100 { color-scheme: dark; }
+.synesis-app.cds--white { color-scheme: light; }
 .synesis-app .cds--header {
   color: var(--cds-text-primary);
   background: var(--cds-layer);
