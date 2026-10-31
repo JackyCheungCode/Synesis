@@ -278,7 +278,7 @@ Deno.serve(async (req: Request) => {
       if(error||!plan||plan.status!=='pending_approval') return json({error:'研究计划不存在或已处理'},409);
       const approvedContent = plan.plan as Record<string,unknown>;
       if (!Array.isArray(approvedContent.platform_tasks) || approvedContent.platform_tasks.length===0) return json({error:'研究计划没有可执行的采集任务'},400);
-      const items=approvedContent.platform_tasks as Array<{platform_slug?:string;actor_id?:string|null;input?:Record<string,unknown>}>;
+      const items=approvedContent.platform_tasks as Array<{platform_slug?:string;actor_id?:string|null;input?:Record<string,unknown>;schema_valid?:boolean;input_schema?:CompactInputSchema}>;
       if(items.some(item=>!item.platform_slug || typeof item.actor_id!=='string' || !item.actor_id.trim() || !item.input || typeof item.input!=='object' || Array.isArray(item.input) || item.schema_valid!==true || !item.input_schema)) {
         return json({error:'研究计划缺少来自 Apify Store 的有效 Actor 或未通过输入 Schema 校验。系统不会执行未经验证的采集配置。'},409);
       }
