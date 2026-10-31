@@ -17,6 +17,7 @@ type Credential = { slug: string; name: string; kind: 'provider' | 'integration'
 type Project = { id: string; name: string; objective: string; status: string; target_regions: string[]; platform_slugs: string[] };
 type Plan = { id: string; project_id: string; status: string; plan: Record<string, unknown>; estimated_cost: number | null; created_at: string };
 type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string; progress?: number; result_count?: number; run_status?: string | null; external_run_id?: string | null; error_message?: string | null; finished_at?: string | null; result_synced_count?: number };
+type MarketReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; content:Record<string,unknown> };
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vuyyaqsmlzixhdjvaidj.supabase.co';
 const fnUrl = `${supabaseUrl}/functions/v1/synesis-api`;
@@ -37,6 +38,7 @@ function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [reports, setReports] = useState<MarketReport[]>([]);
   const [resultTask, setResultTask] = useState<Task|null>(null);
   const [taskResults, setTaskResults] = useState<unknown[]>([]);
   const [resultPage, setResultPage] = useState(0);
@@ -70,14 +72,15 @@ function App() {
   async function loadAll() {
     setBusy(true);
     try {
-      const [p, pl, t, c] = await Promise.all([
+      const [p, pl, t, c, r] = await Promise.all([
         supabase.from('research_projects').select('id,name,objective,status,target_regions,platform_slugs').order('updated_at',{ascending:false}),
         supabase.from('ai_research_plans').select('id,project_id,status,plan,estimated_cost,created_at').order('created_at',{ascending:false}),
         supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at,progress,result_count,result_synced_count,run_status,external_run_id,error_message,finished_at').order('created_at',{ascending:false}),
         api('credentials.list'),
+        supabase.from('market_reports').select('id,title,status,created_at,project_id,content').order('created_at',{ascending:false}),
       ]);
-      if (p.error) throw p.error; if (pl.error) throw pl.error; if (t.error) throw t.error;
-      setProjects(p.data ?? []); setPlans(pl.data ?? []); setTasks(t.data ?? []); setCredentials(c.credentials ?? []);
+      if (p.error) throw p.error; if (pl.error) throw pl.error; if (t.error) throw t.error; if (r.error) throw r.error;
+      setProjects(p.data ?? []); setPlans(pl.data ?? []); setTasks(t.data ?? []); setCredentials(c.credentials ?? []); setReports(r.data ?? []);
     } catch (e) { setNotice({kind:'error',text: message(e)}); }
     finally { setBusy(false); }
   }
@@ -171,6 +174,25 @@ function App() {
       setResultTotal(Number(result.total ?? 0));
       setResultSynced(Number(result.synced ?? 0));
       setResultTask(task);
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+
+  async function saveAnalyticsReport() {
+    const task=tasks.find(item=>item.id===analyticsTaskId);
+    if(!task||!analytics||!session?.user.id) return;
+    setBusy(true);
+    try {
+      const now=new Date().toISOString();
+      const {error}=await supabase.from('market_reports').insert({
+        user_id:session.user.id,project_id:task.project_id,
+        title:`${task.platform_slug} 产品数据分析 · ${now.slice(0,10)}`,report_type:'dataset_analytics',
+        content:analytics,evidence:[{task_id:task.id,platform_slug:task.platform_slug,result_count:task.result_count,result_synced_count:task.result_synced_count}],
+        status:'generated',generated_at:now,
+      });
+      if(error) throw error;
+      setNotice({kind:'success',text:'分析快照已保存到市场研究报告。'});
+      await loadAll();
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
@@ -291,8 +313,8 @@ function App() {
               <Select id="analytics-task" labelText="选择已完成采集的数据集" value={analyticsTaskId} onChange={e=>{setAnalyticsTaskId(e.target.value);setAnalytics(null);}}><SelectItem value="" text="请选择采集任务"/>{tasks.filter(t=>t.status==='succeeded').map(t=><SelectItem key={t.id} value={t.id} text={`${t.platform_slug} · ${t.id.slice(0,8)} · ${t.result_synced_count??0} 条`}/>)}</Select>
               <Button kind="primary" renderIcon={ChartLine} disabled={!analyticsTaskId||busy} onClick={()=>void loadAnalytics(analyticsTaskId)}>生成多维分析</Button>
             </Tile>
-            {analytics && <AnalyticsDashboard data={analytics}/>}
-            <Tile><h2>市场研究报告</h2><p>后续报告将引用这里的统计口径、原始采集记录和数据质量指标，保证结论可追溯。</p><Tag type="cool-gray">报告生成持续完善中</Tag></Tile>
+            {analytics && <><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存分析快照为报告</Button></>}
+            <Tile><h2>已保存的市场研究报告</h2>{reports.length?reports.map(report=><div className="report-row" key={report.id}><div><strong>{report.title}</strong><p>{new Date(report.created_at).toLocaleString()} · {report.status}</p></div><Tag type="green">已保存</Tag></div>):<p>暂无报告。选择数据集生成分析后，可将分析快照保存到这里。</p>}</Tile>
           </section>}
         </div>
       </Content>
