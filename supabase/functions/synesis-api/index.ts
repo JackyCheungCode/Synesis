@@ -431,15 +431,24 @@ Deno.serve(async (req: Request) => {
         const match = value.replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
         return match ? Number(match[0]) : null;
       };
-      const priceValues: number[] = [];
-      const ratingValues: number[] = [];
-      const reviewValues: number[] = [];
+      const ratingStats = {sum:0,count:0};
+      const reviewStats = {sum:0,count:0};
       const brands = new Map<string, number>();
       const categories = new Map<string, number>();
       const words = new Map<string, number>();
-      const currencyPrices = new Map<string, number[]>();
+      const MAX_DISTINCT = 5000;
+      const incrementBounded = (map:Map<string,number>, key:string) => {
+        if (map.has(key)) { map.set(key,(map.get(key)??0)+1); return; }
+        if (map.size < MAX_DISTINCT) { map.set(key,1); return; }
+        let minKey:string|undefined, minCount=Infinity;
+        for (const [candidate,count] of map) if (count < minCount) { minKey=candidate; minCount=count; }
+        if (minKey !== undefined) { map.delete(minKey); map.set(key,minCount+1); }
+      };
+      const SAMPLE_LIMIT = 10000;
+      const currencyStats = new Map<string,{count:number;sum:number;min:number;max:number;sample:number[];bands:number[]}>();
+      let priceCount = 0;
       const fieldCounts = { title:0, price:0, currency:0, rating:0, reviews:0, brand:0, category:0, image:0, link:0, sku:0, description:0, sales:0, sales_rank:0, stock:0 };
-      const trendMap = new Map<string, {count:number;prices:number[]}>();
+      const trendMap = new Map<string, {count:number;priceCount:number;priceSum:number}>();
       const funnel = { total: 0, titled: 0, priced: 0, rated: 0, imaged: 0, linked: 0 };
       const stop = new Set(['the','and','for','with','from','this','that','you','your','new','pack','set','inch','inches','of','to','a','an','on','by','is','are','（','）']);
       for (let offset = 0; offset < total; offset += pageSize) {
@@ -472,21 +481,28 @@ Deno.serve(async (req: Request) => {
           const date = new Date(typeof rawTime === 'number' && Number.isFinite(rawTime) ? (rawTime < 100000000000 ? rawTime * 1000 : rawTime) : NaN);
           if (!Number.isNaN(date.getTime())) {
             const key = date.toISOString().slice(0,10);
-            const point = trendMap.get(key) ?? {count:0,prices:[]};
+            const point = trendMap.get(key) ?? {count:0,priceCount:0,priceSum:0};
             point.count++;
-            if (price !== null && price >= 0) point.prices.push(price);
+            if (price !== null && price >= 0) { point.priceCount++; point.priceSum += price; }
             trendMap.set(key,point);
           }
         }
         if (title) { funnel.titled++; fieldCounts.title++; }
         if (price !== null && price >= 0) {
-          priceValues.push(price); funnel.priced++; fieldCounts.price++;
-          const group = currencyPrices.get(currency) ?? [];
-          group.push(price); currencyPrices.set(currency, group);
+          priceCount++; funnel.priced++; fieldCounts.price++;
+          let group = currencyStats.get(currency);
+          if (!group) { group={count:0,sum:0,min:price,max:price,sample:[],bands:[0,0,0,0,0]}; currencyStats.set(currency,group); }
+          group.count++; group.sum+=price; group.min=Math.min(group.min,price); group.max=Math.max(group.max,price);
+          const bandIndex=price<25?0:price<50?1:price<100?2:price<250?3:4; group.bands[bandIndex]++;
+          if (group.sample.length < SAMPLE_LIMIT) group.sample.push(price);
+          else {
+            const sampleIndex=Math.floor(Math.random()*group.count);
+            if (sampleIndex < SAMPLE_LIMIT) group.sample[sampleIndex]=price;
+          }
         }
         if (currencyValue) fieldCounts.currency++;
-        if (rating !== null && rating >= 0) { ratingValues.push(rating); funnel.rated++; fieldCounts.rating++; }
-        if (reviews !== null && reviews >= 0) { reviewValues.push(reviews); fieldCounts.reviews++; }
+        if (rating !== null && rating >= 0) { ratingStats.sum+=rating; ratingStats.count++; funnel.rated++; fieldCounts.rating++; }
+        if (reviews !== null && reviews >= 0) { reviewStats.sum+=reviews; reviewStats.count++; fieldCounts.reviews++; }
         if (image) { funnel.imaged++; fieldCounts.image++; }
         if (link) { funnel.linked++; fieldCounts.link++; }
         if (brand) fieldCounts.brand++;
@@ -496,36 +512,34 @@ Deno.serve(async (req: Request) => {
         if (sales !== null && sales >= 0) fieldCounts.sales++;
         if (salesRank !== null && salesRank >= 0) fieldCounts.sales_rank++;
         if (stock !== null && stock >= 0) fieldCounts.stock++;
-        if (brand) { const key=String(brand).trim(); brands.set(key,(brands.get(key)??0)+1); }
-        if (category) { const key=String(category).trim(); categories.set(key,(categories.get(key)??0)+1); }
+        if (brand) incrementBounded(brands,String(brand).trim());
+        if (category) incrementBounded(categories,String(category).trim());
         const textValue = [title, category, brand].filter(Boolean).join(' ').toLowerCase();
         for (const word of textValue.match(/[a-z0-9\u4e00-\u9fff]{2,}/g) ?? []) {
-          if (!stop.has(word) && !/^\d+$/.test(word)) words.set(word,(words.get(word)??0)+1);
+          if (!stop.has(word) && !/^\d+$/.test(word)) incrementBounded(words,word);
         }
       }
       }
       funnel.total = analyzed;
-      const comparableCurrency = currencyPrices.size === 1 && !currencyPrices.has('UNKNOWN')
-        ? [...currencyPrices.keys()][0] : null;
-      const comparablePrices = comparableCurrency ? (currencyPrices.get(comparableCurrency) ?? []) : [];
-      const sorted = [...comparablePrices].sort((a,b)=>a-b);
+      const comparableCurrency = currencyStats.size === 1 && !currencyStats.has('UNKNOWN')
+        ? [...currencyStats.keys()][0] : null;
+      const comparableStats = comparableCurrency ? currencyStats.get(comparableCurrency) : null;
+      const sorted = comparableStats ? [...comparableStats.sample].sort((a,b)=>a-b) : [];
       const percentile = (p:number) => sorted.length ? sorted[Math.min(sorted.length-1,Math.floor((sorted.length-1)*p))] : null;
-      const average = (values:number[]) => values.length ? values.reduce((sum,value)=>sum+value,0)/values.length : null;
+      const average = (sum:number,count:number) => count ? sum/count : null;
       const top = (map:Map<string,number>) => [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10).map(([label,count])=>({label,count}));
-      const trends = [...trendMap.entries()].sort((a,b)=>a[0].localeCompare(b[0])).slice(-30).map(([date,point])=>({date,count:point.count,average_price:average(point.prices)}));
-      const makeBands = (values:number[]) => [
-        {label:'0–25',count:values.filter(v=>v>=0&&v<25).length},
-        {label:'25–50',count:values.filter(v=>v>=25&&v<50).length},
-        {label:'50–100',count:values.filter(v=>v>=50&&v<100).length},
-        {label:'100–250',count:values.filter(v=>v>=100&&v<250).length},
-        {label:'250+',count:values.filter(v=>v>=250).length},
+      const trends = [...trendMap.entries()].sort((a,b)=>a[0].localeCompare(b[0])).slice(-30).map(([date,point])=>({date,count:point.count,average_price:average(point.priceSum,point.priceCount)}));
+      const makeBands = (counts:number[]) => [
+        {label:'0–25',count:counts[0]},{label:'25–50',count:counts[1]},
+        {label:'50–100',count:counts[2]},{label:'100–250',count:counts[3]},
+        {label:'250+',count:counts[4]},
       ];
-      const bands = comparableCurrency ? makeBands(comparablePrices) : [];
-      const bandsByCurrency = [...currencyPrices.entries()].map(([currency,values])=>({currency,bands:makeBands(values)}));
+      const bands = comparableStats ? makeBands(comparableStats.bands) : [];
+      const bandsByCurrency = [...currencyStats.entries()].map(([currency,stats])=>({currency,bands:makeBands(stats.bands)}));
       return json({
         task, coverage:{analyzed,available:total,complete:analyzed>=total},
-        metrics:{average_price:average(comparablePrices),min_price:sorted.length?sorted[0]:null,max_price:sorted.length?sorted[sorted.length-1]:null,median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),price_currency:comparableCurrency,price_comparable:Boolean(comparableCurrency),average_rating:average(ratingValues),average_reviews:average(reviewValues),price_count:priceValues.length,comparable_price_count:comparablePrices.length,rating_count:ratingValues.length,review_count:reviewValues.length},
-        distributions:{price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),price_by_currency:[...currencyPrices.entries()].map(([currency,values])=>({currency,count:values.length,average:average(values),min:Math.min(...values),max:Math.max(...values)})).sort((a,b)=>b.count-a.count)},
+        metrics:{average_price:comparableStats?average(comparableStats.sum,comparableStats.count):null,min_price:comparableStats?.min??null,max_price:comparableStats?.max??null,median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),price_currency:comparableCurrency,price_comparable:Boolean(comparableCurrency),percentiles_approximate:true,average_rating:average(ratingStats.sum,ratingStats.count),average_reviews:average(reviewStats.sum,reviewStats.count),price_count:priceCount,comparable_price_count:comparableStats?.count??0,rating_count:ratingStats.count,review_count:reviewStats.count},
+        distributions:{price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),price_by_currency:[...currencyStats.entries()].map(([currency,stats])=>({currency,count:stats.count,average:average(stats.sum,stats.count),min:stats.min,max:stats.max})).sort((a,b)=>b.count-a.count)},
         trends,
         funnel, field_counts:fieldCounts,
         quality:{title_rate:analyzed?fieldCounts.title/analyzed:0,price_rate:analyzed?fieldCounts.price/analyzed:0,currency_rate:analyzed?fieldCounts.currency/analyzed:0,rating_rate:analyzed?fieldCounts.rating/analyzed:0,reviews_rate:analyzed?fieldCounts.reviews/analyzed:0,brand_rate:analyzed?fieldCounts.brand/analyzed:0,category_rate:analyzed?fieldCounts.category/analyzed:0,image_rate:analyzed?fieldCounts.image/analyzed:0,link_rate:analyzed?fieldCounts.link/analyzed:0,sku_rate:analyzed?fieldCounts.sku/analyzed:0,description_rate:analyzed?fieldCounts.description/analyzed:0,sales_rate:analyzed?fieldCounts.sales/analyzed:0,sales_rank_rate:analyzed?fieldCounts.sales_rank/analyzed:0,stock_rate:analyzed?fieldCounts.stock/analyzed:0}
