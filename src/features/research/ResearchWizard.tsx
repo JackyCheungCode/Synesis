@@ -53,7 +53,9 @@ const fieldSpecs=[
  ['usage_scenarios','使用场景','例如：上班族、长时间离家'],
  ['logistics_attributes','包装与物流属性','例如：易碎、带电池、体积重量'],
  ['exclusions','排除条件','例如：排除二手商品、低评分商品'],
- ['purchase_requirements','采购数量与成本要求','例如：首单 500 件，目标 FOB 成本'],\n ['business_goals','商业目标与研究问题','例如：寻找新品机会、评估进入德国市场的可行性'],\n ['other_constraints','其他约束条件','填写其他必须遵守的研究限制'],
+ ['purchase_requirements','采购数量与成本要求','例如：首单 500 件，目标 FOB 成本'],
+ ['business_goals','商业目标与研究问题','例如：寻找新品机会、评估进入德国市场的可行性'],
+ ['other_constraints','其他约束条件','填写其他必须遵守的研究限制'],
 ];
 function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:ResearchReport[]) {
  if(reports.length)return 4;
