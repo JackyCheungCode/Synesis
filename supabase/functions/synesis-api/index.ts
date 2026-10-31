@@ -386,20 +386,20 @@ Deno.serve(async (req: Request) => {
           const normalized = items.map((raw,index) => {
             const record=raw as Record<string,unknown>;
             const identity=resolveProductIdentity(task.platform_slug,record);
-            const priceRaw=readField(record,['price','sale_price','current_price','amount','cost','listing_price','unit_price']);
+            const priceRaw=readField(record,[/^(price|sale.?price|current.?price|amount|cost|listing.?price|unit.?price)$/i]);
             const priceText=typeof priceRaw==='number'?String(priceRaw):typeof priceRaw==='string'?priceRaw.replace(/,/g,''):'';
             const priceMatch=priceText.match(/-?\d+(?:\.\d+)?/);
             const price=priceMatch?Number(priceMatch[0]):null;
-            const currencyRaw=readField(record,['currency','currency_code','price_currency']);
+            const currencyRaw=readField(record,[/^(currency|currency.?code|price.?currency)$/i]);
             const currency=currencyRaw?String(currencyRaw).trim().toUpperCase():null;
             return {record,index,identity:identity?.externalProductId??null,
               sourceUrl:identity?.sourceUrl??null,sku:identity?.sourceSku??null,
               canonicalKey:identity?.canonicalKey??null,
-              title:readField(record,['title','name','product_name','item_name']),
-              brand:readField(record,['brand','brandname']),
-              category:readField(record,['category','department','product_type']),
-              description:readField(record,['description','product_description','about']),
-              image:readField(record,['image','image_url','thumbnail','picture']),
+              title:readField(record,[/^(title|name|product.?name|item.?name)$/i]),
+              brand:readField(record,[/^brand(name)?$/i]),
+              category:readField(record,[/^(category|department|product.?type)$/i]),
+              description:readField(record,[/^(description|product.?description|about)$/i]),
+              image:readField(record,[/^(image|image.?url|thumbnail|picture)$/i]),
               price:price!==null&&Number.isFinite(price)&&price>=0?price:null,currency};
           }).filter(item=>item.identity);
           const uniqueNormalized = [...new Map(normalized.map(item=>[item.identity!,item])).values()];
