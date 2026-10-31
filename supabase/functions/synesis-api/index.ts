@@ -322,6 +322,8 @@ Deno.serve(async (req: Request) => {
       if (lockError) throw lockError;
       if (!lock) return json({ error: '该任务正在同步，请稍后重试' }, 409);
 
+      // Release the lease on every return path (including upstream errors).
+      try {
       const { clear: apifyToken } = await getCredential('apify', 'integration');
       const runResponse = await fetch(`https://api.apify.com/v2/actor-runs/${encodeURIComponent(task.external_run_id)}`, {
         headers: { Authorization: `Bearer ${apifyToken}` },
@@ -473,10 +475,6 @@ Deno.serve(async (req: Request) => {
       const { error: updateError } = await admin.from('collection_tasks').update(update)
         .eq('id', taskId).eq('user_id', userId).eq('sync_lock_token', syncLockToken);
       if (updateError) throw updateError;
-      const { error: releaseError } = await admin.from('collection_tasks')
-        .update({ sync_lock_token: null, sync_lock_expires_at: null })
-        .eq('id', taskId).eq('user_id', userId).eq('sync_lock_token', syncLockToken);
-      if (releaseError) throw releaseError;
       return json({
         ok: true,
         task: { id: taskId, status, run_status: runStatus, progress: update.progress,
@@ -484,6 +482,11 @@ Deno.serve(async (req: Request) => {
           batch_count: batchCount, result_sync_complete: syncComplete, error_message: update.error_message ?? null },
         result_truncated: !syncComplete && runStatus === 'SUCCEEDED',
       });
+      } finally {
+        await admin.from('collection_tasks')
+          .update({ sync_lock_token: null, sync_lock_expires_at: null })
+          .eq('id', taskId).eq('user_id', userId).eq('sync_lock_token', syncLockToken);
+      }
     }
 
     if (action === 'tasks.analytics') {
