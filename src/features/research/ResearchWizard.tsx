@@ -1,7 +1,7 @@
 import React from 'react';
 import {
  Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep,
- Accordion, AccordionItem, FluidForm, FormGroup, Checkbox, RadioButtonGroup, RadioButton,
+ Accordion, AccordionItem, FluidForm, FormGroup, Checkbox, RadioButtonGroup, RadioButton, ProgressBar,
  unstable__FluidTextInput as FluidTextInput,
  unstable__FluidTextArea as FluidTextArea,
  unstable__FluidDropdown as FluidDropdown,
@@ -10,6 +10,9 @@ import {
  unstable__FluidNumberInput as FluidNumberInput,
 } from '@carbon/react';
 import { Add, ArrowLeft, ArrowRight, Renew, ChartLine } from '@carbon/icons-react';
+import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+import * as L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 export type ResearchDimension = { key:string; label:string; values:string[]; status:'provided'|'suggested'|'needs_confirmation'|'user_confirmed'; note?:string };
 export type ResearchProfile = { summary:string; dimensions:ResearchDimension[]; research_goals:string[]; assumptions:string[]; missing_information:string[] };
@@ -71,13 +74,62 @@ const fieldSpecs=[
  ['other_constraints','其他约束条件','填写其他必须遵守的研究限制'],
  ['other_research_notes','其他研究说明 / 自然语言补充','补充背景、研究假设、特殊关注点或其他说明'],
 ];
-const countryOptions=['美国','英国','德国','法国','意大利','西班牙','加拿大','澳大利亚','日本','韩国','中国','荷兰','瑞典','波兰','阿联酋','沙特阿拉伯'];
+function flagEmoji(code:string) {
+ return [...code.toUpperCase()].map(char=>String.fromCodePoint(127397+char.charCodeAt(0))).join('');
+}
+function buildCountryOptions() {
+ const names=new Intl.DisplayNames(['zh-Hant'],{type:'region'});
+ const values=new Map<string,{id:string;text:string;flag:string}>();
+ for(let first=65;first<=90;first++)for(let second=65;second<=90;second++){
+  const code=String.fromCharCode(first,second);
+  const name=names.of(code);
+  if(!name||name===code||name==='欧盟'||name==='欧洲联盟')continue;
+  const text=code==='CN'?'中国大陆':code==='HK'?'中国香港':code==='MO'?'中国澳门':code==='TW'?'中国台湾':name;
+  values.set(code,{id:code,text,flag:flagEmoji(code)});
+ }
+ return [...values.values()].sort((a,b)=>a.text.localeCompare(b.text,'zh-Hant'));
+}
+const countryOptions=buildCountryOptions();
+const countryByLabel=new Map(countryOptions.map(item=>[item.text,item]));
+const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+function CountryMapViewport({features}:{features:any[]}) {
+ const map=useMap();
+ React.useEffect(()=>{
+  if(!features.length){map.setView([20,0],2);return;}
+  const bounds=L.featureGroup(features.map(feature=>L.geoJSON(feature))).getBounds();
+  if(bounds.isValid())map.fitBounds(bounds.pad(.18),{maxZoom:5,animate:true});
+ },[map,features]);
+ return null;
+}
+function CountrySelectionMap({selectedCodes}:{selectedCodes:string[]}) {
+ const [world,setWorld]=React.useState<any>(null);
+ const [loadError,setLoadError]=React.useState(false);
+ React.useEffect(()=>{
+  let active=true;
+  fetch(WORLD_GEOJSON_URL).then(response=>{if(!response.ok)throw new Error('GeoJSON unavailable');return response.json();})
+   .then(data=>{if(active)setWorld(data);}).catch(()=>{if(active)setLoadError(true);});
+  return ()=>{active=false;};
+ },[]);
+ const features=React.useMemo(()=>world?.features?.filter((feature:any)=>{
+  const code=feature.properties?.ISO_A2_EH??feature.properties?.ISO_A2;
+  return selectedCodes.includes(code);
+ })??[],[world,selectedCodes.join(',')]);
+ return <div className="research-country-map-wrap">
+  <div className="research-country-map-heading"><b>目标市场地图</b><span>{selectedCodes.length?selectedCodes.length+' 个国家 / 地区已选':'选择国家后自动定位并高亮'}</span></div>
+  <MapContainer center={[20,0]} zoom={2} scrollWheelZoom={false} className="research-country-map">
+   <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
+   {features.length>0&&<GeoJSON key={selectedCodes.join('-')} data={{type:'FeatureCollection',features} as any} style={()=>({color:'#0f62fe',weight:2,fillColor:'#0f62fe',fillOpacity:.28})}/>}
+   <CountryMapViewport features={features}/>
+  </MapContainer>
+  {loadError&&<p className="research-map-note">地图边界数据暂时无法载入；国家选择仍可正常使用。</p>}
+ </div>;
+}
 const languageOptions=['英语','中文','德语','法语','西班牙语','意大利语','日语','韩语','荷兰语','阿拉伯语','多语言 / 自动识别'];
 const categoryOptions=['消费电子','家居用品','厨房用品','宠物用品','美容与个人护理','运动与户外','母婴用品','服装与配饰','汽车用品','工业与商业用品'];
 const supplyOptions=['中国','越南','印度','泰国','马来西亚','印度尼西亚','台湾','韩国','日本','美国','德国','墨西哥','土耳其'];
 const complianceOptions=['CE','RoHS','FCC','UKCA','REACH','FDA','CPC','Prop 65'];
 const logisticsOptions=['易碎','带电池','大件','液体','粉末','温控','危险品限制','超重'];
-const channelOptions=['Amazon','独立站','线下零售','TikTok Shop'];
+const channelOptions=['Amazon','eBay','Walmart','Etsy','AliExpress','Alibaba.com','TikTok Shop','Shopify','Temu','SHEIN','淘宝','天猫','京东','拼多多','抖音电商','小红书','快手电商','唯品会','Shopee','Lazada','Mercado Libre','Rakuten','Coupang','独立站','线下零售'];
 const goalOptions=['市场进入','竞品分析','选品开发'];
 const toItems=(values:string[])=>values.map(value=>({id:value,text:value}));
 function ResearchProgress({activeStep,maxUnlockedStep,stepReady}:{activeStep:number;maxUnlockedStep:number;stepReady:boolean[]}) {
