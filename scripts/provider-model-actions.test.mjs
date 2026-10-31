@@ -37,7 +37,7 @@ test('Cloudflare Workers AI model namespaces remain path segments', () => {
   assert.match(backend, /function cloudflareModelPath\(value: string\)/);
   assert.match(backend, /segments\.map\(segment => encodeURIComponent\(segment\).*join\('\/'\)/);
   assert.equal((backend.match(/cloudflareModelPath\(model \|\| '@cf\/meta\/llama-3\.3-70b-instruct'\)/g) ?? []).length, 2);
-  assert.doesNotMatch(backend, /encodeURIComponent\(model \|\| '@cf\/meta\/llama-3\.3-70b-instruct'\)/);
+  assert.doesNotMatch(backend, /encodeURIComponent\(config\.default_model \|\| '@cf\/meta\/llama-3\.3-70b-instruct-fp8-fast'\)/);
 });
 
 
