@@ -615,14 +615,14 @@ function classifyResultPlatform(platform:string):{key:string;profile:ResultProfi
  const value=platform.toLowerCase();
  const rules:[string,RegExp][]=[
   ['ecommerce',/amazon|ebay|walmart|etsy|aliexpress|shopify|tiktok.?shop|temu|shopee|lazada|tokopedia|allegro|idealo|craigslist|meta.?ad|淘宝|天猫|1688|京东|拼多多|闲鱼|rakuten|乐天|mercari|qoo10|商城/],
+  ['apps',/google.?play|play.?store|app.?store|apple.?store|应用商店/],
+  ['publicdata',/sec|edgar|usaspending|grants|fec|epa|clinicaltrials|openfda|nhtsa|ofac|court|cms|irs|ted|gleif|政府|公共数据/],
+  ['jobs',/indeed|glassdoor|ziprecruiter|wellfound|monster|careerbuilder|remote.?ok|we.?work|himalayas|boss|直聘|51job|智联|猎聘|拉勾|doda|mynavi|jobkorea|saramin|jobstreet|linkedin.?jobs|jobs|招聘/],
+  ['b2b',/crunchbase|opencorporates|companies.?house|sunbiz|business.?entity|builtwith|wappalyzer|similarweb|企查查|天眼查|爱企查|企业信用|法人番号|dart|公司注册|google.?maps|商家|linkedin.?company|企业/],
+  ['realestate',/zillow|redfin|realtor|apartments|marketplace|rightmove|zoopla|suumo|home.?s|airbnb|booking|trip\.com|expedia|agoda|vrbo|yelp|tripadvisor|trustpilot|大众点评|美团|openrice|hotpepper|房产|住宿/],
+  ['news',/google.?news|news|bbc|reuters|techcrunch|wired|times|guardian|financial.?times|bloomberg|hacker.?news|espn|新浪新闻|网易新闻|腾讯新闻|澎湃|36氪|虎嗅|界面|财新|arxiv|huggingface|europe.?pmc|rss/],
   ['social',/tiktok|instagram|youtube|twitter|^x$|linkedin|facebook|reddit|threads|bluesky|pinterest|snapchat|twitch|douyin|抖音|小红书|xiaohongshu|weibo|微博|bilibili|知乎|豆瓣|雪球|line/],
   ['search',/google|bing|baidu|百度|yandex|naver|yahoo|duckduckgo|brave|搜狗|360搜索|autocomplete|trends/],
-  ['b2b',/crunchbase|opencorporates|companies.?house|sunbiz|business.?entity|builtwith|wappalyzer|similarweb|企查查|天眼查|爱企查|企业信用|法人番号|dart|公司注册|google.?maps|商家|linkedin.?company|企业/],
-  ['jobs',/indeed|glassdoor|ziprecruiter|wellfound|monster|careerbuilder|remote.?ok|we.?work|himalayas|boss|直聘|51job|智联|猎聘|拉勾|doda|mynavi|jobkorea|saramin|jobstreet|jobs|招聘/],
-  ['realestate',/zillow|redfin|realtor|apartments|marketplace|rightmove|zoopla|suumo|home.?s|airbnb|booking|trip\.com|expedia|agoda|vrbo|yelp|tripadvisor|trustpilot|大众点评|美团|openrice|hotpepper|房产|住宿/],
-  ['news',/news|bbc|reuters|techcrunch|wired|times|guardian|financial.?times|bloomberg|hacker.?news|espn|新浪新闻|网易新闻|腾讯新闻|澎湃|36氪|虎嗅|界面|财新|arxiv|huggingface|europe.?pmc|rss/],
-  ['publicdata',/sec|edgar|usaspending|grants|fec|epa|clinicaltrials|openfda|nhtsa|ofac|court|cms|irs|ted|gleif|政府|公共数据/],
-  ['apps',/google.?play|play.?store|app.?store|apple.?store|应用商店/],
  ];
  const found=rules.find(([,pattern])=>pattern.test(value));
  const key=found?.[0]??'general';
