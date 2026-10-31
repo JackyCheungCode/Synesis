@@ -200,7 +200,7 @@ test('feature pages use concise page-level copy and shared Carbon hierarchy', ()
 test('Carbon page frame uses Carbon Grid and left-aligned page headings', () => {
   assert.match(app, /Grid, Column/);
   assert.match(app, /<Grid fullWidth className="synesis-page-grid">/);
-  assert.match(app, /<Column sm={4} md={8} lg={16} xlg={16}>/);
+  assert.ok(app.includes('<Column sm={4} md={8} lg={16} xlg={16}>'));
   assert.match(foundation, /\.synesis-app \.page-title-row\s*\{[^}]*justify-content:\s*flex-start/s);
   assert.match(foundation, /\.synesis-app \.page-heading-copy h1\s*\{[^}]*text-align:\s*left/s);
 });

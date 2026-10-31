@@ -101,7 +101,7 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: var(--cds-spacing-06) var(--synesis-page-gutter) var(--cds-spacing-09);
+  padding: var(--cds-spacing-05) 16px var(--cds-spacing-09);
   gap: var(--synesis-section-gap);
 }
 .synesis-app .module-stack { gap: var(--synesis-section-gap); }
@@ -198,7 +198,12 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 .synesis-app .synesis-global-search-results a { display: flex; flex-direction: column; gap: var(--cds-spacing-02); padding: var(--cds-spacing-03); color: var(--cds-link-primary); border-bottom: 1px solid var(--cds-border-subtle); text-decoration: none; }
 .synesis-app .synesis-global-search-results a:hover { background: var(--cds-layer-hover); text-decoration: underline; }
 .synesis-app .synesis-global-search-results a span { color: var(--cds-text-secondary); overflow-wrap: anywhere; }
-.synesis-app .page-title-row { display: flex; align-items: center; min-width: 0; margin-bottom: var(--cds-spacing-05); }
+.synesis-app .synesis-page-grid { width: 100%; max-width: none; margin: 0; }
+.synesis-app .synesis-page-grid > .cds--col { min-width: 0; }
+.synesis-app .page-title-row { display: flex; align-items: flex-start; justify-content: flex-start; min-width: 0; margin: 0 0 var(--cds-spacing-07); text-align: left; }
+.synesis-app .page-heading-copy { width: 100%; min-width: 0; text-align: left; }
+.synesis-app .page-heading-copy h1 { margin: 0; text-align: left; }
+.synesis-app .page-heading-copy .subheading { max-width: 48rem; margin: var(--cds-spacing-03) 0 0; text-align: left; }
 .synesis-app .page-title-row h1 { margin: 0; }
 .synesis-app .page-title-row .subheading { margin: var(--cds-spacing-02) 0 0; max-width: 48rem; }
 .synesis-app .page-title-row .cds--breadcrumb { margin: 0; }
@@ -247,7 +252,8 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker,.product-grid,.project-card-grid) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  .synesis-app .page-wrap { padding: var(--cds-spacing-05) var(--synesis-page-gutter) var(--cds-spacing-08); }
+  .synesis-app .page-wrap { padding: var(--cds-spacing-05) 0 var(--cds-spacing-08); }
+  .synesis-app .page-title-row { margin-bottom: var(--cds-spacing-05); }
   .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker,.product-grid,.project-card-grid) > * { grid-column: 1 / -1; }
   .synesis-app .platform-picker > legend { grid-column: 1 / -1; }
   .synesis-app :where(.analytics-kpis,.research-analytics-kpis) > * { grid-column: span 2; }
@@ -634,32 +640,4 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   .synesis-app .module-stack { gap: var(--cds-spacing-05); }
   .synesis-app .module-heading { align-items: flex-start; flex-wrap: wrap; }
   .synesis-app .module-heading p { max-width: none; }
-}
-
-
-/* Carbon five-layer rebuild — shared page frame and left-aligned productive header. */
-.synesis-app .synesis-page-grid { width:100%; max-width:none; margin:0; }
-.synesis-app .synesis-page-grid > .cds--col { min-width:0; }
-.synesis-app .page-wrap {
-  width:100%; max-width:none; min-width:0; margin:0;
-  padding:var(--cds-spacing-05) 16px var(--cds-spacing-09);
-  text-align:left;
-}
-.synesis-app .page-title-row {
-  display:flex; width:100%; min-width:0; justify-content:flex-start;
-  align-items:flex-start; margin:0 0 var(--cds-spacing-07); text-align:left;
-}
-.synesis-app .page-heading-copy { width:100%; min-width:0; text-align:left; }
-.synesis-app .page-heading-copy h1 { margin:0; text-align:left; }
-.synesis-app .page-heading-copy .subheading {
-  max-width:48rem; margin:var(--cds-spacing-03) 0 0; text-align:left;
-}
-.synesis-app .page-wrap > :where(.module-stack,.dashboard-layout,.research-workspace,.product-library) {
-  width:100%; min-width:0; text-align:left;
-}
-@media (min-width:1056px) { .synesis-app .page-wrap { padding-inline:16px; } }
-@media (min-width:673px) and (max-width:1055px) { .synesis-app .page-wrap { padding-inline:8px; } }
-@media (max-width:672px) {
-  .synesis-app .page-wrap { padding-inline:0; }
-  .synesis-app .page-title-row { margin-bottom:var(--cds-spacing-05); }
 }

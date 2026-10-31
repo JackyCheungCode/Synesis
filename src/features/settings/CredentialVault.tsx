@@ -14,7 +14,7 @@ type Props={
 export function CredentialVault(props:Props) {
   const {credentials,keyValues,setKeyValues,cloudflareAccountId,setCloudflareAccountId,integrationMeta,setIntegrationMeta,providerModels,selectedProvider,setSelectedProvider,onSave,onTest,busy=false}=props;
   return <section className="module-stack">
-    <div className="module-heading"><p>BYOK · 密钥由后端加密保存，界面不回显完整密钥。</p><Tag type="green">BYOK</Tag></div>
+    <div className="module-heading"><p>密钥由后端加密保存，界面不回显完整密钥。</p></div>
     <section><h3>模型提供商</h3><div className="vault-grid">{providers.map(p=><Tile key={p.slug} className="vault-card">
       <div className="card-head"><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={34}/><div><h3>{p.name}</h3><p>{providerModels[p.slug] ?? '模型可在路由配置中指定'}</p></div><Tag type={credentials.some(c=>c.slug===p.slug)?'green':'cool-gray'}>{credentials.find(c=>c.slug===p.slug)?.status==='validated'?'已验证':credentials.some(c=>c.slug===p.slug)?'已保存':'未配置'}</Tag></div>
       <PasswordInput id={`key-${p.slug}`} labelText={p.slug==='cloudflare'?'Cloudflare API Token':'API Key'} placeholder="粘贴 API Key" value={keyValues[p.slug]??''} onChange={e=>setKeyValues(v=>({...v,[p.slug]:e.target.value}))} autoComplete="off"/>
