@@ -6,6 +6,8 @@ type Props = { page: WorkspacePage; open: boolean; onNavigate: (page: WorkspaceP
 
 export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) {
   const firstLinkRef = useRef<HTMLAnchorElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const items: { page: WorkspacePage; label: string; icon: typeof Dashboard }[] = [
     { page: 'dashboard', label: '情报总览', icon: Dashboard },
     { page: 'projects', label: '研究项目中心', icon: ChartLine },
@@ -20,7 +22,7 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -29,14 +31,14 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
       document.removeEventListener('keydown', handleKeyDown);
       document.querySelector<HTMLButtonElement>('.cds--header__menu-trigger')?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return <>
     <button
       className={`synesis-nav-backdrop${open ? ' is-visible' : ''}`}
       type="button"
       aria-label="关闭导航菜单"
-      tabIndex={open ? 0 : -1}
+      tabIndex={-1}
       onClick={onClose}
     />
     <aside
