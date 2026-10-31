@@ -90,7 +90,8 @@ function buildCountryOptions() {
  return [...values.values()].sort((a,b)=>a.text.localeCompare(b.text,'zh-Hant'));
 }
 type CountryOptionItem={id:string;text:string;flag:string};
-function CountryOptionElement(item:CountryOptionItem) {
+function CountryOptionElement(value:unknown) {
+ const item=value as CountryOptionItem;
  return <span className="research-country-option"><img src={`https://flagcdn.com/w40/${item.id.toLowerCase()}.png`} alt="" loading="lazy"/><span>{item.text}</span></span>;
 }
 const countryOptions=buildCountryOptions();
