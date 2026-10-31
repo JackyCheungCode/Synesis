@@ -165,15 +165,18 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   min-width: 0;
   gap: var(--synesis-grid-gap);
 }
-.synesis-app .platform-picker,
-.synesis-app .research-intake-grid,
-.synesis-app .research-platform-options,
-.synesis-app .collection-depth-descriptions,
-.synesis-app .research-normalization-summary {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+/* 16-column desktop grid; each 4-column unit is one quarter of the canvas. */
+.synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: var(--synesis-grid-gap);
 }
-.synesis-app .analytics-kpis,
-.synesis-app .research-analytics-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.synesis-app .carbon-grid > * { grid-column: span 4; }
+.synesis-app .carbon-grid > .wide-tile { grid-column: 1 / -1; }
+.synesis-app .vault-grid > *,.synesis-app .analytics-grid > * { grid-column: span 8; }
+.synesis-app :where(.analytics-kpis,.research-analytics-kpis,.research-intake-grid,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary) > * { grid-column: span 4; }
+.synesis-app .platform-picker > legend { grid-column: 1 / -1; }
+.synesis-app .platform-picker > *:not(legend) { grid-column: span 4; }
 .synesis-app .synesis-layout-grid {
   display: grid;
   grid-template-columns: repeat(16, minmax(0, 1fr));
@@ -181,23 +184,29 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 }
 .synesis-app .synesis-layout-grid > * { min-width: 0; }
 @media (max-width: 1055px) {
-  .synesis-app .synesis-layout-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .synesis-app .synesis-layout-grid,
+  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+  .synesis-app .carbon-grid > *,.synesis-app .vault-grid > *,.synesis-app .analytics-grid > *,.synesis-app :where(.analytics-kpis,.research-analytics-kpis,.research-intake-grid,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary) > * { grid-column: span 4; }
+  .synesis-app .carbon-grid > .wide-tile,.synesis-app .platform-picker > legend { grid-column: 1 / -1; }
+  .synesis-app .platform-picker > *:not(legend) { grid-column: span 4; }
 }
 @media (max-width: 672px) {
   .synesis-app { --synesis-page-gutter: 1rem; }
-  .synesis-app .synesis-layout-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .synesis-app .synesis-layout-grid,
+  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
   .synesis-app .page-wrap { padding: var(--cds-spacing-05) var(--synesis-page-gutter) var(--cds-spacing-08); }
-  .synesis-app .vault-grid,
-  .synesis-app .research-intake-grid,
+  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) > * { grid-column: 1 / -1; }
+  .synesis-app .platform-picker > legend { grid-column: 1 / -1; }
   .synesis-app .research-source-grid,
-  .synesis-app .research-dimension-grid,
-  .synesis-app .collection-depth-descriptions { grid-template-columns: minmax(0, 1fr) !important; }
+  .synesis-app .research-dimension-grid { grid-template-columns: minmax(0, 1fr) !important; }
   .synesis-app .collection-settings-actions { align-items: stretch; flex-direction: column; }
 }
 @media (max-width: 380px) {
-  .synesis-app .vault-grid,
-  .synesis-app .collection-depth-descriptions,
-  .synesis-app .research-intake-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) > * { grid-column: 1 / -1; }
   .synesis-app .page-wrap { padding-inline: var(--cds-spacing-03); }
 }
 @media (prefers-reduced-motion: reduce) {
