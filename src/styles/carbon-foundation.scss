@@ -156,6 +156,29 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 .synesis-app :where(.platform-results-table tbody tr:hover td,.cross-platform-results-table tbody tr:hover td) {
   background: var(--cds-layer-hover-01);
 }
+/* Carbon UI shell skip link: first keyboard stop, revealed only on focus. */
+.synesis-app .synesis-skip-link {
+  position: fixed;
+  top: 0;
+  left: var(--synesis-page-gutter);
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--cds-spacing-03) var(--cds-spacing-05);
+  color: var(--cds-link-primary);
+  background: var(--cds-layer);
+  border: 2px solid var(--cds-focus);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: underline;
+  transform: translateY(-150%);
+}
+.synesis-app .synesis-skip-link:focus,
+.synesis-app .synesis-skip-link:focus-visible {
+  transform: translateY(var(--cds-spacing-03));
+  outline: 2px solid var(--cds-focus);
+  outline-offset: 2px;
+}
 .synesis-app :where(button,a,input,textarea,select,[tabindex]):focus-visible {
   outline: 2px solid var(--cds-focus);
   outline-offset: 2px;
