@@ -270,13 +270,24 @@ Deno.serve(async (req: Request) => {
       const objective=String(project.objective??'').trim();
       const knownPlatforms=[
         ['amazon',/amazon|亚马逊/i],['ebay',/ebay/i],['walmart',/walmart/i],
-        ['alibaba',/alibaba|阿里巴巴/i],['aliexpress',/aliexpress|速卖通/i],
-        ['tiktok',/tiktok|抖音/i],['reddit',/reddit/i],['youtube',/youtube|油管/i],['google',/google|谷歌/i],
+        ['alibaba',/alibaba|阿里巴巴/i],['aliexpress',/aliexpress|速卖通/i],['etsy',/etsy/i],
+        ['tiktok',/tiktok|抖音/i],['instagram',/instagram/i],['facebook',/facebook/i],
+        ['pinterest',/pinterest/i],['reddit',/reddit/i],['youtube',/youtube|油管/i],
+        ['google',/google|谷歌/i],['bing',/bing/i],['shopify',/shopify/i],
       ] as const;
       const mentioned=knownPlatforms.filter(([,pattern])=>pattern.test(objective)).map(([slug])=>slug);
-      const searchTerms=mentioned.length
-        ? mentioned.slice(0,3).map(slug=>slug+' product scraper')
-        : ['ecommerce product scraper','product reviews scraper','market research data scraper'];
+      const categoryTerms=[
+        [/社交媒体|social media/i,'social media scraper'],
+        [/搜索引擎|search engine|购物搜索/i,'search engine results scraper'],
+        [/商品评价|消费者反馈|reviews|评论/i,'product reviews scraper'],
+        [/供应商|制造商|企业目录|supplier/i,'supplier directory scraper'],
+        [/广告与市场趋势|广告素材|趋势关键词|advertising/i,'public ads trends scraper'],
+        [/独立站|品牌官网|shopify|brand website/i,'ecommerce website scraper'],
+        [/全球电商|电商平台|ecommerce/i,'ecommerce product scraper'],
+        [/行业数据|行业目录|贸易信息/i,'industry directory data scraper'],
+      ].filter(([pattern])=>(pattern as RegExp).test(objective)).map(([,term])=>String(term));
+      const searchTerms=[...mentioned.slice(0,6).map(slug=>slug+' scraper'),...categoryTerms].slice(0,8);
+      if(!searchTerms.length) searchTerms.push('ecommerce product scraper','product reviews scraper','market research data scraper');
       const actorMap=new Map<string,Record<string,unknown>>();
       for(const term of searchTerms) {
         const query=new URLSearchParams({search:term,limit:'10',includeInputSchema:'true'});
