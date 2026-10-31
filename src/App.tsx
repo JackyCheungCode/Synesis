@@ -528,7 +528,8 @@ function App() {
             onLoadProjectResults={(id,offset)=>void loadProjectResults(id,offset)}
             analytics={analytics} analyticsTaskId={analyticsTaskId}
             taskLogs={taskLogs} onLoadLogs={(task)=>void loadTaskLogs(task)}
-            onSaveAnalytics={()=>void saveAnalyticsReport()}\n            onSaveProjectAnalytics={(id)=>void saveProjectAnalytics(id)}
+            onSaveAnalytics={()=>void saveAnalyticsReport()}
+            onSaveProjectAnalytics={(id)=>void saveProjectAnalytics(id)}
             onGenerateReport={(id)=>{setBusy(true);void generateResearchReport(id).catch(error=>setNotice({kind:'error',text:'AI 报告生成失败：'+message(error)})).finally(()=>setBusy(false));}}
           />}
           {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
