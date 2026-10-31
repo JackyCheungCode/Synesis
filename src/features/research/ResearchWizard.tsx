@@ -1,6 +1,7 @@
 import React from 'react';
 import {
- Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep,
+ Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep, Checkbox,
+ Tabs, TabList, Tab, TabPanels, TabPanel,
  Accordion, AccordionItem, FluidForm, FormGroup, RadioButtonGroup, RadioButton, ProgressBar,
  unstable__FluidTextInput as FluidTextInput,
  unstable__FluidTextArea as FluidTextArea,
@@ -39,15 +40,18 @@ const dimensionGroups=[
  {title:'商业与渠道',description:'描述客户、销售路径、供应链和研究范围。',keys:['target_customers','sales_channels','competitors','reference_urls','origin_supply_markets','logistics_attributes','exclusions']},
 ];
 const sourceGroups=[
- {id:'ecommerce',title:'全球电商平台',desc:'商品目录、价格、商品排名与卖家信息',items:['Amazon','eBay','Walmart','AliExpress','Alibaba','Etsy']},
- {id:'social',title:'社交媒体',desc:'内容、互动、话题、创作者与趋势线索',items:['TikTok','Instagram','Facebook','YouTube','Reddit','Pinterest']},
- {id:'search',title:'搜索引擎与购物搜索',desc:'搜索结果、关键词、购物结果与网页线索',items:['Google','Bing','Google Shopping']},
- {id:'reviews',title:'商品评价与消费者反馈',desc:'星级、评论文本、问答与消费者痛点',items:['Amazon Reviews','Walmart Reviews','Reddit Discussions']},
- {id:'suppliers',title:'企业与供应商',desc:'企业目录、制造商、批发商与供应链线索',items:['Supplier Directories','Manufacturer Websites','Wholesale Directories']},
- {id:'ads',title:'广告与市场趋势',desc:'公开广告素材、热门内容与趋势信号',items:['Ad Libraries','Trend Keywords','Public Campaign Pages']},
- {id:'brands',title:'独立站与品牌官网',desc:'品牌官网、独立电商站与公开产品目录',items:['Shopify Stores','Brand Websites','Product Catalogues']},
- {id:'other',title:'其他行业数据',desc:'公开行业目录与可访问的垂直数据源',items:['Industry Directories','Public Trade Data','Logistics Information']},
+ {id:'ecommerce',title:'电商与零售',desc:'商品、价格、评论、店铺与竞品广告',items:['Amazon','eBay','Walmart','Etsy','AliExpress','Shopify 独立站','TikTok Shop','Temu','Shopee','Lazada','Tokopedia','Allegro','idealo','Craigslist','Meta Ad Library','淘宝','天猫','1688','京东','拼多多','闲鱼 Goofish','抖音商城','小红书商城','日本乐天 Rakuten','Yahoo! Shopping Japan','Qoo10','Mercari Japan']},
+ {id:'social',title:'社交媒体与内容',desc:'帖子、视频、创作者、互动、评论与话题',items:['TikTok','Instagram','YouTube','X / Twitter','LinkedIn','Facebook','Reddit','Threads','Bluesky','Pinterest','Snapchat','Twitch','抖音 Douyin','小红书 Xiaohongshu','微博 Weibo','Bilibili','知乎','豆瓣','雪球','LINE 公开内容']},
+ {id:'search',title:'搜索引擎与 SEO',desc:'搜索结果、关键词、趋势、地图与新闻',items:['Google Search','Google Maps','Google Trends','Google Autocomplete','Google News','Bing','Baidu 百度','Yandex','Naver','Yahoo Search','DuckDuckGo','Brave Search','搜狗','360 搜索','Yahoo! Japan']},
+ {id:'b2b',title:'B2B 线索与商业情报',desc:'企业、联系人、商业登记、技术栈与企业关系',items:['Google Maps 商家','LinkedIn 公司页','LinkedIn 公开人物资料','Crunchbase','OpenCorporates','Companies House','Florida Sunbiz','Alabama Business Entity','美国各州企业登记','BuiltWith','Wappalyzer','Similarweb','企查查','天眼查','爱企查','国家企业信用信息公示系统','日本法人番号公表网站','韩国 DART','香港公司注册处']},
+ {id:'jobs',title:'招聘与人力资源',desc:'职位、薪资、技能需求、企业招聘与人才趋势',items:['LinkedIn Jobs','Indeed','Glassdoor','Google Jobs','ZipRecruiter','Wellfound','Monster','CareerBuilder','Remote OK','We Work Remotely','Himalayas','BOSS 直聘','前程无忧 51Job','智联招聘','猎聘','拉勾网','日本 doda','日本 Mynavi','韩国 JobKorea','韩国 Saramin','新加坡 JobStreet']},
+ {id:'realestate',title:'房产、住宿与本地服务',desc:'房源、租赁、酒店、民宿、商家与消费者点评',items:['Zillow','Redfin','Realtor.com','Apartments.com','Facebook Marketplace 房源','Rightmove','Zoopla','ImmobilienScout24','SUUMO','LIFULL HOME\'S','Airbnb','Booking.com','Trip.com','Expedia','Agoda','Hotels.com','Vrbo','Yelp','Tripadvisor','Trustpilot','大众点评','美团','OpenRice','HotPepper Beauty']},
+ {id:'news',title:'新闻、学术与研究',desc:'新闻事件、行业资讯、论文、研究机构与 RSS',items:['Google News','BBC','Reuters','TechCrunch','Wired','The New York Times','The Guardian','Financial Times','Bloomberg','Hacker News','ESPN','新浪新闻','网易新闻','腾讯新闻','澎湃新闻','36氪','虎嗅','界面新闻','财新','日经新闻 Nikkei','韩国 Yonhap News','RSS / Atom','arXiv','Hugging Face Papers','Europe PMC','PubMed','Crossref','OpenAlex','Semantic Scholar']},
+ {id:'publicdata',title:'公共数据与政府记录',desc:'监管披露、政府采购、企业登记、统计与开放数据',items:['SEC EDGAR','USAspending.gov','Grants.gov','FEC','EPA','ClinicalTrials.gov','openFDA','NHTSA','OFAC','PACER 联邦法院','CMS Provider Data','IRS 990','EU TED','GLEIF','World Bank Open Data','OECD Data','UN Comtrade','Eurostat','日本 e-Stat','韩国 KOSIS','中国国家统计局']},
+ {id:'apps',title:'应用商店',desc:'应用资料、评分、评论、版本、开发者与 ASO',items:['Google Play','Apple App Store','华为应用市场','小米应用商店','OPPO 软件商店','vivo 应用商店','腾讯应用宝','百度手机助手','日本 App Store','韩国 Google Play']},
+ {id:'web',title:'通用网页与 RAG',desc:'公开 URL、企业网站、产品页、文档、PDF 与知识库',items:['任意公开网站 URL','企业官网','竞品独立站','商品详情页','产品目录','博客与新闻网页','技术文档','帮助中心','公开 PDF','Sitemap','RSS / Atom Feed','论坛与社区公开页面']}
 ];
+const asiaPlatformNames=new Set(['淘宝','天猫','1688','京东','拼多多','闲鱼 Goofish','抖音商城','小红书商城','日本乐天 Rakuten','Yahoo! Shopping Japan','Qoo10','Mercari Japan','抖音 Douyin','小红书 Xiaohongshu','微博 Weibo','Bilibili','知乎','豆瓣','雪球','LINE 公开内容','Baidu 百度','搜狗','360 搜索','Naver','Yahoo! Japan','企查查','天眼查','爱企查','国家企业信用信息公示系统','日本法人番号公表网站','韩国 DART','香港公司注册处','BOSS 直聘','前程无忧 51Job','智联招聘','猎聘','拉勾网','日本 doda','日本 Mynavi','韩国 JobKorea','韩国 Saramin','新加坡 JobStreet','SUUMO','LIFULL HOME\'S','大众点评','美团','OpenRice','HotPepper Beauty','新浪新闻','网易新闻','腾讯新闻','澎湃新闻','36氪','虎嗅','界面新闻','财新','日经新闻 Nikkei','韩国 Yonhap News','日本 e-Stat','韩国 KOSIS','中国国家统计局','华为应用市场','小米应用商店','OPPO 软件商店','vivo 应用商店','腾讯应用宝','百度手机助手','日本 App Store','韩国 Google Play']);
 const dropdownOptions:Record<string,string[]>={languages:['英语','德语','法语','西班牙语','意大利语','日语','韩语','中文','多语言 / 自动识别'],time_range:['近 30 天','近 90 天','近 6 个月','近 12 个月','近 24 个月','全部可用历史数据','自定义（在补充说明中填写）'],business_goals:['市场进入可行性','新品选品与产品开发','竞争对手分析','市场定价分析','消费者需求洞察','寻找供应商与制造商','销售渠道策略','品牌定位与营销策略','综合市场研究']};
 const fieldSpecs=[
  ['keywords','核心关键词','例如：智能喂食器、自动猫砂盆'],
@@ -194,6 +198,7 @@ export function ResearchWizard(props:Props) {
  const [customValue,setCustomValue]=React.useState('');
  const [activeStep,setActiveStep]=React.useState(0);
  const [selectedSources,setSelectedSources]=React.useState<string[]>([]);
+ const [activeSourceTab,setActiveSourceTab]=React.useState(0);
  const [openPanels,setOpenPanels]=React.useState([true,false,false,false]);
  const [touchedRequired,setTouchedRequired]=React.useState({keywords:false,countries:false,languages:false});
  const project=projects.find(p=>p.id===projectId);
@@ -355,7 +360,28 @@ export function ResearchWizard(props:Props) {
   <ResearchProgress activeStep={activeStep} maxUnlockedStep={maxUnlockedStep} stepReady={stepReady}/>
   {activeStep===0&&<Tile><div className="module-heading"><div><h3>第一步 · 已确认的研究需求</h3><p>查看第一步保存的结构化画像。修改需求时应重新评估后续采集计划。</p></div><Tag type="green">已保存</Tag></div><p>{savedProfile?.summary??project.objective}</p>{savedProfile?.dimensions.filter(item=>item.values.length).map(item=><div className="research-saved-row" key={item.key}><b>{item.label} <Tag type={statusType[item.status]}>{statusLabel[item.status]}</Tag></b><p>{item.values.join(' · ')}</p></div>)}{!savedProfile&&<p>{project.objective}</p>}</Tile>}
   {activeStep===1&&<Tile className="research-source-tile"><div className="module-heading"><div><p className="eyebrow">STEP 2 / DATA SOURCE MARKETPLACE</p><h3>选择调研平台与数据类别</h3><p>先选择需要覆盖的数据类别和具体平台。Synesis 将据此搜索 Apify Store 中真实存在且有输入 Schema 的 Actor。</p></div>{plan?<Tag type="green">平台方案已生成</Tag>:<Tag type="blue">待选择</Tag>}</div>
-   <div className="research-source-grid">{sourceGroups.map(group=><div className="research-source-card" key={group.id}><label className="research-source-title"><input type="checkbox" checked={selectedPlanSources.includes(group.id)} onChange={e=>setSelectedSources(v=>e.target.checked?[...v,group.id]:v.filter(x=>x!==group.id))}/><span><b>{group.title}</b><small>{group.desc}</small></span></label><div className="research-source-items">{group.items.map(item=><label key={item}><input type="checkbox" checked={selectedPlanSources.includes(item)} onChange={e=>setSelectedSources(v=>e.target.checked?[...v,item]:v.filter(x=>x!==item))}/>{item}</label>)}</div></div>)}</div>
+   <div className="research-platform-picker">
+    <section className="research-selected-platforms" aria-label="已选择的平台">
+     <div className="research-selected-heading"><div><h4>已选择的平台</h4><p>跨分类自由组合；切换分类不会清除已选平台。</p></div><div className="research-selected-actions"><Tag type={selectedPlanSources.length?'blue':'gray'}>{selectedPlanSources.length} 个平台</Tag><Button kind="ghost" size="sm" disabled={!selectedPlanSources.length||busy} onClick={()=>setSelectedSources([])}>清空选择</Button></div></div>
+     {selectedPlanSources.length>0?<div className="research-selected-tags">{Array.from(new Set(selectedPlanSources)).map(platform=><Tag key={platform} type="blue" filter onClose={()=>setSelectedSources(values=>values.filter(value=>value!==platform))}>{platform}</Tag>)}</div>:<p className="research-selected-empty">尚未选择平台。请在下方分类中勾选一个或多个数据来源。</p>}
+    </section>
+    <Tabs selectedIndex={activeSourceTab} onChange={({selectedIndex}:any)=>setActiveSourceTab(selectedIndex)} className="research-platform-tabs">
+     <TabList aria-label="调研平台分类" contained scrollable>
+      {sourceGroups.map(group=><Tab key={group.id}>{group.title}</Tab>)}
+     </TabList>
+     <TabPanels>
+      {sourceGroups.map(group=><TabPanel key={group.id}>
+       <div className="research-platform-category-heading"><div><h4>{group.title}</h4><p>{group.desc}</p></div><Tag type="cool-gray">{group.items.length} 个来源</Tag></div>
+       <div className="research-platform-options">
+        {group.items.map(platform=><div className="research-platform-option" key={platform}>
+         <Checkbox id={'source-'+group.id+'-'+platform.replace(/[^a-zA-Z0-9]/g,'-')} labelText={platform} checked={selectedPlanSources.includes(platform)} onChange={(_,data)=>setSelectedSources(values=>data.checked?[...values,platform]:values.filter(value=>value!==platform))}/>
+         {asiaPlatformNames.has(platform)&&<Tag type="purple">中国 / 亚洲</Tag>}
+        </div>)}
+       </div>
+      </TabPanel>)}
+     </TabPanels>
+    </Tabs>
+   </div>
    {plan&&<><div className="research-actor-candidates"><h4>Apify Store 发现的候选 Actor</h4>{(Array.isArray(plan.plan.actor_candidates)?plan.plan.actor_candidates:[]).map((actor:any,index:number)=><div className="research-actor-card" key={String(actor.id??index)}><div><b>{String(actor.title??actor.name??actor.id??'Apify Actor')}</b><p>{String(actor.description??'暂无描述')}</p><small>{Array.isArray(actor.categories)?actor.categories.join(' · '):'Apify Store 候选'} · {String(actor.pricing_model??'计费方式未提供')}{actor.rating?' · 评分 '+actor.rating:''}</small></div></div>)}</div><div className="research-plan-meta"><span>发现候选 Actor：{Array.isArray(plan.plan.actor_candidates)?plan.plan.actor_candidates.length:0}</span><span>拟执行任务：{proposedTasks.length}</span><span>预计费用（AI 估算）：{plan.estimated_cost===null?'暂不可估算':'$ '+Number(plan.estimated_cost).toFixed(2)}</span></div><p>{String(plan.plan.executive_summary??'AI 已生成调研平台方案。')}</p><div className="research-plan-list">{proposedTasks.map((task:any,index:number)=><div className="research-plan-row" key={index}><div><b>{String(task.platform_slug??'平台')} · {String(task.actor_title??'待选择 Actor')}</b><p>{String(task.purpose??task.description??'按研究目标采集')}</p><p>预计记录：{task.estimated_items??'未估算'} · 计费：{String(task.pricing_model??'未提供')}{task.actor_rating?' · 评分 '+task.actor_rating:''}</p>{task.schema_valid?<Tag type="green">输入参数已校验</Tag>:<Tag type="warm-gray">参数待调整</Tag>}{(task.validation_errors??[]).map((error:string)=><p key={error}>{error}</p>)}</div></div>)}</div><div className="research-start-actions"><span>可以修改上方平台勾选，再按当前选择重新搜索候选 Actor。</span><Button kind="tertiary" disabled={!selectedPlanSources.length||busy} onClick={()=>onGeneratePlan(project,selectedPlanSources)}>按当前选择重新生成方案</Button></div><div className="research-approval"><p>{actorsReady?'所有拟执行任务均已匹配真实 Apify Actor，并通过输入 Schema 校验。批准后将开始抓取。':'部分任务未找到可执行的真实 Actor 或未通过 Schema 校验，不能批准执行。可调整平台选择后重新生成。'}</p><Button kind="primary" disabled={!actorsReady||busy||plan.status!=='pending_approval'} onClick={()=>onApprove(plan)}>确认平台方案并开始抓取</Button></div></>}
    {!plan&&<div className="research-start-actions"><span>选择一个或多个分类 / 平台。实际 Actor 以 Apify Store 搜索结果为准。</span><Button kind="primary" disabled={!selectedPlanSources.length||busy} onClick={()=>onGeneratePlan(project,selectedPlanSources)}>搜索 Apify 平台并生成方案 <ArrowRight size={16}/></Button></div>}
   </Tile>}
