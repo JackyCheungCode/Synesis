@@ -309,27 +309,30 @@ Deno.serve(async (req: Request) => {
         const infoPayload = await infoResponse.json();
         totalCount = Math.max(0, Number(infoPayload.data?.itemCount ?? run.stats?.output ?? 0));
         const pageSize = 250;
-        if (syncedCount < totalCount) {
-          const dataResponse = await fetch(`https://api.apify.com/v2/datasets/${encodeURIComponent(datasetId)}/items?clean=false&format=json&limit=${pageSize}&offset=${syncedCount}`, {
+        const maxPagesPerRequest = 4;
+        for (let page = 0; page < maxPagesPerRequest && syncedCount < totalCount; page++) {
+          const pageOffset = syncedCount;
+          const dataResponse = await fetch(`https://api.apify.com/v2/datasets/${encodeURIComponent(datasetId)}/items?clean=false&format=json&limit=${pageSize}&offset=${pageOffset}`, {
             headers: { Authorization: `Bearer ${apifyToken}` },
           });
-          if (!dataResponse.ok) return json({ error: `采集完成，但第 ${syncedCount} 条之后的结果读取失败（HTTP ${dataResponse.status}），可重试继续同步` }, 502);
+          if (!dataResponse.ok) return json({ error: `采集完成，但第 ${pageOffset} 条之后的结果读取失败（HTTP ${dataResponse.status}），已保存 ${syncedCount}/${totalCount} 条，可重试从断点继续` }, 502);
           const payload = await dataResponse.json();
           const items: unknown[] = Array.isArray(payload) ? payload : [];
-          if (items.length) {
-            const rows = items.map((raw_data, index) => ({
-              task_id: taskId, user_id: userId, item_index: syncedCount + index, raw_data,
-              source_updated_at: new Date().toISOString(),
-            }));
-            const { error: insertError } = await admin.from('collection_task_results')
-              .upsert(rows, { onConflict: 'task_id,item_index' });
-            if (insertError) throw insertError;
-            batchCount = items.length;
-            syncedCount += items.length;
+          if (items.length === 0) {
+            if (syncedCount < totalCount) {
+              return json({ error: `结果集返回空页，已同步 ${syncedCount}/${totalCount} 条；请重试或检查源数据集` }, 502);
+            }
+            break;
           }
-          if (items.length === 0 && syncedCount < totalCount) {
-            return json({ error: `结果集返回空页，已同步 ${syncedCount}/${totalCount} 条；请重试或检查源数据集` }, 502);
-          }
+          const rows = items.map((raw_data, index) => ({
+            task_id: taskId, user_id: userId, item_index: pageOffset + index, raw_data,
+            source_updated_at: new Date().toISOString(),
+          }));
+          const { error: insertError } = await admin.from('collection_task_results')
+            .upsert(rows, { onConflict: 'task_id,item_index' });
+          if (insertError) throw insertError;
+          batchCount += items.length;
+          syncedCount += items.length;
         }
       }
       const syncComplete = runStatus === 'SUCCEEDED' && syncedCount >= totalCount;
