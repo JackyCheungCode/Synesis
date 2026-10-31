@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode, type FormEvent } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { Button, InlineNotification, TextInput } from '@carbon/react';
 import { supabase } from '../lib/supabase';
@@ -43,7 +43,7 @@ function AuthScreen() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage(null);
     try {
       if (mode === 'signin') {
