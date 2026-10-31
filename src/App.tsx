@@ -53,6 +53,7 @@ function App() {
   const [resultTotal, setResultTotal] = useState(0);
   const [resultSynced, setResultSynced] = useState(0);
   const [analyticsTaskId, setAnalyticsTaskId] = useState('');
+  const [taskLogs, setTaskLogs] = useState<Record<string,string[]>>({});
   const [analytics, setAnalytics] = useState<any>(null);
   const [keyValues, setKeyValues] = useState<Record<string,string>>({});
   const [selectedProvider, setSelectedProvider] = useState('openai');
@@ -269,6 +270,15 @@ function App() {
     finally { setBusy(false); }
   }
 
+  async function loadTaskLogs(task: Task) {
+    if (!task.external_run_id) return;
+    try {
+      const data=await api('tasks.logs',{taskId:task.id});
+      setTaskLogs(current=>({...current,[task.id]:String(data.logs??'').split(/\r?\n/).filter(Boolean).slice(-250)}));
+    } catch(e) {
+      setTaskLogs(current=>({...current,[task.id]:['日志暂时不可用：'+message(e)]}));
+    }
+  }
   async function loadAnalytics(taskId: string) {
     if (!taskId) return;
     setBusy(true);
@@ -417,6 +427,7 @@ function App() {
             onView={(task)=>void viewTaskResults(task)}
             onAnalyze={(task)=>void loadAnalytics(task.id)}
             analytics={analytics} analyticsTaskId={analyticsTaskId}
+            taskLogs={taskLogs} onLoadLogs={(task)=>void loadTaskLogs(task)}
           />}
           {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
           {page==='products' && <ProductLibrary
