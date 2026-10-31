@@ -417,7 +417,8 @@ export function ResearchWizard(props:Props) {
   ...(Number(task.result_synced_count??0)>0?[{time:task.updated_at??task.finished_at??task.created_at,label:task.platform_slug+' 数据同步进度',detail:(task.result_synced_count??0)+' / '+(task.result_count??0)+' 条'}]:[]),
  ]).sort((a,b)=>new Date(b.time).getTime()-new Date(a.time).getTime()).slice(0,30);
  const savedAnalyticsTaskIds=new Set(projectReports.filter(report=>report.report_type==='dataset_analytics').flatMap(report=>(report.evidence??[]).map(item=>item.task_id).filter((id):id is string=>Boolean(id))));
- const savedAnalyticsTaskCount=projectTasks.filter(task=>savedAnalyticsTaskIds.has(task.id)).length;\n const statsSavedForAllTasks=projectTasks.length>0&&projectTasks.every(task=>savedAnalyticsTaskIds.has(task.id));
+ const savedAnalyticsTaskCount=projectTasks.filter(task=>savedAnalyticsTaskIds.has(task.id)).length;
+ const statsSavedForAllTasks=projectTasks.length>0&&projectTasks.every(task=>savedAnalyticsTaskIds.has(task.id));
  const analyticsSavedForCurrentTask=Boolean(analyticsTaskId&&projectReports.some(report=>report.report_type==='dataset_analytics'&&report.evidence?.some(item=>item.task_id===analyticsTaskId)));
  const stepReady=[true,true,projectTasks.length>0,allSynced,statsSavedForAllTasks];
  let maxUnlockedStep=0; for(let index=1;index<stepReady.length;index++){if(!stepReady[index])break;maxUnlockedStep=index;}
