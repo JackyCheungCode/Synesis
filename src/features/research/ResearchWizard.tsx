@@ -364,7 +364,7 @@ export function ResearchWizard(props:Props) {
    <div className="research-workflow-spacer"/>
    <Button className="research-workflow-button" kind="danger--ghost" disabled={busy} onClick={onBack}>取消</Button>
    <Button className="research-workflow-button" kind="tertiary" disabled={busy} onClick={()=>onSaveDraft({brief:project.objective,formValues,profile:savedProfile??null,activeStep,selectedSources},project.id)}>暂存</Button>
-   <Button className="research-workflow-button" kind="primary" disabled={activeStep===4||!stepReady[activeStep+1]} onClick={()=>setActiveStep(v=>Math.min(4,v+1))}>下一步 <ArrowRight size={16}/></Button>
+   <Button className="research-workflow-button" kind="primary" disabled={activeStep===4||!stepReady[activeStep+1]} onClick={()=>setActiveStep(v=>Math.min(4,v+1))}>下一步</Button>
   </div>
  </section>;
 }
