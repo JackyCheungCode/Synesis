@@ -41,7 +41,7 @@ export function CollectionSettingsPage({ settings, onChange, onSave, saving = fa
       <div className="collection-count-presets" aria-label="常用返回数量">
         {[50, 100, 300, 500, 1000].map(count => <Button key={count} kind={settings.itemsPerPlatform === count ? 'primary' : 'tertiary'} size="sm" aria-pressed={settings.itemsPerPlatform === count} disabled={saving} onClick={() => onChange({ ...settings, itemsPerPlatform: count })}>{count.toLocaleString()} 条</Button>)}
       </div>
-    </Tile>
+    </Tile></Column>
     <Column sm={4} md={8} lg={8} xlg={8}><Tile className="collection-setting-card">
       <div className="collection-setting-heading"><div><h3>默认采集深度</h3><p>决定默认数据范围。</p></div><Tag type="cool-gray">任务默认值</Tag></div>
       <RadioButtonGroup
