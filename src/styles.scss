@@ -505,3 +505,29 @@ html, body { overflow-x:clip; }
   .research-start-actions { align-items:stretch; flex-direction:column; }
   .research-start-actions button { width:100%; }
 }
+
+
+/* Structured research intake - step one */
+.research-profile-tile { display:flex; flex-direction:column; gap:1rem; }
+.research-profile-stats { display:flex; flex-wrap:wrap; gap:.5rem; }
+.research-profile-hint { margin:0; color:var(--cds-text-secondary); font-size:.82rem; line-height:1.55; }
+.research-dimension-group { display:flex; flex-direction:column; gap:.8rem; padding-top:1rem; border-top:1px solid var(--cds-border-subtle); }
+.research-dimension-group h3 { margin:0; font-size:1rem; }
+.research-dimension-group > div > p { margin:.25rem 0 0; color:var(--cds-text-secondary); font-size:.82rem; }
+.research-dimension-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; }
+.research-dimension { display:flex; flex-direction:column; gap:.45rem; min-width:0; padding:.85rem; background:var(--cds-layer-01); border:1px solid var(--cds-border-subtle); border-radius:6px; }
+.research-dimension-heading { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+.research-dimension-heading b { font-size:.86rem; }
+.research-dimension small { color:var(--cds-text-secondary); line-height:1.4; }
+.research-custom-dimension { display:grid; grid-template-columns:1fr 1fr auto; align-items:end; gap:.75rem; }
+.research-profile-notes { padding:.85rem 1rem; border-left:3px solid var(--cds-support-info); background:var(--cds-layer-01); }
+.research-profile-notes b { font-size:.85rem; }
+.research-profile-notes p { margin:.45rem 0 0; color:var(--cds-text-secondary); font-size:.82rem; }
+.research-saved-row { display:flex; flex-direction:column; gap:.2rem; padding:.65rem 0; border-top:1px solid var(--cds-border-subtle); }
+.research-saved-row b { font-size:.85rem; }
+.research-saved-row p { margin:0; color:var(--cds-text-secondary); font-size:.85rem; overflow-wrap:anywhere; }
+@media(max-width:700px) {
+ .research-dimension-grid { grid-template-columns:minmax(0,1fr); }
+ .research-custom-dimension { grid-template-columns:minmax(0,1fr); }
+ .research-custom-dimension .cds--btn { width:100%; }
+}
