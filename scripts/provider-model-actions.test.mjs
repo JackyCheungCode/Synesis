@@ -62,3 +62,20 @@ test('queued collection tasks start Apify before result synchronization', () => 
   assert.match(frontend, /api\('tasks\.execute',\{taskId:task\.id\}\)/);
   assert.match(frontend, /task\.status==='running'&&Boolean\(task\.external_run_id\)/);
 });
+
+
+test('research intake extracts JSON from fenced or prose-wrapped model output', () => {
+  assert.match(backend, /function parseJsonObject\(raw: string\)/);
+  assert.match(backend, /Find the first balanced JSON object/);
+  assert.match(backend, /parseJsonObject\(first\.raw\)/);
+});
+
+test('research intake retries malformed JSON through the selected provider', () => {
+  const branch = backend.slice(backend.indexOf("if (action === 'research.parse')"), backend.indexOf("if (action === 'plans.generate')"));
+  assert.match(branch, /async function requestResearchText/);
+  assert.match(branch, /const repaired=await requestResearchText\(repairPrompt\)/);
+  assert.match(branch, /max_tokens:8000/);
+  assert.match(branch, /generationConfig:\{responseMimeType:'application\/json',maxOutputTokens:8000\}/);
+  assert.match(branch, /selectedModel=model/);
+  assert.match(branch, /缺少 dimensions 数组/);
+});
