@@ -134,6 +134,16 @@ function App() {
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
+  async function retryTask(task: Task) {
+    setBusy(true);
+    try {
+      await api('tasks.retry',{taskId:task.id});
+      setNotice({kind:'success',text:'已创建新的待执行重试任务，原失败记录会保留。'});
+      await loadAll();
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+
   async function runTask(task: Task) {
     setBusy(true);
     try {
@@ -302,7 +312,7 @@ function App() {
           {page==='tasks' && <section className="module-stack"><div className="module-heading"><div><h2>Apify 采集任务</h2><p>只有通过人工审批的研究计划才会产生可执行任务。</p></div><Button kind="tertiary" renderIcon={Renew} onClick={()=>void loadAll()}>刷新</Button></div>
             <div className="task-table-wrap"><table className="task-table"><thead><tr><th>平台</th><th>状态</th><th>进度</th><th>结果接收</th><th>Apify Actor</th><th>创建时间</th><th>操作</th></tr></thead><tbody>
               {pageRows.map(task=><tr key={task.id}><td>{task.platform_slug}</td><td><Tag type={task.status==='succeeded'?'green':task.status==='failed'?'red':'blue'}>{task.status}</Tag></td><td>{task.progress??0}%</td><td>{(task.result_synced_count??0).toLocaleString()} / {(task.result_count??0).toLocaleString()}</td><td>{task.actor_id??'—'}</td><td>{new Date(task.created_at).toLocaleString()}</td><td><div className="card-actions">
-                {task.status==='queued'&&<Button size="sm" kind="tertiary" renderIcon={Play} onClick={()=>void runTask(task)}>执行</Button>}
+                {task.status==='queued'&&<Button size="sm" kind="tertiary" renderIcon={Play} onClick={()=>void runTask(task)}>执行</Button>}{task.status==='failed'&&<Button size="sm" kind="tertiary" renderIcon={Renew} onClick={()=>void retryTask(task)}>创建重试</Button>}
                 {(['running','queued'].includes(task.status)||(task.status==='succeeded'&&(task.result_synced_count??0)<(task.result_count??0)))&&<Button size="sm" kind="ghost" renderIcon={Renew} onClick={()=>void syncTask(task)}>同步 / 继续接收</Button>}
                 {task.status==='succeeded'&&<Button size="sm" kind="ghost" onClick={()=>void viewTaskResults(task)}>查看结果</Button>}
               </div></td></tr>)}
