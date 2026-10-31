@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Tag, TextArea, TextInput, Tile } from '@carbon/react';
+import { Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep, Breadcrumb, BreadcrumbItem } from '@carbon/react';
 import { Add, ArrowLeft, ArrowRight, CheckmarkFilled, Renew, ChartLine } from '@carbon/icons-react';
 
 export type ResearchDimension = { key:string; label:string; values:string[]; status:'provided'|'suggested'|'needs_confirmation'|'user_confirmed'; note?:string };
@@ -61,6 +61,14 @@ const fieldSpecs=[
  ['business_goals','商业目标与研究问题','例如：寻找新品机会、评估进入德国市场的可行性'],
  ['other_constraints','其他约束条件','填写其他必须遵守的研究限制'],
 ];
+function ResearchProgress({activeStep,maxUnlockedStep,stepReady}:{activeStep:number;maxUnlockedStep:number;stepReady:boolean[]}) {
+ return <Tile className="research-progress-tile">
+  <div className="module-heading"><div><h3 className="cds--type-heading-03">五步研究工作流</h3><p>按顺序完成研究流程；后续步骤将在前置数据准备完成后解锁。</p></div><Tag type="blue" className="synesis-workspace-tag">第 {activeStep+1} / 5 步</Tag></div>
+  <ProgressIndicator currentIndex={activeStep} spaceEqually className="research-carbon-progress">
+   {stages.map((label,index)=><ProgressStep key={label} label={label} description={index===activeStep?'当前步骤':stepReady[index]?'已满足前置条件':'等待前序步骤完成'} complete={stepReady[index]&&index<activeStep} current={index===activeStep} disabled={index>maxUnlockedStep}/>)}
+  </ProgressIndicator>
+ </Tile>;
+}
 function ResearchAnalyticsView({data}:{data:any}) {
  const metrics=data?.metrics??{}, distributions=data?.distributions??{};
  const sections=[
@@ -128,12 +136,13 @@ export function ResearchWizard(props:Props) {
  const suggestedCount=profile?.dimensions.filter(item=>item.status==='suggested').length??0;
  const missingCount=profile?.dimensions.filter(item=>item.status==='needs_confirmation').length??0;
  if(!project||project.scope?.workflow_state==='draft')return <section className="module-stack research-workspace research-fullwidth">
-  <Tile className="research-progress-tile"><div className="module-heading"><div><h3>五步研究工作流</h3><p>当前位于第一步：研究需求填写。完成确认后进入平台选择。</p></div><Tag type="blue">第 1 / 5 步</Tag></div><div className="research-stepper">{stages.map((label,index)=><button type="button" key={label} className={'research-step research-step-button'+(index===0?' is-current':'')} disabled={index!==0}><span>{index+1}</span><b>{label}</b></button>)}</div></Tile>
+  <div className="research-page-breadcrumb"><Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb></div>
+  <ResearchProgress activeStep={0} maxUnlockedStep={0} stepReady={[true,false,false,false,false]}/>
   <Tile className="research-start-tile">
-   <p className="eyebrow">STEP 1 / RESEARCH SCOPE</p><h2>建立你的市场研究需求</h2>
+   <p className="eyebrow">STEP 1 / RESEARCH SCOPE</p><h2 className="cds--type-heading-03">建立你的市场研究需求</h2>
    <p>按字段填写关键信息；不确定的项目可以留空。AI 会帮助整理、识别缺失项，并保留信息来源状态。</p>
    <div className="research-intake-grid">
-    {fieldSpecs.map(([key,label,placeholder])=><div className="research-intake-field" key={key}>{dropdownOptions[key]?<><label className="research-select-label" htmlFor={'intake-'+key}>{label}</label><select id={'intake-'+key} className="research-select-control" value={formValues[key]??''} onChange={e=>{setFormValues(v=>({...v,[key]:e.target.value}));setProfile(null);}}><option value="">请选择（可留空）</option>{dropdownOptions[key].map(option=><option key={option} value={option}>{option}</option>)}</select></>:<TextInput id={'intake-'+key} labelText={label} value={formValues[key]??''} placeholder={placeholder} onChange={e=>{setFormValues(v=>({...v,[key]:e.target.value}));setProfile(null);}}/>}</div>)}
+    {fieldSpecs.map(([key,label,placeholder])=><div className="research-intake-field" key={key}>{dropdownOptions[key]?<><label className="research-select-label" htmlFor={'intake-'+key}>{label}</label><select id={'intake-'+key} className="research-select-control" value={formValues[key]??''} onChange={e=>{setFormValues(v=>({...v,[key]:e.target.value}));setProfile(null);}}><option value="">请选择（可留空）</option>{dropdownOptions[key].map(option=><option key={option} value={option}>{option}</option>)}</select></>:<TextInput id={'intake-'+key} labelText={label} helperText={key==='keywords'?'输入产品名称、核心品类或目标搜索词；多个关键词可用逗号分隔。':undefined} value={formValues[key]??''} placeholder={placeholder} onChange={e=>{setFormValues(v=>({...v,[key]:e.target.value}));setProfile(null);}}/>}</div>)}
    </div>
    <div className="research-intake-field research-intake-wide"><TextArea id="research-brief" labelText="其他研究说明 / 自然语言补充" value={brief} onChange={e=>{setBrief(e.target.value);setProfile(null);}} rows={4} placeholder="例如：希望比较德国和法国市场的竞争强度，重点寻找差异化产品机会，并评估适合跨境电商的切入方式。"/></div>
    <div className="research-start-actions"><span>所有字段均可选；至少填写一个条件或补充说明即可开始。</span><Button kind="primary" renderIcon={Renew} disabled={(!brief.trim()&&!Object.values(formValues).some(v=>v.trim()))||busy} onClick={()=>void parseBrief()}>AI 整理研究需求</Button></div>
@@ -153,10 +162,13 @@ export function ResearchWizard(props:Props) {
    {profile.missing_information.length>0&&<div className="research-profile-notes"><b>尚未明确的信息</b>{profile.missing_information.map((item,index)=><p key={index}>{item}</p>)}</div>}
    <div className="research-profile-hint">研究条件已整理完成。点击底部「下一步」保存并进入调研平台选择。</div>
   </Tile>}
-  <div className="research-step-footer research-workflow-actions"><Button className="research-workflow-button" kind="ghost" disabled>上一步</Button><Button className="research-workflow-button" kind="primary" disabled={busy||!profile||!profile.dimensions.some(item=>item.values.length>0)} onClick={()=>onCreate([fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\n'),brief.trim()].filter(Boolean).join('\n\n'),profile!,project?.id)}>下一步：调研平台 <ArrowRight size={16}/></Button><Button className="research-workflow-button" kind="secondary" disabled={busy||(!brief.trim()&&!Object.values(formValues).some(v=>v.trim())&&!profile)} onClick={()=>onSaveDraft({brief:[fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\\n'),brief.trim()].filter(Boolean).join('\\n\\n'),formValues,profile,activeStep:0,selectedSources},project?.id)}>暂存</Button><Button className="research-workflow-button" kind="danger--tertiary" disabled={busy} onClick={onBack}>取消</Button></div>
-  <div className="module-heading"><div><h2>我的研究项目</h2><p>每项研究都保留需求、采集、统计与报告记录。</p></div><Tag type="blue">{projects.length} 个项目</Tag></div>
-  <div className="project-card-grid">{projects.map(item=><Tile key={item.id} className="list-tile"><div><h3>{item.name}</h3><p>{item.objective}</p><Tag type={item.status==='completed'?'green':'blue'}>{item.status}</Tag></div><Button kind="ghost" renderIcon={ArrowRight} onClick={()=>onOpen(item.id)}>打开研究工作区</Button></Tile>)}</div>
-  {!projects.length&&<Tile><p>还没有研究项目。填写上方研究需求即可开始。</p></Tile>}
+  <div className="research-step-footer research-workflow-actions">
+   <Button className="research-workflow-button" kind="tertiary" disabled={activeStep===0} onClick={()=>setActiveStep(v=>Math.max(0,v-1))}>上一步</Button>
+   <div className="research-workflow-spacer"/>
+   <Button className="research-workflow-button" kind="danger--ghost" disabled={busy} onClick={onBack}>取消</Button>
+   <Button className="research-workflow-button" kind="tertiary" disabled={busy} onClick={()=>onSaveDraft({brief:project.objective,formValues,profile:savedProfile??null,activeStep,selectedSources},project.id)}>暂存</Button>
+   <Button className="research-workflow-button" kind="primary" disabled={activeStep===4||!stepReady[activeStep+1]} onClick={()=>setActiveStep(v=>Math.min(4,v+1))}>下一步 <ArrowRight size={16}/></Button>
+  </div>
  </section>;
 
  const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
@@ -174,10 +186,8 @@ export function ResearchWizard(props:Props) {
  let maxUnlockedStep=0; for(let index=1;index<stepReady.length;index++){if(!stepReady[index])break;maxUnlockedStep=index;}
  return <section className="module-stack research-workspace research-fullwidth">
   <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><p className="eyebrow">RESEARCH PROJECT WORKSPACE</p><h2>{project.name}</h2><p>{savedProfile?.summary??project.objective}</p></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
-  <Tile className="research-progress-tile">
-   <div className="module-heading"><div><h3>五步研究工作流</h3><p>每一步独立保存进度；可返回查看前序结果。只有批准采集计划后才会启动 Apify。</p></div><Tag type="blue">第 {activeStep+1} / 5 步</Tag></div>
-   <div className="research-stepper">{stages.map((label,index)=><button type="button" key={label} className={'research-step research-step-button'+(index===activeStep?' is-current':'')+(stepReady[index]?' is-complete':'')} disabled={index>maxUnlockedStep} onClick={()=>setActiveStep(index)}><span>{stepReady[index]&&index!==activeStep?<CheckmarkFilled size={18}/>:index+1}</span><b>{label}</b></button>)}</div>
-  </Tile>
+  <div className="research-page-breadcrumb"><Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb></div>
+  <ResearchProgress activeStep={activeStep} maxUnlockedStep={maxUnlockedStep} stepReady={stepReady}/>
   {activeStep===0&&<Tile><div className="module-heading"><div><h3>第一步 · 已确认的研究需求</h3><p>查看第一步保存的结构化画像。修改需求时应重新评估后续采集计划。</p></div><Tag type="green">已保存</Tag></div><p>{savedProfile?.summary??project.objective}</p>{savedProfile?.dimensions.filter(item=>item.values.length).map(item=><div className="research-saved-row" key={item.key}><b>{item.label} <Tag type={statusType[item.status]}>{statusLabel[item.status]}</Tag></b><p>{item.values.join(' · ')}</p></div>)}{!savedProfile&&<p>{project.objective}</p>}</Tile>}
   {activeStep===1&&<Tile className="research-source-tile"><div className="module-heading"><div><p className="eyebrow">STEP 2 / DATA SOURCE MARKETPLACE</p><h3>选择调研平台与数据类别</h3><p>先选择需要覆盖的数据类别和具体平台。Synesis 将据此搜索 Apify Store 中真实存在且有输入 Schema 的 Actor。</p></div>{plan?<Tag type="green">平台方案已生成</Tag>:<Tag type="blue">待选择</Tag>}</div>
    <div className="research-source-grid">{sourceGroups.map(group=><div className="research-source-card" key={group.id}><label className="research-source-title"><input type="checkbox" checked={selectedPlanSources.includes(group.id)} onChange={e=>setSelectedSources(v=>e.target.checked?[...v,group.id]:v.filter(x=>x!==group.id))}/><span><b>{group.title}</b><small>{group.desc}</small></span></label><div className="research-source-items">{group.items.map(item=><label key={item}><input type="checkbox" checked={selectedPlanSources.includes(item)} onChange={e=>setSelectedSources(v=>e.target.checked?[...v,item]:v.filter(x=>x!==item))}/>{item}</label>)}</div></div>)}</div>
