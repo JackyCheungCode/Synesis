@@ -1799,7 +1799,7 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
 .cross-platform-normalization-note { padding:8px 10px; color:var(--cds-text-secondary,var(--cds-text-secondary)); background:var(--cds-layer-02,var(--cds-background)); font-size:11px; line-height:1.5; }
 .normalization-quality-good,.normalization-quality-warning { display:inline-flex; align-items:center; border-radius:12px; padding:3px 7px; font-size:11px; font-weight:600; white-space:nowrap; }
 .normalization-quality-good { color:var(--cds-support-success,var(--cds-support-success)); background:var(--cds-support-success-inverse,var(--cds-support-success-inverse)); }
-.normalization-quality-warning { color:var(--cds-support-warning,var(--cds-text-warning)); background:var(--cds-support-warning-inverse,var(--cds-layer-01)1c7); }
+.normalization-quality-warning { color:var(--cds-support-warning,var(--cds-text-warning)); background:var(--cds-support-warning-inverse); }
 
 
 /* Unified five-step research workflow */
