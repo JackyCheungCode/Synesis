@@ -5,13 +5,13 @@ import { ResearchWizard } from './features/research/ResearchWizard';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content,
   Button, InlineNotification, Tag, TextInput, PasswordInput, Tile,
-  Toggle, Select, SelectItem, TextArea, Modal, Loading, Accordion, AccordionItem, Link,
+  Select, SelectItem, Modal, Loading, Accordion, AccordionItem, Link,
 } from '@carbon/react';
 import {
-  Add, Renew, Play, Search as SearchIcon, UserAvatar,
+  Add, Renew, Search as SearchIcon, UserAvatar,
 } from '@carbon/icons-react';
 import { BrandIcon } from './components/BrandIcon';
-import { platforms, providers, apiIntegrations } from './data/catalog';
+import { providers, apiIntegrations } from './data/catalog';
 import { useAuth } from './auth/AuthProvider';
 import { supabase } from './lib/supabase';
 
@@ -156,15 +156,6 @@ function App() {
       await api('tasks.retry',{taskId:task.id});
       setNotice({kind:'success',text:'已创建新的待执行重试任务，原失败记录会保留。'});
       await loadAll();
-    } catch(e) { setNotice({kind:'error',text:message(e)}); }
-    finally { setBusy(false); }
-  }
-
-  async function runTask(task: Task) {
-    setBusy(true);
-    try {
-      await api('tasks.execute',{taskId:task.id});
-      setNotice({kind:'success',text:'Apify 采集任务已提交。'}); await loadAll();
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
