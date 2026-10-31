@@ -416,6 +416,7 @@ function App() {
             onSync={(task)=>void syncTask(task)}
             onView={(task)=>void viewTaskResults(task)}
             onAnalyze={(task)=>void loadAnalytics(task.id)}
+            analytics={analytics} analyticsTaskId={analyticsTaskId}
           />}
           {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
           {page==='products' && <ProductLibrary
