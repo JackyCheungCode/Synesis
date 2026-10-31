@@ -413,6 +413,8 @@ function App() {
             onAnalyze={(task)=>void loadAnalytics(task.id)}
             analytics={analytics} analyticsTaskId={analyticsTaskId}
             taskLogs={taskLogs} onLoadLogs={(task)=>void loadTaskLogs(task)}
+            onSaveAnalytics={()=>void saveAnalyticsReport()}
+            onGenerateReport={(id)=>{setBusy(true);void generateResearchReport(id).catch(error=>setNotice({kind:'error',text:'AI 报告生成失败：'+message(error)})).finally(()=>setBusy(false));}}
           />}
           {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
           {page==='products' && <ProductLibrary
