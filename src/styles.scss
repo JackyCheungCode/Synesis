@@ -1628,3 +1628,38 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
   .synesis-app .research-selected-countries { gap: 6px; }
   .synesis-app .research-selected-country { max-width: 100%; }
 }
+
+/* Final regression guard: country names are rendered in the trigger and removable chips below.
+   Hide Carbon's numeric selection token, which otherwise appears as a dark pill. */
+.synesis-app .research-country-field .cds--multi-select .cds--list-box__selection,
+.synesis-app .research-country-field .cds--multi-select .cds--tag,
+.synesis-app .research-country-field .cds--multi-select .cds--tag--filter {
+  display:none!important;
+}
+.synesis-app .research-country-field .cds--multi-select .cds--list-box__label {
+  display:block!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  text-align:left!important;
+  color:var(--cds-text-primary)!important;
+}
+.synesis-app .research-country-field .cds--multi-select .cds--list-box__field {
+  min-width:0!important;
+  justify-content:flex-start!important;
+  background:var(--cds-field-01)!important;
+  color:var(--cds-text-primary)!important;
+}
+.synesis-app .research-intake-actions,
+.synesis-app .research-step-footer.research-intake-actions {
+  position:static!important;
+  inset:auto!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  left:auto!important;
+  z-index:auto!important;
+  box-shadow:none!important;
+}
