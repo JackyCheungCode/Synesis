@@ -130,7 +130,7 @@ function App() {
       return result.profile as ResearchProfile;
     } finally { setBusy(false); }
   }
-  async function createProject(brief: string, profile: ResearchProfile) {
+  async function createProject(brief: string, profile: ResearchProfile, projectId?:string) {
     const researchBrief = brief.trim();
     if (!researchBrief || !profile?.dimensions?.length) return;
     setBusy(true);
@@ -138,17 +138,50 @@ function App() {
       const countries = profile.dimensions.find(item=>item.key==='countries')?.values ?? [];
       const regions = profile.dimensions.find(item=>item.key==='regions')?.values ?? [];
       const targetRegions = [...countries,...regions].filter(Boolean);
-      const {data,error} = await supabase.from('research_projects').insert({
+      const payload = {
         name:(profile.summary || researchBrief).slice(0,56),
         objective:researchBrief, target_regions:targetRegions, platform_slugs:[],
-        scope:{input_mode:'structured_research',research_profile:profile,original_brief:researchBrief,profile_version:1},
+        scope:{input_mode:'structured_research',research_profile:profile,original_brief:researchBrief,profile_version:1,workflow_state:'in_progress',active_step:1},
         status:'planning',
-      }).select().single();
-      if(error) throw error;
-      navigate('projects', data.id);
-      setNotice({kind:'success',text:'第一步已完成：结构化研究条件已保存。尚未创建采集计划或启动 Apify 任务。'});
+      };
+      const result = projectId
+        ? await supabase.from('research_projects').update(payload).eq('id',projectId).select().single()
+        : await supabase.from('research_projects').insert(payload).select().single();
+      if(result.error) throw result.error;
+      navigate('projects', result.data.id);
+      setNotice({kind:'success',text:'第一步已保存：研究需求已确认。现在可以进入第二步选择调研平台。'});
       await loadAll();
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+
+  async function saveResearchDraft(draft:{brief:string;formValues:Record<string,string>;profile:ResearchProfile|null;activeStep:number;selectedSources:string[]},projectId?:string) {
+    setBusy(true);
+    try {
+      const existing=projectId?projects.find(item=>item.id===projectId):undefined;
+      const originalBrief=draft.brief.trim();
+      const objective=originalBrief || existing?.objective || '待完善的研究需求';
+      const scope={
+        ...(existing?.scope??{}),
+        input_mode:'structured_research',
+        workflow_state:existing?.scope?.workflow_state==='draft'||!existing?'draft':'in_progress',
+        active_step:draft.activeStep,
+        intake_form:draft.formValues,
+        original_brief:originalBrief,
+        research_profile:draft.profile,
+        selected_data_sources:draft.selectedSources,
+        profile_version:1,
+      };
+      const regions=[...(draft.profile?.dimensions.find(item=>item.key==='countries')?.values??[]),...(draft.profile?.dimensions.find(item=>item.key==='regions')?.values??[])];
+      const payload={name:(draft.profile?.summary||objective).slice(0,56),objective,target_regions:regions,scope,status:'planning'};
+      const result=projectId
+        ? await supabase.from('research_projects').update(payload).eq('id',projectId).select().single()
+        : await supabase.from('research_projects').insert(payload).select().single();
+      if(result.error) throw result.error;
+      if(!projectId) navigate('projects',result.data.id);
+      setNotice({kind:'success',text:'研究草稿已暂存。你可以稍后从研究项目列表继续。'});
+      await loadAll();
+    } catch(e) { setNotice({kind:'error',text:'暂存失败：'+message(e)}); }
     finally { setBusy(false); }
   }
   async function generateResearchPlan(project: Project, selectedSources: string[]) {
@@ -401,7 +434,8 @@ function App() {
           {page==='projects' && <ResearchWizard
             projects={projects} plans={plans} tasks={tasks} reports={reports} projectId={projectId} busy={busy}
             onParse={(brief)=>parseResearchBrief(brief)}
-            onCreate={(brief,profile)=>void createProject(brief,profile)}
+            onCreate={(brief,profile,id)=>void createProject(brief,profile,id)}
+            onSaveDraft={(draft,id)=>void saveResearchDraft(draft,id)}
             onOpen={(id)=>navigate('projects',id)}
             onBack={()=>navigate('projects')}
             onGeneratePlan={(project,categories)=>void generateResearchPlan(project,categories)}
