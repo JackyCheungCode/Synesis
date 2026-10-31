@@ -409,6 +409,7 @@ function App() {
             onCreate={(brief,profile)=>void createProject(brief,profile)}
             onOpen={(id)=>navigate('projects',id)}
             onBack={()=>navigate('projects')}
+            onGeneratePlan={(project,categories)=>void generateResearchPlan(project,categories)}
             onApprove={(plan)=>setApprovalPlan(plan)}
             onCancel={(task)=>cancelTask(task)}
             onRetry={(task)=>void retryTask(task)}
