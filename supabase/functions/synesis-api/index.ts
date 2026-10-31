@@ -503,7 +503,6 @@ Deno.serve(async (req: Request) => {
           if (!stop.has(word) && !/^\d+$/.test(word)) words.set(word,(words.get(word)??0)+1);
         }
       }
-        }
       }
       funnel.total = analyzed;
       const comparableCurrency = currencyPrices.size === 1 && !currencyPrices.has('UNKNOWN')
@@ -529,7 +528,7 @@ Deno.serve(async (req: Request) => {
         distributions:{price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),price_by_currency:[...currencyPrices.entries()].map(([currency,values])=>({currency,count:values.length,average:average(values),min:Math.min(...values),max:Math.max(...values)})).sort((a,b)=>b.count-a.count)},
         trends,
         funnel, field_counts:fieldCounts,
-        quality:{title_rate:analyzed?fieldCounts.title/records.length:0,price_rate:analyzed?fieldCounts.price/records.length:0,currency_rate:analyzed?fieldCounts.currency/records.length:0,rating_rate:analyzed?fieldCounts.rating/records.length:0,reviews_rate:analyzed?fieldCounts.reviews/records.length:0,brand_rate:analyzed?fieldCounts.brand/records.length:0,category_rate:analyzed?fieldCounts.category/records.length:0,image_rate:analyzed?fieldCounts.image/records.length:0,link_rate:analyzed?fieldCounts.link/records.length:0,sku_rate:analyzed?fieldCounts.sku/records.length:0,description_rate:analyzed?fieldCounts.description/records.length:0,sales_rate:analyzed?fieldCounts.sales/records.length:0,sales_rank_rate:analyzed?fieldCounts.sales_rank/records.length:0,stock_rate:analyzed?fieldCounts.stock/records.length:0}
+        quality:{title_rate:analyzed?fieldCounts.title/analyzed:0,price_rate:analyzed?fieldCounts.price/analyzed:0,currency_rate:analyzed?fieldCounts.currency/analyzed:0,rating_rate:analyzed?fieldCounts.rating/analyzed:0,reviews_rate:analyzed?fieldCounts.reviews/analyzed:0,brand_rate:analyzed?fieldCounts.brand/analyzed:0,category_rate:analyzed?fieldCounts.category/analyzed:0,image_rate:analyzed?fieldCounts.image/analyzed:0,link_rate:analyzed?fieldCounts.link/analyzed:0,sku_rate:analyzed?fieldCounts.sku/analyzed:0,description_rate:analyzed?fieldCounts.description/analyzed:0,sales_rate:analyzed?fieldCounts.sales/analyzed:0,sales_rank_rate:analyzed?fieldCounts.sales_rank/analyzed:0,stock_rate:analyzed?fieldCounts.stock/analyzed:0}
       });
     }
 
