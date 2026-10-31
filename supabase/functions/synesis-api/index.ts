@@ -277,7 +277,7 @@ Deno.serve(async (req: Request) => {
         ['tiktok',/tiktok|抖音/i],['instagram',/instagram/i],['facebook',/facebook/i],
         ['pinterest',/pinterest/i],['reddit',/reddit/i],['youtube',/youtube|油管/i],
         ['google',/google|谷歌/i],['bing',/bing/i],['shopify',/shopify/i],
-        ['shopee',/shopee/i],['lazada',/lazada/i],['temu',/temu/i],['walmart',/walmart/i],
+        ['shopee',/shopee/i],['lazada',/lazada/i],['temu',/temu/i],
         ['x-twitter',/x \/ twitter|twitter/i],['linkedin',/linkedin/i],['threads',/threads/i],
         ['douyin',/douyin|抖音/i],['xiaohongshu',/xiaohongshu|小红书|rednote/i],
         ['weibo',/weibo|微博/i],['bilibili',/bilibili|哔哩哔哩/i],['baidu',/baidu|百度/i],
@@ -324,7 +324,7 @@ Deno.serve(async (req: Request) => {
         }
       }
       const actorCandidates=[...actorMap.values()].slice(0,60);
-      const system = 'You are Synesis global trade research planner. Return valid JSON only with keys: executive_summary, research_questions (array), platform_tasks (array of objects {platform_slug, actor_id, input, purpose, estimated_items, estimated_cost_usd}), methodology, deliverables, estimated_cost_usd. Select Actors ONLY from the supplied actor_candidates and copy the exact candidate id. Never invent an Actor ID. Construct input using only fields and types in that candidate input_schema, and include all required fields. Read project.scope.collection_settings: target itemsPerPlatform is the requested record count PER PLATFORM (not a shared total); set estimated_items to that target and map it to the correct limit/count/maxResults/page-size input field only when that field exists in the selected Actor schema. Map depth light to list/core fields, standard to core fields plus available key engagement/rating/basic detail fields, and deep to detail pages, comments, and related records only when the Actor schema explicitly supports them. Never invent unsupported input fields or exceed the Actor schema. If a platform has no suitable candidate or its schema cannot support a requested depth, still explain the limitation and collect the useful supported fields; do not silently omit a selected platform. If no candidate is genuinely suitable or required fields cannot be satisfied, omit that platform task and explain the gap in research_questions or methodology. Tasks are proposed only, not executed.';
+      const system = 'You are Synesis global trade research planner. Return valid JSON only with keys: executive_summary, research_questions (array), platform_tasks (array of objects {platform_slug, actor_id, input, purpose, estimated_items, estimated_cost_usd}), methodology, deliverables, estimated_cost_usd. Select Actors ONLY from the supplied actor_candidates and copy the exact candidate id. Never invent an Actor ID. Construct input using only fields and types in that candidate input_schema, and include all required fields. Read project.scope.collection_settings: target itemsPerPlatform is the requested record count PER PLATFORM (not a shared total); set estimated_items to that target and map it to the correct limit/count/maxResults/page-size input field only when that field exists in the selected Actor schema. Map depth light to list/core fields, standard to core fields plus available key engagement/rating/basic detail fields, and deep to detail pages, comments, and related records only when the Actor schema explicitly supports them. Never invent unsupported input fields or exceed the Actor schema. Create a separate platform_task for every selected platform in project.scope.selected_data_sources whenever a matching Actor candidate exists; do not collapse different selected platforms into one task unless the candidate explicitly supports all of them. If a platform has no suitable candidate or its schema cannot support a requested depth, still explain the limitation and collect the useful supported fields; do not silently omit a selected platform. If no candidate is genuinely suitable or required fields cannot be satisfied, omit that platform task and explain the gap in research_questions or methodology. Tasks are proposed only, not executed.';
       const prompt = JSON.stringify({project,actor_candidates});
       let response: Response;
       if (provider==='openai'||provider==='deepseek'||provider==='mistral'||provider==='x') {
@@ -355,13 +355,13 @@ Deno.serve(async (req: Request) => {
         const schema=candidate.input_schema as CompactInputSchema;
         const properties=schema.properties??{};
         const input=task.input&&typeof task.input==='object'&&!Array.isArray(task.input)?{...(task.input as Record<string,unknown>)}:{};
-        const numericFields=Object.entries(properties).filter(([,definition])=>['number','integer'].includes(String(definition?.type)));
+        const numericFields=Object.entries(properties).filter(([,definition])=>(Array.isArray(definition?.type)?definition.type:[definition?.type]).some(type=>type==='number'||type==='integer'));
         const countField=countFieldPriority.find(key=>numericFields.some(([name])=>name.toLowerCase()===key.toLowerCase()))
           ??numericFields.find(([name])=>/(limit|max(items|results|records|products|videos|posts|listings)|numberofresults|numresults|^count$)/i.test(name))?.[0];
         const settingsWarnings:string[]=[];
         if(countField) input[countField]=requestedItems;
         else settingsWarnings.push('该 Actor Schema 未发现明确的记录数量参数，目标数量可能无法由 Actor 强制限制。');
-        const depthFields=Object.entries(properties).filter(([name,definition])=>definition?.type==='boolean'&&/(include|enable|fetch|get|scrape|with).*(comments?|reviews?|replies|details?)|(comments?|reviews?|replies|details?).*(enabled|included)/i.test(name));
+        const depthFields=Object.entries(properties).filter(([name,definition])=>(Array.isArray(definition?.type)?definition.type:[definition?.type]).includes('boolean')&&/(include|enable|fetch|get|scrape|with).*(comments?|reviews?|replies|details?)|(comments?|reviews?|replies|details?).*(enabled|included)/i.test(name));
         if(requestedDepth==='deep') {
           if(depthFields.length) for(const [name] of depthFields) input[name]=true;
           else settingsWarnings.push('该 Actor Schema 未提供评论、详情或关联内容开关，深度采集将受平台能力限制。');
