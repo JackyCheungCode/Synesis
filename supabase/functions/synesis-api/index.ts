@@ -765,6 +765,8 @@ Deno.serve(async (req: Request) => {
       };
       const ratingStats = {sum:0,count:0};
       const reviewStats = {sum:0,count:0};
+      const engagementStats = {views:{sum:0,count:0},likes:{sum:0,count:0},comments:{sum:0,count:0},shares:{sum:0,count:0},followers:{sum:0,count:0},rank:{sum:0,count:0},salary:{sum:0,count:0}};
+      const entityTypes = new Map<string,number>();
       const brands = new Map<string, number>();
       const categories = new Map<string, number>();
       const words = new Map<string, number>();
@@ -796,11 +798,20 @@ Deno.serve(async (req: Request) => {
         for (const entry of rows) {
           const row = entry.raw_data as Record<string, unknown>;
         const title = pick(row, [/^(title|name|product.?name|item.?name)$/i]);
-        const price = numeric(pick(row, [/^(price|sale.?price|current.?price|amount|cost|listing.?price|unit.?price)$/i]));
+        const price = numeric(pick(row, [/^(price|sale.?price|current.?price|amount|cost|listing.?price|unit.?price|salary|compensation|rent|nightly.?price)$/i]));
         const currencyValue = pick(row, [/^(currency|currency.?code|price.?currency|currency.?symbol)$/i]);
         const currency = currencyValue ? String(currencyValue).trim().toUpperCase() : 'UNKNOWN';
         const rating = numeric(pick(row, [/^(rating|stars|average.?rating|average.?score)$/i]));
         const reviews = numeric(pick(row, [/review.?count|ratings.?count|total.?reviews|review.?total/i]));
+        const views = numeric(pick(row, [/^(views?|view.?count|play.?count|video.?views?|plays?|installs?|downloads?)$/i]));
+        const likes = numeric(pick(row, [/^(likes?|like.?count|digg.?count|favorite.?count)$/i]));
+        const comments = numeric(pick(row, [/^(comments?|comment.?count|replies|reply.?count)$/i]));
+        const shares = numeric(pick(row, [/^(shares?|share.?count|repost.?count)$/i]));
+        const followers = numeric(pick(row, [/^(followers?|follower.?count|subscribers?|subscriber.?count)$/i]));
+        const rank = numeric(pick(row, [/^(rank|position|search.?rank|sales.?rank|best.?seller.?rank|bsr)$/i]));
+        const salary = numeric(pick(row, [/^(salary|compensation|annual.?salary|hourly.?rate|pay)$/i]));
+        const entityType = String(pick(row, [/^(entity.?type|record.?type|content.?type)$/i])??'generic');
+        incrementBounded(entityTypes,entityType);
         const brand = pick(row, [/^brand(name)?$/i]);
         const category = pick(row, [/category|department|product.?type|taxonomy/i]);
         const image = pick(row, [/image|thumbnail|picture|photo/i]);
@@ -838,6 +849,7 @@ Deno.serve(async (req: Request) => {
           }
         }
         if (currencyValue) fieldCounts.currency++;
+        for (const [key,value] of Object.entries({views,likes,comments,shares,followers,rank,salary})) if(value!==null&&value>=0){engagementStats[key as keyof typeof engagementStats].sum+=value;engagementStats[key as keyof typeof engagementStats].count++;}
         if (rating !== null && rating >= 0) { ratingStats.sum+=rating; ratingStats.count++; funnel.rated++; fieldCounts.rating++; const bucket=String(Math.round(rating*2)/2); ratingBuckets.set(bucket,(ratingBuckets.get(bucket)??0)+1); }
         if (reviews !== null && reviews >= 0) { reviewStats.sum+=reviews; reviewStats.count++; fieldCounts.reviews++; }
         if (image) { funnel.imaged++; fieldCounts.image++; }
@@ -881,8 +893,8 @@ Deno.serve(async (req: Request) => {
       const bandsByCurrency = [...currencyStats.entries()].map(([currency,stats])=>({currency,bands:makeBands(stats.bands)}));
       return json({
         task, coverage:{analyzed,available:total,complete:analyzed>=total},
-        metrics:{average_price:comparableStats?average(comparableStats.sum,comparableStats.count):null,min_price:comparableStats?.min??null,max_price:comparableStats?.max??null,median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),price_currency:comparableCurrency,price_comparable:Boolean(comparableCurrency),percentiles_approximate:true,average_rating:average(ratingStats.sum,ratingStats.count),average_reviews:average(reviewStats.sum,reviewStats.count),price_count:priceCount,comparable_price_count:comparableStats?.count??0,rating_count:ratingStats.count,review_count:reviewStats.count},
-        distributions:{price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),countries:top(countries),review_words:top(reviewWords),rating_distribution:[...ratingBuckets.entries()].sort((a,b)=>Number(a[0])-Number(b[0])).map(([rating,count])=>({rating:Number(rating),count})),price_by_currency:[...currencyStats.entries()].map(([currency,stats])=>({currency,count:stats.count,average:average(stats.sum,stats.count),min:stats.min,max:stats.max})).sort((a,b)=>b.count-a.count)},
+        metrics:{average_views:average(engagementStats.views.sum,engagementStats.views.count),average_likes:average(engagementStats.likes.sum,engagementStats.likes.count),average_comments:average(engagementStats.comments.sum,engagementStats.comments.count),average_shares:average(engagementStats.shares.sum,engagementStats.shares.count),average_followers:average(engagementStats.followers.sum,engagementStats.followers.count),average_rank:average(engagementStats.rank.sum,engagementStats.rank.count),average_salary:average(engagementStats.salary.sum,engagementStats.salary.count),engagement_rate:engagementStats.views.sum>0?(engagementStats.likes.sum+engagementStats.comments.sum+engagementStats.shares.sum)/engagementStats.views.sum:null,average_price:comparableStats?average(comparableStats.sum,comparableStats.count):null,min_price:comparableStats?.min??null,max_price:comparableStats?.max??null,median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),price_currency:comparableCurrency,price_comparable:Boolean(comparableCurrency),percentiles_approximate:true,average_rating:average(ratingStats.sum,ratingStats.count),average_reviews:average(reviewStats.sum,reviewStats.count),price_count:priceCount,comparable_price_count:comparableStats?.count??0,rating_count:ratingStats.count,review_count:reviewStats.count},
+        distributions:{entity_types:top(entityTypes),price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),countries:top(countries),review_words:top(reviewWords),rating_distribution:[...ratingBuckets.entries()].sort((a,b)=>Number(a[0])-Number(b[0])).map(([rating,count])=>({rating:Number(rating),count})),price_by_currency:[...currencyStats.entries()].map(([currency,stats])=>({currency,count:stats.count,average:average(stats.sum,stats.count),min:stats.min,max:stats.max})).sort((a,b)=>b.count-a.count)},
         trends,
         funnel, field_counts:fieldCounts,
         quality:{title_rate:analyzed?fieldCounts.title/analyzed:0,price_rate:analyzed?fieldCounts.price/analyzed:0,currency_rate:analyzed?fieldCounts.currency/analyzed:0,rating_rate:analyzed?fieldCounts.rating/analyzed:0,reviews_rate:analyzed?fieldCounts.reviews/analyzed:0,brand_rate:analyzed?fieldCounts.brand/analyzed:0,category_rate:analyzed?fieldCounts.category/analyzed:0,image_rate:analyzed?fieldCounts.image/analyzed:0,link_rate:analyzed?fieldCounts.link/analyzed:0,sku_rate:analyzed?fieldCounts.sku/analyzed:0,description_rate:analyzed?fieldCounts.description/analyzed:0,sales_rate:analyzed?fieldCounts.sales/analyzed:0,sales_rank_rate:analyzed?fieldCounts.sales_rank/analyzed:0,stock_rate:analyzed?fieldCounts.stock/analyzed:0,country_rate:analyzed?fieldCounts.country/analyzed:0,review_text_rate:analyzed?fieldCounts.review_text/analyzed:0}
