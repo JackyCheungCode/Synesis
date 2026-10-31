@@ -21,7 +21,7 @@ type Credential = { slug: string; name: string; kind: 'provider' | 'integration'
 type Project = { id: string; name: string; objective: string; status: string; target_regions: string[]; platform_slugs: string[]; scope?: Record<string,any> };
 type Plan = { id: string; project_id: string; status: string; plan: Record<string, unknown>; estimated_cost: number | null; created_at: string };
 type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string; progress?: number; result_count?: number; run_status?: string | null; external_run_id?: string | null; error_message?: string | null; finished_at?: string | null; result_synced_count?: number };
-type MarketReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; content:Record<string,unknown> };
+type MarketReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; report_type?:string; content:Record<string,unknown> };
 type Product = {id:string;canonical_key:string;title:string|null;brand:string|null;category:string|null;description:string|null;image_url:string|null;updated_at:string};
 type ProductHistory = {id:string;price:number;currency:string;observed_at:string;source_task_id:string;source?:{platform_slug:string;external_product_id:string;source_url:string}|null};
 
@@ -89,7 +89,7 @@ function App() {
         supabase.from('ai_research_plans').select('id,project_id,status,plan,estimated_cost,created_at').order('created_at',{ascending:false}),
         supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at,started_at,updated_at,progress,result_count,result_synced_count,run_status,external_run_id,error_message,finished_at').order('created_at',{ascending:false}),
         api('credentials.list'),
-        supabase.from('market_reports').select('id,title,status,created_at,project_id,content').order('created_at',{ascending:false}),
+        supabase.from('market_reports').select('id,title,status,created_at,project_id,report_type,content').order('created_at',{ascending:false}),
       ]);
       if (p.error) throw p.error; if (pl.error) throw pl.error; if (t.error) throw t.error; if (r.error) throw r.error;
       setProjects(p.data ?? []); setPlans(pl.data ?? []); setTasks(t.data ?? []); setCredentials(c.credentials ?? []); setReports(r.data ?? []); const activeProvider=(c.credentials??[]).find((item:Credential)=>item.kind==='provider'&&item.status==='validated'); if(activeProvider) setSelectedProvider(activeProvider.slug);
