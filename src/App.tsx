@@ -29,12 +29,6 @@ type ProductHistory = {id:string;price:number;currency:string;observed_at:string
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vuyyaqsmlzixhdjvaidj.supabase.co';
 const fnUrl = `${supabaseUrl}/functions/v1/synesis-api`;
-const providerModels: Record<string, string> = {
-  openai: 'gpt-4.1-mini', googlegemini: 'gemini-2.5-flash', deepseek: 'deepseek-chat',
-  anthropic: 'claude-3-7-sonnet-latest', cloudflare: '@cf/meta/llama-3.3-70b-instruct',
-  mistral: 'mistral-small-latest', x: 'grok-3-mini',
-};
-
 function App() {
   const { session, signOut } = useAuth();
   const route = useWorkspaceRoute();
@@ -102,7 +96,7 @@ function App() {
         supabase.from('market_reports').select('id,title,status,created_at,project_id,report_type,evidence,content').order('created_at',{ascending:false}),
       ]);
       if (p.error) throw p.error; if (pl.error) throw pl.error; if (t.error) throw t.error; if (r.error) throw r.error;
-      setProjects(p.data ?? []); setPlans(pl.data ?? []); setTasks(t.data ?? []); setCredentials(c.credentials ?? []); setReports(r.data ?? []); const activeProvider=(c.credentials??[]).find((item:Credential)=>item.kind==='provider'&&item.status==='validated'); if(activeProvider) setSelectedProvider(activeProvider.slug);
+      setProjects(p.data ?? []); setPlans(pl.data ?? []); setTasks(t.data ?? []); setCredentials(c.credentials ?? []); const cloudflareCredential=(c.credentials??[]).find((item:Credential)=>item.slug==='cloudflare'&&item.kind==='provider'); if(cloudflareCredential?.account_id) setCloudflareAccountId(cloudflareCredential.account_id); setReports(r.data ?? []); const activeProvider=(c.credentials??[]).find((item:Credential)=>item.kind==='provider'&&item.status==='validated'); if(activeProvider) setSelectedProvider(activeProvider.slug);
     } catch (e) { setNotice({kind:'error',text: message(e)}); }
     finally { setBusy(false); }
   }
@@ -135,15 +129,30 @@ function App() {
     try {
       await api('credentials.save', { slug, name, kind, apiKey:value, accountId: slug === 'cloudflare' ? cloudflareAccountId.trim() : undefined, metadata: kind === 'integration' ? (slug === 'reddit' ? { clientId: integrationMeta.reddit ?? '' } : slug === 'tiktok' ? { clientKey: integrationMeta.tiktok ?? '' } : {}) : {} });
       setKeyValues(v => ({...v,[slug]:''}));
-      setNotice({kind:'success',text:`${name} 凭证已加密保存。现在可以执行连接测试。`});
+      setNotice({kind:'success',text:`${name} 凭证已加密保存，正在自动获取可用模型…`});
       await loadAll();
+      if(kind==='provider') await loadProviderModels(slug);
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
   async function loadProviderModels(slug:string) {
     setBusy(true);
-    try { const result=await api('models.list',{slug}); setProviderModelsList(v=>({...v,[slug]:result.models??[]})); if(result.selected_model) setSelectedProviderModels(v=>({...v,[slug]:result.selected_model})); else if(result.models?.length) setSelectedProviderModels(v=>({...v,[slug]:result.models[0].id})); setNotice({kind:'success',text:`已获取 ${result.models?.length??0} 个模型。`}); }
-    catch(e) { setNotice({kind:'error',text:message(e)}); } finally { setBusy(false); }
+    try {
+      const result=await api('models.list',{slug});
+      const available=(result.models??[]) as Array<{id:string;name?:string;task?:string}>;
+      setProviderModelsList(v=>({...v,[slug]:available}));
+      const current=String(result.selected_model??'');
+      const next=available.some(item=>item.id===current)?current:(available[0]?.id??'');
+      if(next) {
+        setSelectedProviderModels(v=>({...v,[slug]:next}));
+        if(next!==current) await api('models.select',{slug,model:next});
+        setNotice({kind:'success',text:`已自动获取 ${available.length} 个模型，并默认选择：${available.find(item=>item.id===next)?.name??next}。可在该 Provider 卡片的“默认模型”下拉框中更换。`});
+      } else {
+        setSelectedProviderModels(v=>({...v,[slug]:''}));
+        setNotice({kind:'warning',text:available.length?'模型列表已获取，请在“默认模型”下拉框中选择。':'已连接模型目录，但没有返回可用模型。请检查该 Provider 的模型权限、账户可用模型或模型目录响应。'});
+      }
+    } catch(e) { setNotice({kind:'error',text:`自动获取模型失败：${message(e)}。可修正凭证后重新保存，或点击“刷新模型列表”。`}); }
+    finally { setBusy(false); }
   }
   async function saveProviderModel(slug:string,model:string) {
     setSelectedProviderModels(v=>({...v,[slug]:model}));
@@ -153,7 +162,7 @@ function App() {
   async function testConnection(slug: string, kind: 'provider'|'integration') {
     setBusy(true);
     try {
-      const result = await api('connection.test',{slug,kind,model:selectedProviderModels[slug]||providerModels[slug]});
+      const result = await api('connection.test',{slug,kind,model:selectedProviderModels[slug]});
       setNotice({kind:'success',text:`${slug} 连接成功：${result.message ?? '凭证有效，服务可调用'}`});
       await loadAll();
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
@@ -486,7 +495,7 @@ function App() {
     if(projectTasks.some(task=>!savedByTask.has(task.id))) throw new Error('第四步的项目统计快照尚未全部保存。');
     const analyses = projectTasks.map(task=>({platform:task.platform_slug,taskId:task.id,analysis:savedByTask.get(task.id)}));
     const normalizationSummary=await api('tasks.project-normalization-summary',{projectId});
-    const response = await api('ai.invoke',{provider:selectedProvider,model:providerModels[selectedProvider],messages:[
+    const response = await api('ai.invoke',{provider:selectedProvider,model:selectedProviderModels[selectedProvider],messages:[
       {role:'system',content:'你是 Synesis 的跨境商业智能研究负责人。请用中文输出一份可供管理层决策的完整研究报告。严格依据研究目标、研究画像、目标地区、实际采集任务、各数据源统计快照及全项目标准化质量汇总。字段完整度评分不代表事实准确率或模型置信度；报告需披露标准化覆盖率、平均完整度和质量提醒数量。报告必须包含：执行摘要、研究范围与方法、市场概览、跨平台对比、产品开发策略、定价策略、目标市场进入策略、消费者画像与需求、竞争策略、营销与销售渠道、商业机会、风险、30/60/90天行动路线图、数据质量评估、数据局限和待验证假设。对每项关键结论标记“数据事实 / AI 推断 / 商业建议 / 待验证假设”，引用对应平台名称、统计覆盖数和实际字段/指标；不能把不同币种价格直接比较，不能把播放量、销量、搜索排名混为同一指标。不得虚构市场规模、销量、利润、人口属性、竞争份额或未提供的指标。没有证据时明确写“数据不足，暂不判断”。输出严格 JSON，不要 Markdown 代码围栏，字段使用 executive_summary、research_scope、market_overview、cross_platform_comparison、product_development_strategy、pricing_strategy、market_entry_strategy、customer_persona_strategy、competitive_strategy、marketing_channel_strategy、opportunities、risks、action_roadmap、data_quality_assessment、limitations、assumptions_to_validate。数组项应包含结论、依据、类型和来源。'},
       {role:'user',content:JSON.stringify({research_objective:project.objective,research_profile:project.scope?.research_profile??null,intake_form:project.scope?.intake_form??{},target_regions:project.target_regions,selected_platforms:project.platform_slugs,collection_settings:project.scope?.collection_settings??null,normalization_summary:normalizationSummary,data:analyses})}
     ]});
@@ -588,7 +597,7 @@ function App() {
             credentials={credentials} keyValues={keyValues} setKeyValues={setKeyValues} busy={busy}
             cloudflareAccountId={cloudflareAccountId} setCloudflareAccountId={setCloudflareAccountId}
             integrationMeta={integrationMeta} setIntegrationMeta={setIntegrationMeta}
-            providerModels={providerModels} selectedProvider={selectedProvider} setSelectedProvider={setSelectedProvider}
+            providerModels={Object.fromEntries(Object.entries(selectedProviderModels).map(([slug,model])=>[slug,model]))} selectedProvider={selectedProvider} setSelectedProvider={setSelectedProvider}
             models={providerModelsList} selectedModels={selectedProviderModels} onLoadModels={loadProviderModels} onSelectModel={saveProviderModel}
             onSave={(slug,name,kind)=>void saveCredential(slug,name,kind)}
             onTest={(slug,kind)=>void testConnection(slug,kind)}
