@@ -216,3 +216,16 @@ h3 { color:#161616; font-size:15px; margin:0 0 6px; font-weight:600; }
   .vault-grid { gap:10px; }
   .nav-dismiss-overlay { touch-action:manipulation; }
 }
+
+
+/* Use the full available workspace width on large displays. */
+@media (min-width:1056px) {
+  .synesis-content { width:auto; min-width:0; }
+  .page-wrap {
+    width:100%;
+    max-width:none;
+    margin:0;
+    padding-left:clamp(20px,2vw,36px);
+    padding-right:clamp(20px,2vw,36px);
+  }
+}
