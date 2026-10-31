@@ -54,7 +54,9 @@ test('workspace theme and navigation expose accessible state', () => {
   assert.match(navigation, /aria-current=\{page === target \? 'page' : undefined\}/);
   assert.match(navigation, /<SideNav/);
   assert.match(navigation, /isPersistent=\{false\}/);
-  assert.match(navigation, /onOverlayClick=\{onClose\}/);
+  assert.match(navigation, /onOverlayClick=\{closeAndFocusTrigger\}/);
+  assert.match(navigation, /onToggle=/);
+  assert.match(app, /main-content/);
 });
 
 test('custom selection and async controls expose selected and busy states', () => {
