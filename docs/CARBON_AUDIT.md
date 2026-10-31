@@ -306,3 +306,41 @@ Carbon 官方依据：
 3. 先处理共享风险 LAY-01 至 LAY-03：整理 CSS 规则映射与断点优先级，禁止继续添加零散全局覆盖。
 4. 之后按页面顺序取得 320/375/768/1024/1440px 截图；每次共享样式改动至少回归 Dashboard、Research、Products、Settings、Vault 五个主页面。
 5. 每项运行时证据必须记录浏览器/版本、实际 viewport、页面/数据状态、截图位置及复测结果。缺少这些证据时保持“部分通过/未检查”。
+
+
+### 9.5 第二轮：共享布局级联核查（2026-10-31）
+
+> 本轮把首轮列出的 LAY-01 至 LAY-03 进一步落实到可定位的 CSS 级联证据。结论仍是静态结论；没有浏览器计算样式、截图或真实滚动测量，不关闭任何 L 项。
+
+| 风险 ID | 本轮确认的级联事实 | 影响与判断 | 状态 / 处理要求 |
+|---|---|---|---|
+| LAY-01a | `src/main.tsx` 按 `styles.scss` → Carbon Charts CSS → `carbon-foundation.scss` 加载。Foundation 的普通声明可覆盖前置同优先级规则，但不能覆盖前置 `!important`。 | 全站最终布局不仅由 Foundation 决定；必须同时审查 styles.scss 中的强制覆盖。 | 静态确认；继续禁止新增零散 `!important` |
+| LAY-01b | `styles.scss` 的移动端密度段在 672px 以下将 `.carbon-grid`、`.vault-grid`、`.analytics-grid`、`.analytics-kpis`、`.product-grid` 设为两列并带 `!important`；这会压过 Foundation 的移动端单列规则。380px 以下仍再次强制两列。 | Dashboard KPI、Vault Provider 卡片、商品卡片和分析卡片在 320/375px 实际宽度可能偏窄；这是已确认的级联结果，但是否造成内容挤压必须看真实视口。 | 待整改/待运行时确认；先在截图中对比 320、375、400、672px，再决定哪些模块应单列、哪些可双列 |
+| LAY-01c | 同一移动端密度段把 `.page-wrap` 左右 padding 设为 4px `!important`；Foundation 的 672px 以下 16px gutter 无法覆盖。380px 以下另有更晚的 12px `!important` gutter。 | 381–672px 有效水平 gutter 为 4px；320–380px 有效 gutter 为 12px。两段行为不连续，且与 Foundation 的统一 gutter token 脱节。 | 待整改；需结合用户已提出的“缩小左右边距”要求，以截图确认舒适值后统一 token，不直接恢复过宽边距 |
+| LAY-02a | `.research-fluid-grid`、`.research-price-range`、`.research-checkbox-grid` 等在 styles.scss 中有多轮同名声明；后出现的 intake 规则再次定义桌面/移动端列数。 | 需求表单主要布局目前可从源码追踪，但重复规则提高后续局部修改回归风险。 | 待整理；合并为一个 intake 组件规则区，并保留 672px 以下单列及价格币种整行 |
+| LAY-03a | `.research-stepper`、`.research-step`、`.research-workflow-actions` 至少在基础段、移动端段、后续 Carbon refinement 段重复声明；最终移动端 step label 采用纵向排列、5 等分列宽。 | 320px 下每步可用宽度有限，标题会换行；是否过度换行/高度异常不能从源码确定。 | 待运行时验收；必须检查五步全部文案、当前/完成态和底部动作区，不以“无横向滚动”单项代替可读性 |
+
+#### 页面布局的当前静态基线
+
+- Dashboard：4 个 KPI + 全宽流程 Tile；当前移动端最终级联是两列 KPI，而非 Foundation 预设的单列。
+- Key Vault：Provider / integration 卡片当前移动端最终级联是两列；卡片操作区允许换行，窄屏还存在纵向排列规则。
+- 商品库：商品卡片当前移动端最终级联是两列；图片高度在移动密度段压缩至 112px。
+- Research：需求 Fluid grid 在 672px 以下单列；平台选项、五步 Stepper、研究 KPI、报告操作区分别有独立布局规则；需以 320/375px 实测其组合效果。
+- 表格：商品历史表、原始结果表和跨平台统一数据表都有独立 overflow 容器；静态上支持容器内滚动，不代表触控滚动体验已通过。
+- Settings：采集设置为分区 Tile + NumberInput / RadioButtonGroup；窄屏保存区改为纵向排列。
+- Modals：仍按 L-12 单独验收，不因页面布局静态核查而关闭。
+
+#### 自动化 / CI 证据边界
+
+- 当前基准提交：`1220996fb4459830423ec6c834e9be7cea0b1bd7`（`develop`）。
+- GitHub Actions run #428：build job 成功，包含 `test:product-identity`、`test:carbon-foundation`、`tsc -b && vite build)；deploy job 成功，Cloudflare Worker 与 Supabase Edge Function 部署步骤均成功。
+- 该 CI 未运行真实浏览器截图、视口矩阵、键盘/焦点脚本或屏幕阅读器；CI 成功只能证明当前构建和既有静态测试通过。
+- Shell 未关闭项继续保留；本轮也没有把任何 L-01 至 L-12 升级为运行时通过。
+
+#### 下一步执行顺序
+
+1. 先清理 LAY-01：统一 page gutter 与移动端列数策略，明确 Dashboard KPI、Vault、Products、Analytics 各自的手机布局；保留用户要求的紧凑左右边距。
+2. 再清理 LAY-02：将研究需求页的重复 CSS 合并到单一组件作用域。
+3. 再清理 LAY-03：统一五步 Stepper 与底部动作区的断点规则。
+4. 每一项 CSS 整理都必须同步更新静态回归测试；取得浏览器环境后，按 320/375/768/1024/1440px 回归所有主页面。
+5. 只有取得对应截图、溢出/滚动结果和测试环境记录后，才更新 L 项状态；Shell 的 Escape、焦点、叠层、主题截图与屏幕阅读器项目仍独立保留。
