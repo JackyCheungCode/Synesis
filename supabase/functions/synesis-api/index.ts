@@ -374,15 +374,34 @@ Deno.serve(async (req: Request) => {
         records.push(...(data ?? []).map(row => row.raw_data as Record<string, unknown>));
       }
       const pick = (row: Record<string, unknown>, patterns: RegExp[]) => {
-        for (const [key, value] of Object.entries(row)) {
-          if (value !== null && value !== undefined && value !== '' && patterns.some(pattern => pattern.test(key))) return value;
+        const fields: Array<[string, unknown]> = [];
+        const visit = (value: unknown, path: string, depth: number) => {
+          if (value === null || value === undefined || depth > 5) return;
+          if (Array.isArray(value)) {
+            if (value.every(item => item === null || ['string','number','boolean'].includes(typeof item))) {
+              fields.push([path, value.filter(item => item !== null).join(' ')]);
+            }
+            return;
+          }
+          if (typeof value === 'object') {
+            for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+              visit(nested, path ? path + '.' + key : key, depth + 1);
+            }
+            return;
+          }
+          if (value !== '') fields.push([path, value]);
+        };
+        visit(row, '', 0);
+        for (const [path, value] of fields) {
+          const leaf = path.split('.').pop() ?? path;
+          if (patterns.some(pattern => pattern.test(leaf) || pattern.test(path))) return value;
         }
         return null;
       };
       const numeric = (value: unknown) => {
         if (typeof value === 'number' && Number.isFinite(value)) return value;
         if (typeof value !== 'string') return null;
-        const match = value.replace(/,/g, '').match(/-?\\d+(?:\\.\\d+)?/);
+        const match = value.replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
         return match ? Number(match[0]) : null;
       };
       const priceValues: number[] = [];
@@ -443,8 +462,8 @@ Deno.serve(async (req: Request) => {
         if (brand) { const key=String(brand).trim(); brands.set(key,(brands.get(key)??0)+1); }
         if (category) { const key=String(category).trim(); categories.set(key,(categories.get(key)??0)+1); }
         const textValue = [title, category, brand].filter(Boolean).join(' ').toLowerCase();
-        for (const word of textValue.match(/[a-z0-9\\u4e00-\\u9fff]{2,}/g) ?? []) {
-          if (!stop.has(word) && !/^\\d+$/.test(word)) words.set(word,(words.get(word)??0)+1);
+        for (const word of textValue.match(/[a-z0-9\u4e00-\u9fff]{2,}/g) ?? []) {
+          if (!stop.has(word) && !/^\d+$/.test(word)) words.set(word,(words.get(word)??0)+1);
         }
       }
       const sorted = [...priceValues].sort((a,b)=>a-b);
