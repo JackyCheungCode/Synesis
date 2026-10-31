@@ -33,6 +33,7 @@ const sourceGroups=[
  {id:'brands',title:'独立站与品牌官网',desc:'品牌官网、独立电商站与公开产品目录',items:['Shopify Stores','Brand Websites','Product Catalogues']},
  {id:'other',title:'其他行业数据',desc:'公开行业目录与可访问的垂直数据源',items:['Industry Directories','Public Trade Data','Logistics Information']},
 ];
+const dropdownOptions:Record<string,string[]>={languages:['英语','德语','法语','西班牙语','意大利语','日语','韩语','中文','多语言 / 自动识别'],time_range:['近 30 天','近 90 天','近 6 个月','近 12 个月','近 24 个月','全部可用历史数据','自定义（在补充说明中填写）'],business_goals:['市场进入可行性','新品选品与产品开发','竞争对手分析','市场定价分析','消费者需求洞察','寻找供应商与制造商','销售渠道策略','品牌定位与营销策略','综合市场研究']};
 const fieldSpecs=[
  ['keywords','核心关键词','例如：智能喂食器、自动猫砂盆'],
  ['countries','目标国家','例如：德国、法国、美国'],
@@ -101,7 +102,7 @@ export function ResearchWizard(props:Props) {
    <p className="eyebrow">STEP 1 / RESEARCH SCOPE</p><h2>建立你的市场研究需求</h2>
    <p>按字段填写关键信息；不确定的项目可以留空。AI 会帮助整理、识别缺失项，并保留信息来源状态。</p>
    <div className="research-intake-grid">
-    {fieldSpecs.map(([key,label,placeholder])=><div className="research-intake-field" key={key}><TextInput id={'intake-'+key} labelText={label} value={formValues[key]??''} placeholder={placeholder} onChange={e=>{setFormValues(v=>({...v,[key]:e.target.value}));setProfile(null);}}/></div>)}
+    {fieldSpecs.map(([key,label,placeholder])=><div className="research-intake-field" key={key}>{dropdownOptions[key]?<><label className="research-select-label" htmlFor={'intake-'+key}>{label}</label><select id={'intake-'+key} className="research-select-control" value={formValues[key]??''} onChange={e=>{setFormValues(v=>({...v,[key]:e.target.value}));setProfile(null);}}><option value="">请选择（可留空）</option>{dropdownOptions[key].map(option=><option key={option} value={option}>{option}</option>)}</select></>:<TextInput id={'intake-'+key} labelText={label} value={formValues[key]??''} placeholder={placeholder} onChange={e=>{setFormValues(v=>({...v,[key]:e.target.value}));setProfile(null);}}/>}</div>)}
    </div>
    <div className="research-intake-field research-intake-wide"><TextArea id="research-brief" labelText="其他研究说明 / 自然语言补充" value={brief} onChange={e=>{setBrief(e.target.value);setProfile(null);}} rows={4} placeholder="例如：希望比较德国和法国市场的竞争强度，重点寻找差异化产品机会，并评估适合跨境电商的切入方式。"/></div>
    <div className="research-start-actions"><span>所有字段均可选；至少填写一个条件或补充说明即可开始。</span><Button kind="primary" renderIcon={Renew} disabled={(!brief.trim()&&!Object.values(formValues).some(v=>v.trim()))||busy} onClick={()=>void parseBrief()}>AI 整理研究需求</Button></div>
