@@ -19,6 +19,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Test product identity matching
         run: npm run test:product-identity
+      - name: Test Carbon foundation compliance
+        run: npm run test:carbon-foundation
       - name: Typecheck and build
         run: npm run build
       - name: Upload Vite build
