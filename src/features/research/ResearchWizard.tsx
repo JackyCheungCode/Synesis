@@ -1,7 +1,7 @@
 import React from 'react';
 import {
  Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep,
- Accordion, AccordionItem, FluidForm, FormGroup, Checkbox, RadioButtonGroup, RadioButton, ProgressBar,
+ Accordion, AccordionItem, FluidForm, FormGroup, RadioButtonGroup, RadioButton, ProgressBar,
  unstable__FluidTextInput as FluidTextInput,
  unstable__FluidTextArea as FluidTextArea,
  unstable__FluidDropdown as FluidDropdown,
@@ -244,7 +244,7 @@ export function ResearchWizard(props:Props) {
     <Accordion align="start" className="research-intake-accordion">
      <AccordionItem title={<span className="research-accordion-title"><b>01</b> 核心研究目标 <small>研究范围、关键词与目标市场</small></span>} open={openPanels[0]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===0?!isOpen:x))}>
       <div className="research-fluid-grid">
-       <div className="research-fluid-field research-fluid-span"><FluidTextInput id="intake-keywords" labelText="核心关键词 *" helperText="必填。多个关键词请使用逗号分隔。" value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" invalid={attemptedNext&&!formValues.keywords?.trim()} invalidText="请输入至少一个核心关键词。" onBlur={()=>setAttemptedNext(true)} onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field research-fluid-span"><FluidTextInput id="intake-keywords" labelText="核心关键词 *" value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" invalid={attemptedNext&&!formValues.keywords?.trim()} invalidText="请输入至少一个核心关键词。" onBlur={()=>setAttemptedNext(true)} onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/><small className="cds--form__helper-text">必填。多个关键词请使用逗号分隔。</small></div>
        <div className="research-fluid-field research-fluid-span"><FluidMultiSelect id="intake-countries" titleText="目标国家 / 地区 *" label="搜索并选择国家或地区" items={countryOptions} itemToString={(item:any)=>item?.text??''} itemToElement={CountryOptionElement} selectedItems={countryOptions.filter(item=>splitValues(formValues.countries??'').includes(item.text))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:selectedItems.map((x:any)=>x.text).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen" invalid={attemptedNext&&!formValues.countries?.trim()} invalidText="请至少选择一个目标国家或地区。" onBlur={()=>setAttemptedNext(true)}/></div>
        <div className="research-fluid-field research-fluid-span"><CountrySelectionMap selectedCodes={selectedCountryCodes}/></div>
        <div className="research-fluid-field"><FluidTextInput id="intake-regions" labelText="目标地区 / 城市" value={formValues.regions??''} placeholder="例如：加州、巴伐利亚州、伦敦" onChange={(e:any)=>{setFormValues(v=>({...v,regions:e.target.value}));setProfile(null);}}/></div>
