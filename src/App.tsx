@@ -347,7 +347,7 @@ function App() {
     const ready = projects.filter(project=>{
       const projectTasks=tasks.filter(task=>task.project_id===project.id);
       return projectTasks.length>0 && projectTasks.every(task=>task.status==='succeeded' && Number(task.result_synced_count??0)>=Number(task.result_count??0))
-        && !reports.some(report=>report.project_id===project.id) && !autoReportProjects.current.has(project.id);
+        && !reports.some(report=>report.project_id===project.id && report.report_type==='market_research') && !autoReportProjects.current.has(project.id);
     });
     for (const project of ready) {
       autoReportProjects.current.add(project.id);
