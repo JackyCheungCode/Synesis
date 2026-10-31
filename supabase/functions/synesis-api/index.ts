@@ -205,14 +205,26 @@ Deno.serve(async (req: Request) => {
       const {planId}=body;
       const {data:plan,error}=await admin.from('ai_research_plans').select('*').eq('id',planId).eq('user_id',userId).single();
       if(error||!plan||plan.status!=='pending_approval') return json({error:'研究计划不存在或已处理'},409);
-      const approvedContent = body.plan && typeof body.plan === 'object' ? body.plan : plan.plan;
-      if (!Array.isArray(approvedContent.platform_tasks)) return json({error:'研究计划格式无效'},400);
-      const {error:updateError}=await admin.from('ai_research_plans').update({plan:approvedContent,status:'approved',approved_at:new Date().toISOString(),approved_by:userId}).eq('id',planId).eq('user_id',userId).eq('status','pending_approval');
+      const approvedContent = plan.plan as Record<string,unknown>;
+      if (!Array.isArray(approvedContent.platform_tasks) || approvedContent.platform_tasks.length===0) return json({error:'研究计划没有可执行的采集任务'},400);
+      const items=approvedContent.platform_tasks as Array<{platform_slug?:string;actor_id?:string|null;input?:Record<string,unknown>}>;
+      if(items.some(item=>!item.platform_slug || typeof item.actor_id!=='string' || !item.actor_id.trim() || !item.input || typeof item.input!=='object' || Array.isArray(item.input))) {
+        return json({error:'研究计划缺少有效 Actor ID 或结构化采集参数。系统不会猜测 Actor，也不会允许未配置的任务执行。'},409);
+      }
+      const {clear:apifyToken}=await getCredential('apify','integration');
+      for(const item of items) {
+        const actor=encodeURIComponent(item.actor_id!).replace(/%2F/g,'~');
+        const actorResponse=await fetch(`https://api.apify.com/v2/acts/${actor}`,{headers:{Authorization:`Bearer ${apifyToken}`}});
+        const actorPayload=await actorResponse.json().catch(()=>({}));
+        if(!actorResponse.ok || !actorPayload.data?.id || actorPayload.data?.isDeprecated) {
+          return json({error:`Apify Actor 不存在、不可访问或已弃用：${item.platform_slug}`},422);
+        }
+      }
+      const {error:updateError}=await admin.from('ai_research_plans').update({status:'approved',approved_at:new Date().toISOString(),approved_by:userId}).eq('id',planId).eq('user_id',userId).eq('status','pending_approval');
       if(updateError) throw updateError;
-      const items=approvedContent.platform_tasks;
-      const rows=items.map((item: {platform_slug?:string;actor_id?:string|null;input?:Record<string,unknown>})=>({
+      const rows=items.map((item)=>({
         user_id:userId,project_id:plan.project_id,plan_id:planId,platform_slug:String(item.platform_slug??'unknown'),
-        actor_id:item.actor_id??null,input:item.input??{},status:'queued',
+        actor_id:item.actor_id!,input:item.input??{},status:'queued',
       }));
       if(rows.length){const {error:taskError}=await admin.from('collection_tasks').insert(rows);if(taskError)throw taskError;}
       await admin.from('research_projects').update({status:'active'}).eq('id',plan.project_id).eq('user_id',userId);
