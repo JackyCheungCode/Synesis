@@ -83,7 +83,7 @@ Deno.serve(async (req: Request) => {
       const slugColumn = kind === 'provider' ? 'provider_slug' : 'service_slug';
       const { data: config, error } = await admin.from(table).upsert({
         user_id:userId, [slugColumn]:slug, display_name:String(name).slice(0,100),
-        connection_status:'configured', key_last4:apiKey.slice(-4), enabled:true, updated_at:new Date().toISOString(), ...(kind === 'provider' && slug === 'cloudflare' && body.accountId ? { base_url: String(body.accountId).slice(0,80) } : {}),
+        connection_status:'configured', key_last4:apiKey.slice(-4), enabled:true, metadata: kind === 'integration' ? (body.metadata ?? {}) : undefined, updated_at:new Date().toISOString(), ...(kind === 'provider' && slug === 'cloudflare' && body.accountId ? { base_url: String(body.accountId).slice(0,80) } : {}),
       },{onConflict:`user_id,${slugColumn}`}).select('id').single();
       if (error || !config) throw error ?? new Error('保存凭证配置失败');
       const { error: secretError } = await admin.rpc('synesis_store_credential', {
@@ -100,6 +100,14 @@ Deno.serve(async (req: Request) => {
       let response: Response;
       if (kind === 'integration' && slug === 'apify') {
         response = await fetch('https://api.apify.com/v2/users/me',{headers:{Authorization:`Bearer ${clear}`}});
+      } else if (kind === 'integration' && (slug === 'google' || slug === 'youtube')) {
+        response = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=Synesis&type=video&maxResults=1&key=${encodeURIComponent(clear)}`);
+      } else if (kind === 'integration' && slug === 'reddit') {
+        if (!config.metadata?.clientId) return json({error:'请同时填写 Reddit OAuth Client ID'},400);
+        response = await fetch('https://www.reddit.com/api/v1/access_token',{method:'POST',headers:{Authorization:`Basic ${btoa(String(config.metadata.clientId)+':'+clear)}`,'Content-Type':'application/x-www-form-urlencoded','User-Agent':'Synesis/0.1.0'},body:'grant_type=client_credentials'});
+      } else if (kind === 'integration' && slug === 'tiktok') {
+        if (!config.metadata?.clientKey) return json({error:'请同时填写 TikTok Client Key'},400);
+        response = await fetch('https://open.tiktokapis.com/v2/oauth/token/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_key:String(config.metadata.clientKey),client_secret:clear,grant_type:'client_credentials'})});
       } else if (kind === 'provider') {
         const prompt = 'Reply with exactly: SYNESIS_CONNECTION_OK';
         if (slug === 'openai' || slug === 'deepseek' || slug === 'mistral' || slug === 'x') {
@@ -198,11 +206,13 @@ Deno.serve(async (req: Request) => {
       const {data:task,error}=await admin.from('collection_tasks').select('*,ai_research_plans!inner(status)').eq('id',taskId).eq('user_id',userId).single();
       if(error||!task||task.ai_research_plans.status!=='approved'||!task.actor_id||task.status!=='queued') return json({error:'任务未获人工审批、已执行，或缺少经确认的 Apify Actor ID'},403);
       const {clear:apifyToken}=await getCredential('apify','integration');
+      const {data:claimed,error:claimError}=await admin.from('collection_tasks').update({status:'running',started_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId).eq('status','queued').select('id').maybeSingle();
+      if(claimError||!claimed) return json({error:'任务已被执行或状态已变化'},409);
       const actor=encodeURIComponent(task.actor_id).replace(/%2F/g,'~');
       const response=await fetch(`https://api.apify.com/v2/acts/${actor}/runs?token=${encodeURIComponent(apifyToken)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(task.input??{})});
       const result=await response.json();
-      if(!response.ok) return json({error:result?.error?.message??'Apify 任务提交失败'},502);
-      await admin.from('collection_tasks').update({status:'running',external_run_id:result.data?.id,started_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId);
+      if(!response.ok) { await admin.from('collection_tasks').update({status:'failed',error_message:result?.error?.message??'Apify task failed',finished_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId); return json({error:result?.error?.message??'Apify 任务提交失败'},502); }
+      await admin.from('collection_tasks').update({external_run_id:result.data?.id}).eq('id',taskId).eq('user_id',userId);
       return json({ok:true,runId:result.data?.id});
     }
 
