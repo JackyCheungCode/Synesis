@@ -311,7 +311,7 @@ Deno.serve(async (req: Request) => {
             return (storePayload?.data?.items??[]) as Record<string,unknown>[];
           } catch { return []; }
         }));
-        for(const actors of batch) for(const actor of actors) {
+        for(const actors of batch) for(const actor of actors.slice(0,2)) {
           const schema=actor.inputSchema as CompactInputSchema|undefined;
           if(typeof actor.id!=='string' || !schema || schema.type!=='object' || !schema.properties || actor.notice==='UNDER_MAINTENANCE') continue;
           actorMap.set(actor.id,{
@@ -323,7 +323,7 @@ Deno.serve(async (req: Request) => {
           });
         }
       }
-      const actorCandidates=[...actorMap.values()].slice(0,40);
+      const actorCandidates=[...actorMap.values()].slice(0,60);
       const system = 'You are Synesis global trade research planner. Return valid JSON only with keys: executive_summary, research_questions (array), platform_tasks (array of objects {platform_slug, actor_id, input, purpose, estimated_items, estimated_cost_usd}), methodology, deliverables, estimated_cost_usd. Select Actors ONLY from the supplied actor_candidates and copy the exact candidate id. Never invent an Actor ID. Construct input using only fields and types in that candidate input_schema, and include all required fields. Read project.scope.collection_settings: target itemsPerPlatform is the requested record count PER PLATFORM (not a shared total); set estimated_items to that target and map it to the correct limit/count/maxResults/page-size input field only when that field exists in the selected Actor schema. Map depth light to list/core fields, standard to core fields plus available key engagement/rating/basic detail fields, and deep to detail pages, comments, and related records only when the Actor schema explicitly supports them. Never invent unsupported input fields or exceed the Actor schema. If a platform has no suitable candidate or its schema cannot support a requested depth, still explain the limitation and collect the useful supported fields; do not silently omit a selected platform. If no candidate is genuinely suitable or required fields cannot be satisfied, omit that platform task and explain the gap in research_questions or methodology. Tasks are proposed only, not executed.';
       const prompt = JSON.stringify({project,actor_candidates});
       let response: Response;
