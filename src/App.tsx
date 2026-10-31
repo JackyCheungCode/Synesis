@@ -62,6 +62,8 @@ function App() {
   const [taskLogs, setTaskLogs] = useState<Record<string,string[]>>({});
   const [analytics, setAnalytics] = useState<any>(null);
   const [keyValues, setKeyValues] = useState<Record<string,string>>({});
+  const [providerModelsList,setProviderModelsList]=useState<Record<string,Array<{id:string;name?:string;task?:string}>>>({});
+  const [selectedProviderModels,setSelectedProviderModels]=useState<Record<string,string>>({});
   const [selectedProvider, setSelectedProvider] = useState('openai');
   const [collectionSettings, setCollectionSettings] = useState<CollectionSettings>({ itemsPerPlatform:100, depth:'standard' });
   const [approvalPlan, setApprovalPlan] = useState<Plan|null>(null);
@@ -138,10 +140,20 @@ function App() {
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
+  async function loadProviderModels(slug:string) {
+    setBusy(true);
+    try { const result=await api('models.list',{slug}); setProviderModelsList(v=>({...v,[slug]:result.models??[]})); if(result.selected_model) setSelectedProviderModels(v=>({...v,[slug]:result.selected_model})); else if(result.models?.length) setSelectedProviderModels(v=>({...v,[slug]:result.models[0].id})); setNotice({kind:'success',text:`已获取 ${result.models?.length??0} 个模型。`}); }
+    catch(e) { setNotice({kind:'error',text:message(e)}); } finally { setBusy(false); }
+  }
+  async function saveProviderModel(slug:string,model:string) {
+    setSelectedProviderModels(v=>({...v,[slug]:model}));
+    try { await api('models.select',{slug,model}); setNotice({kind:'success',text:'默认模型已保存。'}); }
+    catch(e) { setNotice({kind:'error',text:message(e)}); }
+  }
   async function testConnection(slug: string, kind: 'provider'|'integration') {
     setBusy(true);
     try {
-      const result = await api('connection.test',{slug,kind,model:providerModels[slug]});
+      const result = await api('connection.test',{slug,kind,model:selectedProviderModels[slug]||providerModels[slug]});
       setNotice({kind:'success',text:`${slug} 连接成功：${result.message ?? '凭证有效，服务可调用'}`});
       await loadAll();
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
@@ -577,6 +589,7 @@ function App() {
             cloudflareAccountId={cloudflareAccountId} setCloudflareAccountId={setCloudflareAccountId}
             integrationMeta={integrationMeta} setIntegrationMeta={setIntegrationMeta}
             providerModels={providerModels} selectedProvider={selectedProvider} setSelectedProvider={setSelectedProvider}
+            models={providerModelsList} selectedModels={selectedProviderModels} onLoadModels={loadProviderModels} onSelectModel={saveProviderModel}
             onSave={(slug,name,kind)=>void saveCredential(slug,name,kind)}
             onTest={(slug,kind)=>void testConnection(slug,kind)}
           />}
