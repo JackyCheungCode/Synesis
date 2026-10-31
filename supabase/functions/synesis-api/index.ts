@@ -391,18 +391,26 @@ Deno.serve(async (req: Request) => {
       const brands = new Map<string, number>();
       const categories = new Map<string, number>();
       const words = new Map<string, number>();
+      const currencyPrices = new Map<string, number[]>();
+      const fieldCounts = { title:0, price:0, currency:0, rating:0, reviews:0, brand:0, category:0, image:0, link:0, sku:0, description:0, sales:0, stock:0 };
       const trendMap = new Map<string, {count:number;prices:number[]}>();
       const funnel = { total: records.length, titled: 0, priced: 0, rated: 0, imaged: 0, linked: 0 };
       const stop = new Set(['the','and','for','with','from','this','that','you','your','new','pack','set','inch','inches','of','to','a','an','on','by','is','are','（','）']);
       for (const row of records) {
         const title = pick(row, [/^(title|name|product.?name|item.?name)$/i]);
-        const price = numeric(pick(row, [/^(price|sale.?price|current.?price|amount|cost)$/i]));
-        const rating = numeric(pick(row, [/^(rating|stars|average.?rating)$/i]));
-        const reviews = numeric(pick(row, [/review.?count|ratings.?count|total.?reviews/i]));
+        const price = numeric(pick(row, [/^(price|sale.?price|current.?price|amount|cost|listing.?price|unit.?price)$/i]));
+        const currencyValue = pick(row, [/^(currency|currency.?code|price.?currency|currency.?symbol)$/i]);
+        const currency = currencyValue ? String(currencyValue).trim().toUpperCase() : 'UNKNOWN';
+        const rating = numeric(pick(row, [/^(rating|stars|average.?rating|average.?score)$/i]));
+        const reviews = numeric(pick(row, [/review.?count|ratings.?count|total.?reviews|review.?total/i]));
         const brand = pick(row, [/^brand(name)?$/i]);
-        const category = pick(row, [/category|department|product.?type/i]);
-        const image = pick(row, [/image|thumbnail|picture/i]);
-        const link = pick(row, [/^(url|link|product.?url|item.?url)$/i]);
+        const category = pick(row, [/category|department|product.?type|taxonomy/i]);
+        const image = pick(row, [/image|thumbnail|picture|photo/i]);
+        const link = pick(row, [/^(url|link|product.?url|item.?url|canonical.?url)$/i]);
+        const sku = pick(row, [/^(sku|asin|upc|ean|gtin|product.?id|item.?id)$/i]);
+        const description = pick(row, [/^(description|product.?description|about)$/i]);
+        const sales = numeric(pick(row, [/sales.?volume|units.?sold|sold.?count|monthly.?sales|sales.?rank/i]));
+        const stock = numeric(pick(row, [/^(stock|inventory|quantity|available.?quantity|in.?stock)$/i]));
         const dateValue = pick(row, [/^(date|created.?at|published.?at|scraped.?at|timestamp|date.?created)$/i]);
         if (dateValue !== null) {
           const rawTime = typeof dateValue === 'number' ? dateValue : Date.parse(String(dateValue));
@@ -415,12 +423,23 @@ Deno.serve(async (req: Request) => {
             trendMap.set(key,point);
           }
         }
-        if (title) funnel.titled++;
-        if (price !== null && price >= 0) { priceValues.push(price); funnel.priced++; }
-        if (rating !== null && rating >= 0) { ratingValues.push(rating); funnel.rated++; }
-        if (reviews !== null && reviews >= 0) reviewValues.push(reviews);
-        if (image) funnel.imaged++;
-        if (link) funnel.linked++;
+        if (title) { funnel.titled++; fieldCounts.title++; }
+        if (price !== null && price >= 0) {
+          priceValues.push(price); funnel.priced++; fieldCounts.price++;
+          const group = currencyPrices.get(currency) ?? [];
+          group.push(price); currencyPrices.set(currency, group);
+        }
+        if (currencyValue) fieldCounts.currency++;
+        if (rating !== null && rating >= 0) { ratingValues.push(rating); funnel.rated++; fieldCounts.rating++; }
+        if (reviews !== null && reviews >= 0) { reviewValues.push(reviews); fieldCounts.reviews++; }
+        if (image) { funnel.imaged++; fieldCounts.image++; }
+        if (link) { funnel.linked++; fieldCounts.link++; }
+        if (brand) fieldCounts.brand++;
+        if (category) fieldCounts.category++;
+        if (sku) fieldCounts.sku++;
+        if (description) fieldCounts.description++;
+        if (sales !== null && sales >= 0) fieldCounts.sales++;
+        if (stock !== null && stock >= 0) fieldCounts.stock++;
         if (brand) { const key=String(brand).trim(); brands.set(key,(brands.get(key)??0)+1); }
         if (category) { const key=String(category).trim(); categories.set(key,(categories.get(key)??0)+1); }
         const textValue = [title, category, brand].filter(Boolean).join(' ').toLowerCase();
@@ -442,10 +461,11 @@ Deno.serve(async (req: Request) => {
       ];
       return json({
         task, coverage:{analyzed:records.length,available:total,complete:total<=analysisLimit},
-        metrics:{average_price:average(priceValues),median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),average_rating:average(ratingValues),average_reviews:average(reviewValues),price_count:priceValues.length,rating_count:ratingValues.length},
-        distributions:{price_bands:bands,brands:top(brands),categories:top(categories),words:top(words)},
+        metrics:{average_price:average(priceValues),min_price:sorted.length?sorted[0]:null,max_price:sorted.length?sorted[sorted.length-1]:null,median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),average_rating:average(ratingValues),average_reviews:average(reviewValues),price_count:priceValues.length,rating_count:ratingValues.length,review_count:reviewValues.length},
+        distributions:{price_bands:bands,brands:top(brands),categories:top(categories),words:top(words),price_by_currency:[...currencyPrices.entries()].map(([currency,values])=>({currency,count:values.length,average:average(values),min:Math.min(...values),max:Math.max(...values)})).sort((a,b)=>b.count-a.count)},
         trends,
-        funnel, quality:{title_rate:records.length?funnel.titled/records.length:0,price_rate:records.length?funnel.priced/records.length:0,rating_rate:records.length?funnel.rated/records.length:0,image_rate:records.length?funnel.imaged/records.length:0,link_rate:records.length?funnel.linked/records.length:0}
+        funnel, field_counts:fieldCounts,
+        quality:{title_rate:records.length?fieldCounts.title/records.length:0,price_rate:records.length?fieldCounts.price/records.length:0,currency_rate:records.length?fieldCounts.currency/records.length:0,rating_rate:records.length?fieldCounts.rating/records.length:0,reviews_rate:records.length?fieldCounts.reviews/records.length:0,brand_rate:records.length?fieldCounts.brand/records.length:0,category_rate:records.length?fieldCounts.category/records.length:0,image_rate:records.length?fieldCounts.image/records.length:0,link_rate:records.length?fieldCounts.link/records.length:0,sku_rate:records.length?fieldCounts.sku/records.length:0,description_rate:records.length?fieldCounts.description/records.length:0,sales_rate:records.length?fieldCounts.sales/records.length:0,stock_rate:records.length?fieldCounts.stock/records.length:0}
       });
     }
 
