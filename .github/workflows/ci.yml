@@ -16,6 +16,8 @@ jobs:
           node-version: 22.14.0
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Test product identity matching
+        run: npm run test:product-identity
       - name: Typecheck and build
         run: npm run build
       - name: Upload Vite build
