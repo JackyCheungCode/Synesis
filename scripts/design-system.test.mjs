@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,readdirSync} from 'node:fs';
+import {readFileSync,readdirSync,existsSync} from 'node:fs';
 import {join} from 'node:path';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 test('application entry and dependencies are independent of legacy UI frameworks and fonts',()=>{
@@ -18,7 +18,6 @@ test('native navigation and primitives do not depend on a vendor component frame
 });
 
 test('tracked application, documentation and pipeline contain no legacy framework references',()=>{
- const {existsSync}=require('node:fs');
  const roots=['../src','../docs'];
  const scan=(dir)=>readdirSync(new URL(dir,import.meta.url),{withFileTypes:true}).flatMap(entry=>{
   const child=join(dir,entry.name);
