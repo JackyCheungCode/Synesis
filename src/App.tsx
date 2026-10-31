@@ -628,13 +628,30 @@ function classifyResultPlatform(platform:string):{key:string;profile:ResultProfi
  const key=found?.[0]??'general';
  return {key,profile:resultProfiles[key]??{title:'平台原始数据',description:'根据当前 Actor 实际返回字段自动生成列；未识别字段会保留在扩展字段中。',fields:[]}};
 }
+const unifiedResultFields:ResultField[]=[
+ {label:'主体 / 标题',patterns:[/^(title|name|product.?name|item.?name|headline|job.?title|company.?name|app.?name|property.?name)$/i]},
+ {label:'品牌 / 作者 / 来源',patterns:[/^(brand(name)?|author|creator|publisher|source|seller.?name|developer.?name|company)$/i]},
+ {label:'描述 / 内容',patterns:[/^(description|summary|snippet|caption|text|content|excerpt)$/i]},
+ {label:'价格 / 金额',patterns:[/^(price|sale.?price|current.?price|amount|salary|award.?amount|contract.?value)$/i]},
+ {label:'币种',patterns:[/^(currency|currency.?code|price.?currency)$/i]},
+ {label:'评分',patterns:[/^(rating|stars|score|average.?rating|review.?score)$/i]},
+ {label:'评论数',patterns:[/^(review.?count|reviews.?count|comments|comment.?count|ratings.?count)$/i]},
+ {label:'浏览 / 播放量',patterns:[/^(views|view.?count|play.?count|video.?views|installs|downloads)$/i]},
+ {label:'点赞数',patterns:[/^(likes|like.?count|digg.?count|favorite.?count)$/i]},
+ {label:'分享数',patterns:[/^(shares|share.?count|repost.?count)$/i]},
+ {label:'地区 / 地址',patterns:[/^(location|address|city|country|region|headquarters)$/i]},
+ {label:'发布时间 / 日期',patterns:[/^(published.?at|created.?at|posted.?at|timestamp|date|updated.?at)$/i]},
+ {label:'来源链接',patterns:[/^(url|link|permalink|source.?url|product.?url|article.?url|job.?url)$/i]},
+];
 function PlatformResultsTable({platform,rows}:{platform:string;rows:unknown[]}) {
  const records=rows.filter((row):row is Record<string,unknown>=>typeof row==='object'&&row!==null&&!Array.isArray(row));
- const {key,profile}=classifyResultPlatform(platform);
+ const {profile}=classifyResultPlatform(platform);
+ const [viewMode,setViewMode]=React.useState<'unified'|'platform'>('unified');
  const allKeys=Array.from(new Set(records.flatMap(row=>Object.keys(row))));
+ const selectedFields=viewMode==='unified'?unifiedResultFields:profile.fields;
  const used=new Set<string>();
  const columns:{key:string;label:string}[]=[];
- for(const field of profile.fields) {
+ for(const field of selectedFields) {
   const match=allKeys.find(name=>!used.has(name)&&field.patterns.some(pattern=>pattern.test(name)));
   if(match){used.add(match);columns.push({key:match,label:field.label});}
  }
@@ -645,9 +662,10 @@ function PlatformResultsTable({platform,rows}:{platform:string;rows:unknown[]}) 
  const filled=records.reduce((sum,row)=>sum+columns.filter(column=>row[column.key]!==null&&row[column.key]!==undefined&&row[column.key]!=='').length,0);
  const completeness=columns.length?Math.round(filled/(records.length*columns.length)*100):0;
  return <section className="platform-results">
-  <div className="platform-results-heading"><div><Tag type="blue">{profile.title}</Tag><h4>{platform} · 结构化结果</h4><p>{profile.description}</p></div><div className="platform-results-metrics"><b>{records.length.toLocaleString()}</b><span>本页记录</span><b>{columns.length}</b><span>展示字段</span><b>{completeness}%</b><span>字段完整率</span></div></div>
-  <div className="platform-results-table-wrap"><table className="platform-results-table"><thead><tr><th className="platform-results-index">#</th>{columns.map(column=><th key={column.key}>{column.label}</th>)}</tr></thead><tbody>{records.map((row,index)=><tr key={index}><td className="platform-results-index">{index+1}</td>{columns.map(column=><td key={column.key} title={format(row[column.key])}>{format(row[column.key])}</td>)}</tr>)}</tbody></table></div>
-  {extras.length>0&&<p className="platform-results-footnote">已自动识别 {columns.length-extras.length} 个分类字段，并保留 {extras.length} 个 Actor 扩展字段。完整字段及嵌套对象可在下方原始 JSON 中查看。</p>}
+  <div className="platform-results-heading"><div><Tag type="blue">{profile.title}</Tag><h4>{platform} · {viewMode==='unified'?'跨平台通用字段':'平台专属字段'}</h4><p>{viewMode==='unified'?'将不同数据源的同类字段映射为统一列名，便于后续横向比较。':profile.description}</p></div><div className="platform-results-metrics"><b>{records.length.toLocaleString()}</b><span>本页记录</span><b>{columns.length}</b><span>展示字段</span><b>{completeness}%</b><span>字段完整率</span></div></div>
+  <div className="platform-results-view-switch"><Button size="sm" kind={viewMode==='unified'?'primary':'tertiary'} onClick={()=>setViewMode('unified')}>跨平台通用字段</Button><Button size="sm" kind={viewMode==='platform'?'primary':'tertiary'} onClick={()=>setViewMode('platform')}>平台专属字段</Button></div>
+  {columns.length?<div className="platform-results-table-wrap"><table className="platform-results-table"><thead><tr><th className="platform-results-index">#</th>{columns.map(column=><th key={column.key}>{column.label}</th>)}</tr></thead><tbody>{records.map((row,index)=><tr key={index}><td className="platform-results-index">{index+1}</td>{columns.map(column=><td key={column.key} title={format(row[column.key])}>{format(row[column.key])}</td>)}</tr>)}</tbody></table></div>:<div className="platform-results-empty"><p>当前返回字段暂时无法映射到该视图。</p><small>请切换到另一视图或查看完整原始 JSON。</small></div>}
+  {extras.length>0&&<p className="platform-results-footnote">当前视图已保留 {extras.length} 个 Actor 扩展字段。所有原始字段和嵌套对象均保存在原始 JSON 中，不会因字段映射而丢失。</p>}
  </section>;
 }
 
