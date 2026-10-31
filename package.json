@@ -20,7 +20,8 @@
     "@supabase/supabase-js": "2.118.0",
     "@types/leaflet": "^1.9.20",
     "leaflet": "^1.9.4",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "@carbon/charts-react": "1.27.24"
   },
   "devDependencies": {
     "@types/react": "19.2.7",
