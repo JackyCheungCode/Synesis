@@ -1,5 +1,5 @@
 import { Button, Tag, TextArea, Tile } from '@carbon/react';
-import { Add, ArrowLeft, ArrowRight, CheckmarkFilled, Renew, Play, ChartLine } from '@carbon/icons-react';
+import { Add, ArrowLeft, ArrowRight, CheckmarkFilled, Renew, ChartLine } from '@carbon/icons-react';
 
 export type ResearchProject = { id:string; name:string; objective:string; status:string; target_regions:string[]; platform_slugs:string[] };
 export type ResearchPlan = { id:string; project_id:string; status:string; plan:Record<string,any>; estimated_cost:number|null; created_at:string };
