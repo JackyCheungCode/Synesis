@@ -900,3 +900,156 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
     margin: 0;
   }
 }
+
+
+/* Carbon fluid research intake */
+.synesis-app .research-fluid-form {
+  width: 100%;
+  background: var(--cds-layer-01);
+}
+.synesis-app .research-intake-accordion {
+  width: 100%;
+  border-top: 1px solid var(--cds-border-subtle);
+}
+.synesis-app .research-intake-accordion .cds--accordion__item {
+  border-bottom: 1px solid var(--cds-border-subtle);
+  border-radius: 0 !important;
+  background: var(--cds-layer-01);
+  box-shadow: none !important;
+}
+.synesis-app .research-intake-accordion .cds--accordion__heading,
+.synesis-app .research-intake-accordion .cds--accordion__content {
+  border-radius: 0 !important;
+}
+.synesis-app .research-accordion-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.synesis-app .research-accordion-title > b {
+  color: var(--cds-link-primary);
+  font-size: 0.875rem;
+}
+.synesis-app .research-accordion-title > small {
+  color: var(--cds-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.synesis-app .research-fluid-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 16px;
+  width: 100%;
+  padding: 16px 0 24px;
+}
+.synesis-app .research-fluid-field {
+  min-width: 0;
+  width: 100%;
+}
+.synesis-app .research-fluid-span {
+  grid-column: 1 / -1;
+}
+.synesis-app .research-price-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(120px, .8fr);
+  gap: 8px;
+  width: 100%;
+}
+.synesis-app .research-checkbox-grid,
+.synesis-app .research-radio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  width: 100%;
+  padding-top: 8px;
+}
+.synesis-app .research-fluid-form .cds--tile,
+.synesis-app .research-start-tile,
+.synesis-app .research-fluid-form .cds--accordion__item,
+.synesis-app .research-fluid-form .cds--text-input,
+.synesis-app .research-fluid-form .cds--text-area,
+.synesis-app .research-fluid-form .cds--number input,
+.synesis-app .research-fluid-form .cds--list-box,
+.synesis-app .research-fluid-form .cds--list-box__field,
+.synesis-app .research-fluid-form .cds--btn,
+.synesis-app .research-fluid-form .cds--checkbox,
+.synesis-app .research-fluid-form .cds--radio-button-wrapper {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.synesis-app .research-start-tile {
+  background: var(--cds-layer-01);
+  border: 1px solid var(--cds-border-subtle);
+  box-shadow: none;
+}
+.synesis-app .research-start-tile .cds--label,
+.synesis-app .research-start-tile .cds--form__helper-text {
+  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+}
+.synesis-app .research-intake-sticky-footer {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 20 !important;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 16px;
+  background: var(--cds-layer-01);
+  border: 1px solid var(--cds-border-subtle);
+  border-top: 1px solid var(--cds-border-strong);
+  box-shadow: none !important;
+}
+.synesis-app .research-intake-sticky-footer .cds--btn {
+  min-width: 112px;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.synesis-app .research-intake-sticky-footer .research-workflow-spacer {
+  flex: 1 1 auto;
+}
+.synesis-app .research-intake-sticky-footer .cds--btn:focus,
+.synesis-app .research-intake-sticky-footer .cds--btn:focus-visible,
+.synesis-app .research-fluid-form :is(input, textarea, button, a):focus-visible {
+  outline: 2px solid var(--cds-focus);
+  outline-offset: 1px;
+}
+@media (max-width: 672px) {
+  .synesis-app .research-fluid-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .synesis-app .research-fluid-span {
+    grid-column: 1;
+  }
+  .synesis-app .research-price-range {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .synesis-app .research-price-range > :last-child {
+    grid-column: 1 / -1;
+  }
+  .synesis-app .research-checkbox-grid,
+  .synesis-app .research-radio-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .synesis-app .research-intake-sticky-footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 8px;
+    gap: 8px;
+  }
+  .synesis-app .research-intake-sticky-footer .research-workflow-spacer {
+    display: none;
+  }
+  .synesis-app .research-intake-sticky-footer .cds--btn {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+}
