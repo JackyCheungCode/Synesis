@@ -42,6 +42,7 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
       onClick={onClose}
     />
     <aside
+      id="synesis-navigation"
       className={`synesis-nav-panel${open ? ' is-open' : ''}`}
       aria-label="Synesis 主导航"
       aria-hidden={!open}
