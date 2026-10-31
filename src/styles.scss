@@ -1775,3 +1775,23 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
 }
 
 .platform-results-view-switch { display:flex; flex-wrap:wrap; gap:8px; }
+
+
+/* Project-wide unified cross-platform dataset */
+.cross-platform-dataset { display:flex; flex-direction:column; gap:12px; margin:20px 0; padding:18px; border:1px solid var(--cds-border-subtle,#e0e0e0); background:var(--cds-layer-01,#fff); }
+.cross-platform-dataset-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.cross-platform-dataset-heading h4 { margin:0; font-size:15px; font-weight:600; }
+.cross-platform-dataset-heading p { margin:5px 0 0; color:var(--cds-text-secondary,#525252); font-size:12px; line-height:1.5; }
+.cross-platform-results-wrap { max-width:100%; max-height:52vh; overflow:auto; border:1px solid var(--cds-border-subtle,#e0e0e0); }
+.cross-platform-results-table { width:max-content; min-width:100%; border-collapse:separate; border-spacing:0; font-size:12px; }
+.cross-platform-results-table th,.cross-platform-results-table td { max-width:280px; min-width:110px; padding:10px 12px; border-bottom:1px solid var(--cds-border-subtle,#e0e0e0); border-right:1px solid var(--cds-border-subtle,#e0e0e0); text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+.cross-platform-results-table th { position:sticky; top:0; z-index:1; background:var(--cds-layer-02,#e0e0e0); white-space:nowrap; font-weight:600; }
+.cross-platform-results-table td { line-height:1.5; }
+.cross-platform-results-table tbody tr:hover td { background:var(--cds-layer-hover-01,#e8e8e8); }
+.cross-platform-dataset-pagination { display:flex; justify-content:space-between; align-items:center; gap:12px; color:var(--cds-text-secondary,#525252); font-size:12px; }
+.cross-platform-dataset-pagination > div { display:flex; flex-wrap:wrap; gap:6px; }
+@media (max-width:700px) {
+ .cross-platform-dataset { padding:12px; }
+ .cross-platform-dataset-heading,.cross-platform-dataset-pagination { flex-direction:column; align-items:flex-start; }
+ .cross-platform-results-wrap { max-height:44vh; }
+}
