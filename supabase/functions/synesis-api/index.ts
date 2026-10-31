@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
-import { readField, resolveProductIdentity } from './product-identity.js';
+import { readField, resolveProductIdentity, normalizeResearchRecord } from './product-identity.js';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -502,7 +502,7 @@ Deno.serve(async (req: Request) => {
     if (action === 'tasks.sync') {
       const { taskId } = body;
       const { data: task, error: taskError } = await admin.from('collection_tasks')
-        .select('id,user_id,platform_slug,external_run_id,status,result_dataset_id,result_synced_count,result_count')
+        .select('id,user_id,project_id,platform_slug,external_run_id,status,result_dataset_id,result_synced_count,result_count')
         .eq('id', taskId).eq('user_id', userId).maybeSingle();
       if (taskError || !task) return json({ error: '采集任务不存在' }, 404);
       if (!task.external_run_id) return json({ error: '任务尚未取得 Apify Run ID' }, 409);
@@ -579,7 +579,25 @@ Deno.serve(async (req: Request) => {
             .upsert(rows, { onConflict: 'task_id,item_index' });
           if (insertError) throw insertError;
 
-          // Normalize platform records while preserving the untouched raw payload above.
+          // Persist versioned canonical fields separately; raw_data above remains untouched.
+          const normalizedRows = items.map((raw,index) => {
+            const normalizedRecord=normalizeResearchRecord(task.platform_slug,raw as Record<string,unknown>);
+            return {
+              user_id:userId,project_id:task.project_id,task_id:taskId,item_index:pageOffset+index,
+              platform_slug:task.platform_slug,entity_type:normalizedRecord.entityType,
+              canonical_key:normalizedRecord.canonicalKey,normalized_data:normalizedRecord.normalizedData,
+              field_sources:normalizedRecord.fieldSources,quality_score:normalizedRecord.qualityScore,
+              warnings:normalizedRecord.warnings,normalization_version:normalizedRecord.normalizationVersion,
+              normalized_at:new Date().toISOString(),
+            };
+          });
+          if(normalizedRows.length) {
+            const {error:normalizationError}=await admin.from('research_normalized_records')
+              .upsert(normalizedRows,{onConflict:'task_id,item_index'});
+            if(normalizationError) throw normalizationError;
+          }
+
+          // Product-specific entity matching and price history remain an additional specialized layer.
           const normalized = items.map((raw,index) => {
             const record=raw as Record<string,unknown>;
             const identity=resolveProductIdentity(task.platform_slug,record);
@@ -907,10 +925,21 @@ Deno.serve(async (req: Request) => {
         .order('task_id',{ascending:true}).order('item_index',{ascending:true})
         .range(offset,offset+limit-1);
       if(rowsError) throw rowsError;
+      const {data:normalizedRows,error:normalizedError}=await admin.from('research_normalized_records')
+        .select('task_id,item_index,entity_type,canonical_key,normalized_data,field_sources,quality_score,warnings,normalization_version')
+        .eq('user_id',userId).eq('project_id',projectId).in('task_id',taskIds)
+        .order('task_id',{ascending:true}).order('item_index',{ascending:true})
+        .range(offset,offset+limit-1);
+      if(normalizedError) throw normalizedError;
       const platformByTask=new Map(tasks.map(task=>[task.id,task.platform_slug]));
+      const normalizedByKey=new Map((normalizedRows??[]).map(row=>[`${row.task_id}:${row.item_index}`,row]));
       return json({
         project_id:projectId,tasks,
-        results:(rows??[]).map(row=>({task_id:row.task_id,platform_slug:platformByTask.get(row.task_id)??'unknown',item_index:row.item_index,raw_data:row.raw_data})),
+        results:(rows??[]).map(row=>({
+          task_id:row.task_id,platform_slug:platformByTask.get(row.task_id)??'unknown',
+          item_index:row.item_index,raw_data:row.raw_data,
+          normalized:normalizedByKey.get(`${row.task_id}:${row.item_index}`)??null,
+        })),
         total:count??0,limit,offset,
       });
     }
