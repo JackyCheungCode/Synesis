@@ -6,7 +6,7 @@ export type ResearchDimension = { key:string; label:string; values:string[]; sta
 export type ResearchProfile = { summary:string; dimensions:ResearchDimension[]; research_goals:string[]; assumptions:string[]; missing_information:string[] };
 export type ResearchProject = { id:string; name:string; objective:string; status:string; target_regions:string[]; platform_slugs:string[]; scope?:Record<string,any> };
 export type ResearchPlan = { id:string; project_id:string; status:string; plan:Record<string,any>; estimated_cost:number|null; created_at:string };
-export type ResearchTask = { id:string; project_id:string; platform_slug:string; status:string; actor_id:string|null; created_at:string; started_at?:string|null; finished_at?:string|null; updated_at?:string|null; progress?:number; result_count?:number; result_synced_count?:number; run_status?:string|null; error_message?:string|null };
+export type ResearchTask = { id:string; project_id:string; platform_slug:string; status:string; actor_id:string|null; created_at:string; started_at?:string|null; finished_at?:string|null; updated_at?:string|null; external_run_id?:string|null; progress?:number; result_count?:number; result_synced_count?:number; run_status?:string|null; error_message?:string|null };
 export type ResearchReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; report_type?:string; content:Record<string,any> };
 type Props = {
  projects:ResearchProject[]; plans:ResearchPlan[]; tasks:ResearchTask[]; reports:ResearchReport[];
@@ -14,7 +14,7 @@ type Props = {
  onOpen:(id:string)=>void; onBack:()=>void; onGeneratePlan:(project:ResearchProject,categories:string[])=>void;
  onApprove:(plan:ResearchPlan)=>void; onCancel:(task:ResearchTask)=>void;
  onRetry:(task:ResearchTask)=>void; onSync:(task:ResearchTask)=>void; onView:(task:ResearchTask)=>void; onAnalyze:(task:ResearchTask)=>void;
- analytics?:any; analyticsTaskId?:string;
+ analytics?:any; analyticsTaskId?:string; taskLogs?:Record<string,string[]>; onLoadLogs:(task:ResearchTask)=>void;
 };
 const stages=['研究需求','调研平台','数据抓取','数据统计','AI 分析报告'];
 const statusLabel:Record<ResearchDimension['status'],string>={provided:'用户已提供',suggested:'AI 建议',needs_confirmation:'待补充确认',user_confirmed:'用户已确认'};
@@ -85,7 +85,7 @@ function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:Res
 }
 const splitValues=(value:string)=>value.split(/\n|,/).map(v=>v.trim()).filter(Boolean);
 export function ResearchWizard(props:Props) {
- const {projects,plans,tasks,reports,projectId,busy,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId}=props;
+ const {projects,plans,tasks,reports,projectId,busy,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs}=props;
  const [brief,setBrief]=React.useState('');
  const [formValues,setFormValues]=React.useState<Record<string,string>>({});
  const [profile,setProfile]=React.useState<ResearchProfile|null>(null);
@@ -103,6 +103,15 @@ export function ResearchWizard(props:Props) {
  const expected=projectTasks.reduce((sum,t)=>sum+Number(t.result_count??0),0);
  const allSynced=projectTasks.length>0&&projectTasks.every(t=>t.status==='succeeded'&&Number(t.result_synced_count??0)>=Number(t.result_count??0));
  React.useEffect(()=>{if(project){setActiveStep(stageIndex(plan,projectTasks,projectReports));const stored=project.scope?.selected_data_sources;if(Array.isArray(stored))setSelectedSources(stored as string[]);}else{setActiveStep(0);setSelectedSources([]);}},[projectId,plan?.id,projectTasks.length,projectReports.length]);
+ const runningTaskKey=projectTasks.map(task=>task.id+':'+task.status+':'+String(task.external_run_id??'')).join('|');
+ React.useEffect(()=>{
+  if(!projectId||activeStep!==2||!projectTasks.some(task=>task.external_run_id))return;
+  const poll=()=>projectTasks.filter(task=>task.external_run_id).forEach(onLoadLogs);
+  poll();
+  if(!projectTasks.some(task=>['queued','running'].includes(task.status)))return;
+  const timer=window.setInterval(poll,8000);
+  return ()=>window.clearInterval(timer);
+ },[activeStep,projectId,runningTaskKey]);
  async function parseBrief(){
   const formBrief=fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\n');
   const combined=[formBrief,brief.trim()].filter(Boolean).join('\n\n补充说明：\n');
@@ -170,7 +179,7 @@ export function ResearchWizard(props:Props) {
   </Tile>}
   {activeStep===2&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 3 / COLLECTION MONITOR</p><h3>数据抓取与动态运行状态</h3><p>状态每 12 秒自动刷新；Apify Run 完成后继续同步 Dataset，直至所有结果写入数据库。</p></div><Tag type={allSynced?'green':'blue'}>{allSynced?'全部同步完成':'采集进行中'}</Tag></div>
    <div className="research-run-kpis"><div><strong>{projectTasks.length}</strong><span>采集任务</span></div><div><strong>{completedCount}</strong><span>同步完成</span></div><div><strong>{synced.toLocaleString()}</strong><span>已同步记录</span></div><div><strong>{expected.toLocaleString()}</strong><span>预期记录</span></div></div>
-   {projectTasks.map(task=><div className="research-task-row" key={task.id}><div><b>{task.platform_slug}</b><p>{task.status} · Apify {task.run_status??'等待运行'} · {Number(task.result_synced_count??0).toLocaleString()} / {Number(task.result_count??0).toLocaleString()}</p>{task.error_message&&<p className="error-text">{task.error_message}</p>}</div><div className="card-actions">{task.status==='failed'&&<Button size="sm" kind="tertiary" renderIcon={Renew} onClick={()=>onRetry(task)}>重试</Button>}{(['queued','running'].includes(task.status)||(task.status==='succeeded'&&Number(task.result_synced_count??0)<Number(task.result_count??0)))&&<Button size="sm" kind="ghost" renderIcon={Renew} onClick={()=>onSync(task)}>同步 / 刷新</Button>}{['queued','running'].includes(task.status)&&<Button size="sm" kind="danger--tertiary" onClick={()=>onCancel(task)}>取消</Button>}{task.status==='succeeded'&&<Button size="sm" kind="ghost" onClick={()=>onView(task)}>查看结果</Button>}</div></div>)}
+   {projectTasks.map(task=><div className="research-task-row" key={task.id}><div><b>{task.platform_slug}</b><p>{task.status} · Apify {task.run_status??'等待运行'} · {Number(task.result_synced_count??0).toLocaleString()} / {Number(task.result_count??0).toLocaleString()}</p>{task.error_message&&<p className="error-text">{task.error_message}</p>}{task.external_run_id&&<div className="research-live-log"><div><b>Apify 实时运行日志</b><Button size="sm" kind="ghost" onClick={()=>onLoadLogs(task)}>刷新日志</Button></div><pre>{(taskLogs[task.id]??[]).join('\n')||'正在等待 Apify 输出日志…'}</pre></div>}</div><div className="card-actions">{task.status==='failed'&&<Button size="sm" kind="tertiary" renderIcon={Renew} onClick={()=>onRetry(task)}>重试</Button>}{(['queued','running'].includes(task.status)||(task.status==='succeeded'&&Number(task.result_synced_count??0)<Number(task.result_count??0)))&&<Button size="sm" kind="ghost" renderIcon={Renew} onClick={()=>onSync(task)}>同步 / 刷新</Button>}{['queued','running'].includes(task.status)&&<Button size="sm" kind="danger--tertiary" onClick={()=>onCancel(task)}>取消</Button>}{task.status==='succeeded'&&<Button size="sm" kind="ghost" onClick={()=>onView(task)}>查看结果</Button>}</div></div>)}
    <div className="research-dimension-group"><h4>动态运行事件</h4>{taskEvents.length?taskEvents.map((event,index)=><div className="research-event-row" key={index}><time>{new Date(event.time).toLocaleString()}</time><b>{event.label}</b><span>{event.detail}</span></div>):<p className="research-profile-hint">尚无采集事件。完成第二步平台选择并批准后，运行状态将在这里显示。</p>}</div>
    {allSynced&&<Button kind="primary" onClick={()=>setActiveStep(3)}>数据已同步，进入统计分析 <ArrowRight size={16}/></Button>}
   </Tile>}
