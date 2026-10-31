@@ -91,10 +91,11 @@
 | S-04 | 当前导航项语义 | `WorkspaceNavigation.tsx:48-58` | 静态通过：isActive 与 aria-current | 屏幕阅读器抽测 |
 | S-05 | 菜单打开/关闭、Escape、遮罩 | `WorkspaceNavigation.tsx:8-21,31-39` | 部分通过：存在 close/focus handler；需验证 Carbon SideNav 事件顺序 | 键盘实测 |
 | S-06 | 焦点返回与导航后主内容焦点 | `WorkspaceNavigation.tsx:8-24`、`App.tsx:557` | 部分通过：代码存在 focus 调用；未进行浏览器验证 | 键盘实测 |
-| S-07 | 主内容 landmark | `App.tsx:557` | 静态通过：Carbon Content 带 id 与 tabIndex=-1；需确认最终 DOM landmark 语义 | axe + 屏幕阅读器 |
+| S-07 | 主内容 landmark | `App.tsx:565` | 静态通过：Carbon Content 带 id 与 tabIndex=-1；最终 DOM landmark 语义待 axe/Accessibility Tree 验证 | axe + 屏幕阅读器 |
 | S-08 | 明暗主题 token 一致性 | `App.tsx:552`、`carbon-foundation.scss` | 部分通过：主题切换存在；所有自定义/Carbon 图表主题需逐屏核对 | 两主题截图对照 |
 | S-09 | 全局搜索入口与账户操作可访问名称 | `App.tsx:551-553` | 静态通过：有 aria-label；tooltip、语义和触控尺寸待测 | 键盘/触屏 |
 | S-10 | Shell 响应式、层级和页面边距 | `styles.scss`、`carbon-foundation.scss` | 未检查：没有视口截图与溢出记录 | 320/375/768/1024/1440px |
+| S-11 | Skip to main 内容跳过链接 | `App.tsx:547-555`、`carbon-foundation.scss` | 已实现，静态通过：Header 内第一项可聚焦链接；点击后聚焦 `#main-content`。需浏览器验证显示时机、焦点与滚动 | Tab 首焦点、Enter 跳转、NVDA/VoiceOver 抽测 |
 
 ### Layer 2 — 页面布局
 
@@ -156,7 +157,7 @@
 | ID | WCAG/Carbon 验收项 | 初始结论 | 必须取得的证据 |
 |---|---|---|---|
 | A-01 | 颜色对比度：普通文本至少 4.5:1，大文本至少 3:1，非文本 UI 边界至少 3:1（适用 WCAG 2.2 AA） | 未完成 | 两主题全部 token 与真实组件背景组合的自动化对比度报告 |
-| A-02 | 键盘可达：所有功能不依赖鼠标 | 未完成 | Tab/Shift+Tab/Enter/Space/方向键/Escape 全流程记录 |
+| A-02 | 键盘可达：所有功能不依赖鼠标 | 部分通过：新增首焦点 Skip to main 链接；其余页面与控件仍未全流程验证 | Tab/Shift+Tab/Enter/Space/方向键/Escape 全流程记录 |
 | A-03 | 焦点可见且不被 Header/Modal/SideNav 遮挡 | 未完成 | 各路由和覆盖层键盘截图 |
 | A-04 | 焦点顺序与焦点返回 | 部分通过（代码有 handler，未实测） | 打开/关闭菜单、四类弹窗、导航后焦点路径 |
 | A-05 | 名称、角色、值 | 部分通过（部分显式 label/aria） | axe 报告与 Accessibility Tree 抽查 |
@@ -224,7 +225,34 @@
 6. 不触发真实 Apify 采集来做 UI 验收；需要数据时使用脱敏 fixture/mock。
 7. 本台账所有“通过”均需指明是静态还是运行时；没有截图/测试报告，不得标记为运行时通过。
 
-## 7. 本轮基线结论
+## 7. Layer 1 — Shell 首轮执行记录
+
+### 已完成的源码整改
+
+| 缺陷 ID | 发现 | 修复 | 证据 | 状态 |
+|---|---|---|---|---|
+| SH-01 | Carbon Shell 缺少跳过重复导航的入口；Carbon UI Shell 键盘指导建议在首个可聚焦控件前提供 Skip to main | 在 Carbon Header 中增加“跳至主要内容”链接；点击后聚焦 `#main-content`，并用 Carbon 语义 token 实现仅在焦点时显示 | `src/App.tsx` Header 首个子元素；`src/styles/carbon-foundation.scss` `.synesis-skip-link` | 静态实现完成；浏览器/屏幕阅读器复测待执行 |
+| SH-02 | 旧样式中存在未被 React Shell 渲染的 `.nav-dismiss-overlay` 样式和多组历史 SideNav z-index 规则 | 本轮暂不删除：需先通过全仓库引用与运行时 DOM 核对，避免清理仍被间接使用的规则 | `src/styles.scss` 早期移动端规则；当前 `WorkspaceNavigation.tsx` 使用 Carbon SideNav 内置 overlay | 待核实，不作为已修复 |
+| SH-03 | SideNav 自定义 z-index 为 9000，需与 Carbon Modal/Toast/Tooltip 层级核对 | 未修改，避免凭猜测改变浮层层级 | `src/styles/carbon-foundation.scss` `.synesis-carbon-side-nav` | 待层级实测 |
+
+### Shell 代码审查结论
+
+- Header 使用 Carbon Header / HeaderMenuButton / HeaderName / HeaderGlobalAction；主导航使用 Carbon SideNav / SideNavMenu / SideNavMenuItem。
+- 菜单保持单一一级入口“跨境市场分析”，五个页面作为二级项；符合当前 IA 要求。Carbon UI Shell Left Panel 本身不支持三级导航，后续若要增加三级信息，应使用页面内 Tabs/局部导航，不应嵌套第三层 SideNav。
+- 主内容使用 Carbon Content，设置 `id="main-content"` 和 `tabIndex={-1}`；导航项触发后尝试将焦点移至主内容。
+- Header 菜单按钮具有 `aria-label`、`aria-expanded`、`aria-controls`；页面导航项提供 `aria-current="page"`。
+- 新增 Skip to main 链接后，静态上具备绕过全局导航的入口。仍未证明浏览器实际焦点顺序、SideNav Escape/遮罩关闭焦点返回、Modal/SideNav 层级、窄视口布局。
+
+### 本轮证据边界
+
+Carbon 官方依据：
+- UI Shell Header 指南建议提供 Skip to main 链接，避免键盘用户逐项穿过全局导航。https://www.carbondesignsystem.com/building-blocks/core/components/ui-shell-header/guidelines
+- UI Shell Left Panel 键盘行为说明：链接可通过 Tab 到达，菜单可用 Space/Enter 展开，激活链接后主内容应获得焦点。https://www.carbondesignsystem.com/building-blocks/core/components/ui-shell-left-panel/accessibility
+- UI Shell Left Panel 不支持三级导航。https://www.carbondesignsystem.com/building-blocks/core/components/ui-shell-left-panel/guidelines
+
+本轮只有源码检查，没有可用的浏览器自动化/计算机控制工具，因此不将焦点、滚动、遮罩和层级标为运行时通过。
+
+## 8. 本轮基线结论
 
 - 页面清单：已建立，覆盖认证、5 个主页面、研究五步、分析视图和 4 类弹窗/全局搜索。
 - 控件清单：已建立，覆盖 20 类组件族。
