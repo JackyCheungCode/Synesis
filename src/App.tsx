@@ -155,6 +155,7 @@ function App() {
     finally { setBusy(false); }
   }
   async function saveProviderModel(slug:string,model:string) {
+    if(!model) return;
     setSelectedProviderModels(v=>({...v,[slug]:model}));
     try { await api('models.select',{slug,model}); setNotice({kind:'success',text:'默认模型已保存。'}); }
     catch(e) { setNotice({kind:'error',text:message(e)}); }
