@@ -315,6 +315,13 @@ function AnalyticsDashboard({data}:{data:any}) {
   const metrics=data.metrics??{}, coverage=data.coverage??{}, bands=data.distributions?.price_bands??[];
   const maxBand=Math.max(1,...bands.map((x:any)=>x.count)), words=data.distributions?.words??[];
   const brands=data.distributions?.brands??[], categories=data.distributions?.categories??[], funnel=data.funnel??{};
+  const trends=data.trends??[];
+  const maxTrend=Math.max(1,...trends.map((point:any)=>point.count));
+  const trendCoordinates=trends.map((point:any,index:number)=>{
+    const x=24+(trends.length<=1?0:index*552/(trends.length-1));
+    const y=176-(point.count/maxTrend)*148;
+    return x+','+y;
+  }).join(' ');
   const pieRows=categories.slice(0,6);
   const pieTotal=Math.max(1,pieRows.reduce((sum:number,row:any)=>sum+row.count,0));
   const circumference=2*Math.PI*42;
@@ -333,6 +340,7 @@ function AnalyticsDashboard({data}:{data:any}) {
     </div>
     <div className="analytics-grid">
       <Tile className="analytics-card"><h3>价格区间分布</h3><div className="bar-chart">{bands.map((b:any)=><div className="bar-row" key={b.label}><span>{b.label}</span><div className="bar-track"><div className="bar-fill" style={{width:`${b.count/maxBand*100}%`}}/></div><b>{b.count}</b></div>)}</div></Tile>
+      <Tile className="analytics-card trend-card"><h3>商品采集时间趋势 · 折线图</h3>{trends.length>1?<><svg viewBox="0 0 600 205" role="img" aria-label="按商品源时间字段统计的每日商品数量趋势"><line x1="24" y1="28" x2="24" y2="176" stroke="var(--cds-border-strong)"/><line x1="24" y1="176" x2="576" y2="176" stroke="var(--cds-border-strong)"/><polyline points={trendCoordinates} fill="none" stroke="#0f62fe" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>{trends.map((point:any,index:number)=><circle key={point.date} cx={24+(trends.length<=1?0:index*552/(trends.length-1))} cy={176-(point.count/maxTrend)*148} r="3.5" fill="#0f62fe"/>)}</svg><div className="trend-axis"><span>{trends[0].date}</span><span>{trends[trends.length-1].date}</span></div><p>按原始记录中的日期、创建时间、发布时间或采集时间字段分组。</p></>:<p>当前数据集没有足够的可识别源时间字段，暂不绘制趋势线；不会用同步时间伪造商品趋势。</p>}</Tile>
       <Tile className="analytics-card"><h3>数据采集漏斗</h3><div className="funnel-chart">{stages.map(([label,value])=><div className="funnel-row" key={String(label)}><span>{label}</span><div className="funnel-track"><div style={{width:`${funnel.total?Number(value)/funnel.total*100:0}%`}}/></div><b>{Number(value).toLocaleString()}</b></div>)}</div></Tile>
       <Tile className="analytics-card"><h3>品牌 Top 10</h3><RankList rows={brands}/></Tile>
       <Tile className="analytics-card"><h3>类目 Top 10</h3><RankList rows={categories}/></Tile>
