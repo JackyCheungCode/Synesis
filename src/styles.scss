@@ -205,3 +205,14 @@ h3 { color:#161616; font-size:15px; margin:0 0 6px; font-weight:600; }
   .vault-card { padding:10px; }
   .card-actions { flex-direction:column; align-items:stretch; }
 }
+
+
+/* Final mobile ergonomics: balanced page gutters and consistent two-column cards. */
+@media (max-width:672px) {
+  .page-wrap { padding:16px 12px 32px; }
+  .carbon-grid,
+  .vault-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .carbon-grid { gap:10px; }
+  .vault-grid { gap:10px; }
+  .nav-dismiss-overlay { touch-action:manipulation; }
+}
