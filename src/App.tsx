@@ -419,7 +419,10 @@ function App() {
     const project = projects.find(item=>item.id===projectId);
     const projectTasks = tasks.filter(item=>item.project_id===projectId);
     if (!project || !projectTasks.length || projectTasks.some(item=>item.status!=='succeeded' || Number(item.result_synced_count??0)<Number(item.result_count??0))) return;
-    const analyses = await Promise.all(projectTasks.map(async task=>({platform:task.platform_slug,taskId:task.id,analysis:await api('tasks.analytics',{taskId:task.id})})));
+    const savedAnalytics=reports.filter(report=>report.project_id===projectId&&report.report_type==='dataset_analytics');
+    const savedByTask=new Map(savedAnalytics.flatMap(report=>(report.evidence??[]).filter(item=>item.task_id).map(item=>[item.task_id as string,report.content] as const)));
+    if(projectTasks.some(task=>!savedByTask.has(task.id))) throw new Error('第四步的项目统计快照尚未全部保存。');
+    const analyses = projectTasks.map(task=>({platform:task.platform_slug,taskId:task.id,analysis:savedByTask.get(task.id)}));
     const response = await api('ai.invoke',{provider:selectedProvider,model:providerModels[selectedProvider],messages:[
       {role:'system',content:'你是 Synesis 的跨境商业智能研究负责人。请用中文输出一份可供管理层决策的完整研究报告。严格依据研究目标、研究画像、目标地区、实际采集任务和各数据源统计快照。报告必须包含：执行摘要、研究范围与方法、市场概览、跨平台对比、产品开发策略、定价策略、目标市场进入策略、消费者画像与需求、竞争策略、营销与销售渠道、商业机会、风险、30/60/90天行动路线图、数据质量评估、数据局限和待验证假设。对每项关键结论标记“数据事实 / AI 推断 / 商业建议 / 待验证假设”，引用对应平台名称、统计覆盖数和实际字段/指标；不能把不同币种价格直接比较，不能把播放量、销量、搜索排名混为同一指标。不得虚构市场规模、销量、利润、人口属性、竞争份额或未提供的指标。没有证据时明确写“数据不足，暂不判断”。输出严格 JSON，不要 Markdown 代码围栏，字段使用 executive_summary、research_scope、market_overview、cross_platform_comparison、product_development_strategy、pricing_strategy、market_entry_strategy、customer_persona_strategy、competitive_strategy、marketing_channel_strategy、opportunities、risks、action_roadmap、data_quality_assessment、limitations、assumptions_to_validate。数组项应包含结论、依据、类型和来源。'},
       {role:'user',content:JSON.stringify({research_objective:project.objective,research_profile:project.scope?.research_profile??null,intake_form:project.scope?.intake_form??{},target_regions:project.target_regions,selected_platforms:project.platform_slugs,collection_settings:project.scope?.collection_settings??null,data:analyses})}
