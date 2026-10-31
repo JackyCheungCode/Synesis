@@ -177,6 +177,7 @@ export function ResearchWizard(props:Props) {
  const [activeStep,setActiveStep]=React.useState(0);
  const [selectedSources,setSelectedSources]=React.useState<string[]>([]);
  const [openPanels,setOpenPanels]=React.useState([true,false,false,false]);
+ const [attemptedNext,setAttemptedNext]=React.useState(false);
  const project=projects.find(p=>p.id===projectId);
  const projectPlans=plans.filter(p=>p.project_id===projectId); const plan=projectPlans[0];
  const projectTasks=tasks.filter(t=>t.project_id===projectId); const projectReports=reports.filter(r=>r.project_id===projectId);
@@ -207,6 +208,21 @@ export function ResearchWizard(props:Props) {
  const confirmedCount=profile?.dimensions.filter(item=>item.status==='provided'||item.status==='user_confirmed').length??0;
  const suggestedCount=profile?.dimensions.filter(item=>item.status==='suggested').length??0;
  const missingCount=profile?.dimensions.filter(item=>item.status==='needs_confirmation').length??0;
+ const requiredReady=Boolean(formValues.keywords?.trim()&&formValues.countries?.trim()&&formValues.languages?.trim());
+ const filledFieldCount=fieldSpecs.filter(([key])=>String(formValues[key]??(key==='other_research_notes'?brief:'' )).trim().length>0).length;
+ const completeness=Math.round(filledFieldCount/fieldSpecs.length*100);
+ const selectedCountryCodes=splitValues(formValues.countries??'').map(label=>countryByLabel.get(label)?.id).filter(Boolean) as string[];
+ function createProfileFromForm():ResearchProfile {
+  const dimensions=fieldSpecs.filter(([key])=>String(formValues[key]??(key==='other_research_notes'?brief:'' )).trim()).map(([key,label])=>({key,label,values:splitValues(String(formValues[key]??(key==='other_research_notes'?brief:''))),status:'provided' as const}));
+  return {summary:'根据用户填写的结构化研究需求建立的研究画像。',dimensions,research_goals:splitValues(formValues.business_goals??''),assumptions:[],missing_information:[]};
+ }
+ function proceedToSources(){
+  setAttemptedNext(true);
+  if(!requiredReady)return;
+  const formBrief=fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\n');
+  const combined=[formBrief,brief.trim()].filter(Boolean).join('\n\n补充说明：\n');
+  onCreate(combined,profile??createProfileFromForm(),project?.id);
+ }
  if(!project||project.scope?.workflow_state==='draft')return <section className="module-stack research-workspace research-fullwidth">
   <ResearchProgress activeStep={0} maxUnlockedStep={0} stepReady={[true,false,false,false,false]}/>
   <Tile className="research-start-tile">
@@ -218,15 +234,17 @@ export function ResearchWizard(props:Props) {
     </div>
     <div className="research-intake-header-meta"><Tag type="blue">需求配置</Tag><span>约 5–10 分钟</span></div>
    </header>
+   <div className="research-intake-completeness"><div><b>研究需求完整度</b><Tag type={completeness===100?"green":"blue"}>{completeness}%</Tag><span>{filledFieldCount} / {fieldSpecs.length} 项已填写</span></div><ProgressBar label="研究需求完整度" value={completeness} max={100} helperText="填写越完整，后续调研平台匹配越准确。"/></div>
    <div className="research-intake-guidance"><span className="research-guidance-mark">i</span><p><b>填写提示</b>　先确定研究市场与核心关键词，再补充产品、渠道和供应链信息。AI 整理时会区分用户提供的信息与模型建议，不会覆盖你填写的内容。</p></div>
    <FluidForm className="research-fluid-form">
     <Accordion align="start" className="research-intake-accordion">
      <AccordionItem title={<span className="research-accordion-title"><b>01</b> 核心研究目标 <small>研究范围、关键词与目标市场</small></span>} open={openPanels[0]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===0?!isOpen:x))}>
       <div className="research-fluid-grid">
-       <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-keywords" labelText="核心关键词" helperText="多个关键词请使用逗号分隔；也可以一行填写一个关键词。" rows={4} value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/></div>
-       <div className="research-fluid-field research-fluid-span"><FluidMultiSelect id="intake-countries" titleText="目标国家" label="选择国家 / 地区" items={toItems(countryOptions)} itemToString={(item:any)=>item?.text??''} selectedItems={toItems(splitValues(formValues.countries??''))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:selectedItems.map((x:any)=>x.id).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen"/></div>
+       <div className="research-fluid-field research-fluid-span"><FluidTextInput id="intake-keywords" labelText="核心关键词 *" helperText="必填。多个关键词请使用逗号分隔。" value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" invalid={attemptedNext&&!formValues.keywords?.trim()} invalidText="请输入至少一个核心关键词。" onBlur={()=>setAttemptedNext(true)} onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/></div>
+       <div className="research-fluid-field research-fluid-span"><FluidMultiSelect id="intake-countries" titleText="目标国家 / 地区 *" label="搜索并选择国家或地区" items={countryOptions} itemToString={(item:any)=>item?item.flag+'  '+item.text:''} selectedItems={countryOptions.filter(item=>splitValues(formValues.countries??'').includes(item.text))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:selectedItems.map((x:any)=>x.text).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen" invalid={attemptedNext&&!formValues.countries?.trim()} invalidText="请至少选择一个目标国家或地区。"/></div>
+       <div className="research-fluid-field research-fluid-span"><CountrySelectionMap selectedCodes={selectedCountryCodes}/></div>
        <div className="research-fluid-field"><FluidTextInput id="intake-regions" labelText="目标地区 / 城市" value={formValues.regions??''} placeholder="例如：加州、巴伐利亚州、伦敦" onChange={(e:any)=>{setFormValues(v=>({...v,regions:e.target.value}));setProfile(null);}}/></div>
-       <div className="research-fluid-field"><FluidDropdown id="intake-languages" titleText="研究语言" label="选择研究语言" items={toItems(languageOptions)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(languageOptions).find(x=>x.id===formValues.languages)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,languages:selectedItem?.id??''}));setProfile(null);}}/></div>
+       <div className="research-fluid-field"><FluidDropdown id="intake-languages" titleText="研究语言 *" label="选择研究语言" items={toItems(languageOptions)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(languageOptions).find(x=>x.id===formValues.languages)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,languages:selectedItem?.id??''}));setProfile(null);}} invalid={attemptedNext&&!formValues.languages?.trim()} invalidText="请选择研究语言。"/></div>
        <div className="research-fluid-field"><FluidDropdown id="intake-time-range" titleText="研究时间范围" label="选择时间范围" items={toItems(dropdownOptions.time_range)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(dropdownOptions.time_range).find(x=>x.id===formValues.time_range)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,time_range:selectedItem?.id??''}));setProfile(null);}}/></div>
       </div>
      </AccordionItem>
@@ -247,7 +265,7 @@ export function ResearchWizard(props:Props) {
      <AccordionItem title={<span className="research-accordion-title"><b>03</b> 市场与渠道受众 <small>目标客户、销售渠道与参考来源</small></span>} open={openPanels[2]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===2?!isOpen:x))}>
       <div className="research-fluid-grid">
        <div className="research-fluid-field research-fluid-span"><FluidTextInput id="intake-customers" labelText="目标客户群体" value={formValues.target_customers??''} placeholder="例如：养猫家庭、宠物店、年轻上班族" onChange={(e:any)=>{setFormValues(v=>({...v,target_customers:e.target.value}));setProfile(null);}}/></div>
-       <div className="research-fluid-field research-fluid-span"><FormGroup legendText="销售渠道"><div className="research-checkbox-grid">{channelOptions.map(option=><Checkbox key={option} id={'channel-'+option} labelText={option} checked={splitValues(formValues.sales_channels??'').includes(option)} onChange={(_event:any,data:{checked:boolean})=>{const values=splitValues(formValues.sales_channels??'');setFormValues(v=>({...v,sales_channels:(data.checked?[...values,option]:values.filter(x=>x!==option)).join(', ')}));setProfile(null);}}/> )}</div></FormGroup></div>
+       <div className="research-fluid-field research-fluid-span"><FluidMultiSelect id="intake-sales-channels" titleText="销售渠道" label="搜索并选择销售渠道" items={toItems(channelOptions)} itemToString={(item:any)=>item?.text??''} selectedItems={toItems(splitValues(formValues.sales_channels??''))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,sales_channels:selectedItems.map((x:any)=>x.id).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen"/></div>
        <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-urls" labelText="参考 URL / 社交账号" helperText="每行填写一个网址或社交账号链接。" rows={4} value={formValues.reference_urls??''} placeholder="https://example.com/product" onChange={(e:any)=>{setFormValues(v=>({...v,reference_urls:e.target.value}));setProfile(null);}}/></div>
       </div>
      </AccordionItem>
@@ -263,7 +281,8 @@ export function ResearchWizard(props:Props) {
        <div className="research-fluid-field"><FluidTextInput id="intake-constraints" labelText="其他约束条件" value={formValues.other_constraints??''} placeholder="填写研究限制条件" onChange={(e:any)=>{setFormValues(v=>({...v,other_constraints:e.target.value}));setProfile(null);}}/></div>
        <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-other-notes" labelText="其他研究说明 / 自然语言补充" helperText="可补充研究背景、优先级、假设、关注的问题和希望 AI 特别分析的内容。" rows={6} value={brief||formValues.other_research_notes||''} onChange={(e:any)=>{setBrief(e.target.value);setProfile(null);}}/></div>
       </div>
-     </AccordionItem>
+     <div className="research-ai-parse-action"><div><b>AI 需求整理</b><p>将已填写内容解析为结构化研究画像，并标记用户信息、AI 建议与待确认项。</p></div><Button kind="secondary" renderIcon={Renew} disabled={busy||(!brief.trim()&&!Object.values(formValues).some(value=>value.trim()))} onClick={()=>void parseBrief()}>AI 整理研究需求</Button></div>
+      </AccordionItem>
     </Accordion>
    </FluidForm>
    {parseError&&<p className="error-text">{parseError}</p>}
@@ -287,13 +306,10 @@ export function ResearchWizard(props:Props) {
   <div className="project-card-grid">{projects.map(item=><Tile key={item.id} className="list-tile"><div><h3>{item.name}</h3><p>{item.objective}</p><Tag type={item.status==='completed'?'green':'blue'}>{item.status}</Tag></div><Button kind="ghost" renderIcon={ArrowRight} onClick={()=>onOpen(item.id)}>打开研究工作区</Button></Tile>)}</div>
   {!projects.length&&<Tile><p>还没有研究项目。填写上方研究需求即可开始。</p></Tile>}
   <div className="research-step-footer research-workflow-actions research-intake-actions">
-   <Button className="research-workflow-button" kind="tertiary" disabled>上一步</Button>
-   <div className="research-workflow-spacer"/>
-   <Button className="research-workflow-button" kind="danger--ghost" disabled={busy} onClick={onBack}>取消</Button>
-   <Button className="research-workflow-button" kind="tertiary" disabled={busy||(!brief.trim()&&!Object.values(formValues).some(v=>v.trim())&&!profile)} onClick={()=>onSaveDraft({brief:[fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\n'),brief.trim()].filter(Boolean).join('\n\n'),formValues,profile,activeStep:0,selectedSources},project?.id)}>暂存</Button>
-   {profile?<Button className="research-workflow-button" kind="primary" disabled={busy||!profile.dimensions.some(item=>item.values.length>0)} onClick={()=>onCreate([fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\n'),brief.trim()].filter(Boolean).join('\n\n'),profile,project?.id)}>下一步：调研平台 <ArrowRight size={16}/></Button>:<Button className="research-workflow-button" kind="primary" renderIcon={Renew} disabled={busy||(!brief.trim()&&!Object.values(formValues).some(v=>v.trim()))} onClick={()=>void parseBrief()}>AI 整理研究需求</Button>}
-  </div>
- </section>;
+    <Button className="research-workflow-button" kind="secondary" disabled>上一步</Button>
+    <Button className="research-workflow-button" kind="primary" disabled={busy||!requiredReady} onClick={proceedToSources}>下一步：调研平台 <ArrowRight size={16}/></Button>
+   </div>
+  </section>;
 
  const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
  const selectedPlanSources=selectedSources;
