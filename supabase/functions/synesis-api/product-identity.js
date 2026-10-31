@@ -1,10 +1,10 @@
 const GTIN_LENGTHS = new Set([8, 12, 13, 14]);
 export function readField(record, aliases) {
-  const wanted = new Set(aliases.map((name) => name.toLowerCase()));
+  const matches = (key) => aliases.some((alias) => alias instanceof RegExp ? alias.test(key) : String(alias).toLowerCase() === key.toLowerCase());
   const visit = (value, depth = 0) => {
     if (!value || typeof value !== 'object' || depth > 5) return null;
     if (Array.isArray(value)) { for (const item of value) { const found = visit(item, depth + 1); if (found !== null) return found; } return null; }
-    for (const [key, nested] of Object.entries(value)) if (wanted.has(key.toLowerCase()) && nested != null && String(nested).trim() !== '') return nested;
+    for (const [key, nested] of Object.entries(value)) if (matches(key) && nested != null && String(nested).trim() !== '') return nested;
     for (const nested of Object.values(value)) { const found = visit(nested, depth + 1); if (found !== null) return found; }
     return null;
   };
