@@ -794,3 +794,21 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
   position: static !important;
   flex: 0 0 auto;
 }
+
+
+/* Workflow controls are Carbon React Buttons and remain in normal document flow. */
+.synesis-app .research-workflow-actions {
+  position: static !important;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+  clear: both;
+}
+.synesis-app .research-workflow-actions .research-workflow-button,
+.synesis-app .research-workflow-actions .cds--btn {
+  position: static !important;
+  inset: auto !important;
+  align-self: auto;
+  transform: none !important;
+}
