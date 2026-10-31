@@ -92,3 +92,76 @@
 .synesis-app .product-search-row>:first-child{grid-column:1/-1}
 .synesis-app .card-actions{justify-content:flex-start}
 }
+/* Full-page composition refinements */
+.synesis-app .page-wrap{gap:26px}
+.synesis-app .page-title-row{padding-bottom:2px}
+.synesis-app .page-heading-copy h1{font-size:30px;letter-spacing:-.045em}
+.synesis-app .dashboard-layout{gap:22px}
+.synesis-app .dashboard-welcome{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:26px 28px;border-radius:16px;background:linear-gradient(115deg,#142943,#1c3b61 68%,#24508a);color:#fff;box-shadow:0 10px 28px rgba(18,43,76,.12)}
+.synesis-app .dashboard-welcome h2{margin:8px 0 4px;color:#fff;font-size:24px}
+.synesis-app .dashboard-welcome p{margin:0;color:#c7d6e9;font-size:13px}
+.synesis-app .dashboard-welcome .dashboard-eyebrow{color:#9fc0ff}
+.synesis-app .dashboard-welcome .cds--btn--primary{background:#fff;color:#17345a;border-color:#fff}
+.synesis-app .dashboard-eyebrow{display:block;color:var(--sn-accent);font-size:10px;font-weight:700;letter-spacing:.12em}
+.synesis-app .dashboard-metric{position:relative;overflow:hidden;min-height:116px;padding:20px 22px}
+.synesis-app .dashboard-metric:after{content:"";position:absolute;right:-18px;top:-22px;width:74px;height:74px;border:12px solid var(--sn-accent-soft);border-radius:50%;opacity:.8}
+.synesis-app .dashboard-metric-value{font-size:36px;letter-spacing:-.05em}
+.synesis-app .dashboard-empty{display:flex;align-items:center;gap:18px;padding:20px 22px}
+.synesis-app .dashboard-empty-mark{display:grid;place-items:center;flex:0 0 44px;height:44px;border-radius:12px;background:var(--sn-accent-soft);color:var(--sn-accent);font-size:13px;font-weight:700}
+.synesis-app .dashboard-empty>div:nth-child(2){flex:1}
+.synesis-app .dashboard-workflow-tile{padding:24px 26px}
+.synesis-app .dashboard-workflow-caption{color:var(--sn-muted);font-size:12px}
+.synesis-app .dashboard-workflow-steps li{padding:12px;border:1px solid var(--sn-border);border-radius:10px;background:var(--sn-surface-2)}
+.synesis-app .product-library-toolbar{padding:22px 24px}
+.synesis-app .product-library-toolbar h2,.synesis-app .settings-intro h2,.synesis-app .vault-intro h2{margin:5px 0 2px;font-size:21px}
+.synesis-app .product-library-toolbar p,.synesis-app .settings-intro p,.synesis-app .vault-intro p{margin:0;font-size:12px}
+.synesis-app .product-results-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
+.synesis-app .product-results-heading h2{margin:0}
+.synesis-app .product-results-heading span{color:var(--sn-muted);font-size:12px}
+.synesis-app .product-tile{padding:14px;gap:12px}
+.synesis-app .product-image{height:180px}
+.synesis-app .product-tile .cds--btn{margin-top:auto;justify-content:center}
+.synesis-app .history-tile{border:1px solid var(--sn-border);border-radius:14px;background:var(--sn-surface);box-shadow:var(--sn-shadow)}
+.synesis-app .settings-intro,.synesis-app .vault-intro{padding-bottom:4px}
+.synesis-app .collection-setting-card{padding:24px;gap:20px}
+.synesis-app .collection-count-presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.synesis-app .collection-depth-descriptions{display:grid;gap:8px;margin-top:16px}
+.synesis-app .collection-depth-descriptions>div{padding:12px 14px;border:1px solid var(--sn-border);border-radius:9px;background:var(--sn-surface-2)}
+.synesis-app .collection-depth-descriptions>div.is-selected{border-color:var(--sn-accent);background:var(--sn-accent-soft)}
+.synesis-app .collection-settings-actions{position:sticky;bottom:12px;display:flex;justify-content:flex-end;padding:12px 0;background:linear-gradient(transparent,var(--sn-canvas) 35%)}
+.synesis-app .credential-vault-page .vault-section{display:flex;flex-direction:column;gap:14px}
+.synesis-app .vault-section>.module-heading h2{margin:0;font-size:19px}
+.synesis-app .vault-section>.module-heading p{margin:4px 0 0;font-size:12px}
+.synesis-app .vault-card{height:100%;padding:20px;gap:16px}
+.synesis-app .vault-card .card-head{min-height:48px}
+.synesis-app .vault-card .card-actions{margin-top:auto;justify-content:flex-start}
+.synesis-app .vault-carbon-grid{row-gap:14px}
+.synesis-app .research-progress-tile,.synesis-app .research-profile-tile,.synesis-app .research-start-tile{border-radius:14px}
+.synesis-app .research-progress-tile,.synesis-app .research-profile-tile{padding:20px 22px}
+.synesis-app .research-start-tile{padding:24px}
+.synesis-app .research-intake-heading-copy h2{font-size:22px;letter-spacing:-.035em}
+.synesis-app .research-fluid-form,.synesis-app .research-fluid-grid{gap:16px}
+.synesis-app .research-source-card,.synesis-app .research-dimension,.synesis-app .research-actor-card{padding:16px;border-radius:12px}
+.synesis-app .research-analytics-panel,.synesis-app .analytics-card{padding:18px;border:1px solid var(--sn-border);border-radius:12px;background:var(--sn-surface);box-shadow:var(--sn-shadow)}
+.synesis-app .platform-results,.synesis-app .cross-platform-results-wrap{border:1px solid var(--sn-border);border-radius:12px;background:var(--sn-surface);overflow:hidden}
+.synesis-app .platform-results-table-wrap,.synesis-app .cross-platform-results-wrap{overflow-x:auto}
+.synesis-app .research-workflow-actions{padding-top:12px}
+.synesis-app .cds--btn{transition:background-color .15s ease,border-color .15s ease,transform .15s ease}
+.synesis-app .cds--btn:active{transform:translateY(1px)}
+.synesis-app :where(button,a,input,textarea,select,[tabindex]):focus-visible{outline:2px solid var(--sn-accent);outline-offset:2px}
+@media(max-width:1055px){.synesis-app .dashboard-welcome{padding:22px}.synesis-app .dashboard-workflow-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:672px){
+.synesis-app .page-heading-copy h1{font-size:24px}
+.synesis-app .dashboard-welcome{align-items:flex-start;flex-direction:column;padding:20px}
+.synesis-app .dashboard-welcome h2{font-size:21px}
+.synesis-app .dashboard-metric{min-height:100px;padding:16px}
+.synesis-app .dashboard-metric-value{font-size:30px}
+.synesis-app .dashboard-empty{align-items:flex-start;flex-wrap:wrap}
+.synesis-app .dashboard-empty>div:nth-child(2){flex-basis:calc(100% - 64px)}
+.synesis-app .dashboard-workflow-steps{grid-template-columns:1fr}
+.synesis-app .product-library-toolbar{padding:18px}
+.synesis-app .product-results-heading{align-items:flex-start;flex-direction:column;gap:4px}
+.synesis-app .collection-setting-card{padding:18px}
+.synesis-app .collection-settings-actions{position:static}
+}
+@media(prefers-reduced-motion:reduce){.synesis-app *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

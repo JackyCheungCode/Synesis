@@ -12,10 +12,11 @@ type Props={
 export function ProductLibrary(props:Props) {
   const {products,productTotal,productOffset,productSearch,setProductSearch,busy,selectedProduct,productHistory,productHistoryTotal,productHistoryOffset,onLoadProducts,onLoadHistory,onSelectProduct,onClearHistory}=props;
   return <section className="module-stack" aria-label="标准化商品库">
-    <Tile><div className="module-heading"><Tag type="blue">{productTotal.toLocaleString()} 件商品</Tag></div>
+    <Tile className="product-library-toolbar"><div className="module-heading"><div><span className="dashboard-eyebrow">PRODUCT INTELLIGENCE</span><h2>商品目录</h2><p>{productTotal.toLocaleString()} 件标准化商品</p></div><Tag type="blue">{productTotal.toLocaleString()} 件</Tag></div>
       {busy&&<InlineLoading description="正在更新商品数据" status="active"/>}
       <div className="product-search-row"><TextInput id="product-search" labelText="搜索商品" placeholder="商品名称、品牌或平台商品标识" value={productSearch} onChange={e=>setProductSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')onLoadProducts(0,productSearch);}}/><Button kind="primary" onClick={()=>onLoadProducts(0,productSearch)} disabled={busy}>搜索</Button><Button kind="tertiary" renderIcon={Renew} onClick={()=>onLoadProducts(productOffset)} disabled={busy}>刷新</Button></div>
     </Tile>
+    {products.length>0&&<div className="product-results-heading"><h2>商品结果</h2><span>每页 25 件 · 选择商品查看价格历史</span></div>}
     <Grid condensed className="product-carbon-grid">{products.map(product=><Column key={product.id} sm={4} md={4} lg={4} xlg={4}><Tile className="product-tile">
       {product.image_url&&<img className="product-image" src={product.image_url} alt="" loading="lazy" onError={e=>{e.currentTarget.style.display='none';}}/>}
       <div><h3>{product.title||'未命名商品'}</h3><p>{product.brand||'品牌未知'} · {product.category||'未分类'}</p></div>
