@@ -604,7 +604,7 @@ function App() {
             onStepChange={(id,step)=>void updateResearchWorkflowStep(id,step)}
             onExportProjectResults={(id)=>void exportProjectResults(id)}
           />}
-          {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics} theme={theme === "dark" ? "g100" : "white"}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
+          {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics} /><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
           {page==='products' && <ProductLibrary
             products={products} productTotal={productTotal} productOffset={productOffset}
             productSearch={productSearch} setProductSearch={setProductSearch} busy={busy}
@@ -810,16 +810,16 @@ function PlatformResultsTable({platform,rows}:{platform:string;rows:unknown[]}) 
  </section>;
 }
 
-function AnalyticsDashboard({data,theme}:{data:any;theme:'white'|'g100'}) {
+function AnalyticsDashboard({data}:{data:any}) {
   const metrics=data.metrics??{}, coverage=data.coverage??{}, bands=data.distributions?.price_bands??[];
   const bandsByCurrency=data.distributions?.price_bands_by_currency??[];
   const maxBand=Math.max(1,...bands.map((x:any)=>x.count),...bandsByCurrency.flatMap((g:any)=>g.bands.map((x:any)=>x.count))), words=data.distributions?.words??[];
   const brands=data.distributions?.brands??[], categories=data.distributions?.categories??[], countries=data.distributions?.countries??[], reviewWords=data.distributions?.review_words??[], ratingDistribution=data.distributions?.rating_distribution??[], funnel=data.funnel??{};
   const trends=data.trends??[];
   const trendData=trends.map((point:any)=>({group:'每日商品数量',date:point.date,value:Number(point.count)}));
-  const trendOptions:any={theme,resizable:true,height:'240px',axes:{bottom:{title:'日期',mapsTo:'date',scaleType:'labels'},left:{title:'记录数',mapsTo:'value',scaleType:'linear',includeZero:true}},accessibility:{svgAriaLabel:'按商品源时间字段统计的每日商品数量趋势'}};
+  const trendOptions:any={resizable:true,height:'240px',axes:{bottom:{title:'日期',mapsTo:'date',scaleType:'labels'},left:{title:'记录数',mapsTo:'value',scaleType:'linear',includeZero:true}},accessibility:{svgAriaLabel:'按商品源时间字段统计的每日商品数量趋势'}};
   const donutData=categories.slice(0,6).map((row:any)=>({group:String(row.label),value:Number(row.count)}));
-  const donutOptions:any={theme,resizable:true,height:'260px',donut:{center:{label:'商品类目'}},pie:{valueMapsTo:'value'},legend:{enabled:true,position:'right'},accessibility:{svgAriaLabel:'商品类目占比环形图'}};
+  const donutOptions:any={resizable:true,height:'260px',donut:{center:{label:'商品类目'}},pie:{valueMapsTo:'value'},legend:{enabled:true,position:'right'},accessibility:{svgAriaLabel:'商品类目占比环形图'}};
   const stages=[['全部记录',funnel.total??0],['有商品标题',funnel.titled??0],['有价格',funnel.priced??0],['有评分',funnel.rated??0],['有图片',funnel.imaged??0],['有商品链接',funnel.linked??0]];
   const money=(n:number|null)=>n===null||n===undefined?'—':n.toLocaleString(undefined,{maximumFractionDigits:2});
   return <section className="module-stack analytics-stack">
