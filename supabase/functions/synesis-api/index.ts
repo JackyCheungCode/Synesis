@@ -712,7 +712,11 @@ Deno.serve(async (req: Request) => {
           const original=Array.isArray(executionInput[field])?executionInput[field] as unknown[]:[];
           const valid=original.filter(isValidHttpUrl).map(value=>value.trim());
           if(valid.length===0) {
-            const keywords=Array.isArray(executionInput.searchTerms)?executionInput.searchTerms.filter((value):value is string=>typeof value==='string'&&value.trim()):[];
+            const keywordCandidates=[
+              ...original.filter((value):value is string=>typeof value==='string'&&value.trim()&&!isValidHttpUrl(value)),
+              ...(Array.isArray(executionInput.searchTerms)?executionInput.searchTerms.filter((value):value is string=>typeof value==='string'&&value.trim()):[]),
+            ];
+            const keywords=[...new Set(keywordCandidates.map(value=>value.trim()))];
             executionInput[field]=keywords.length?keywords.map(keyword=>`https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`):['https://www.amazon.com/'];
           } else executionInput[field]=valid;
         }
