@@ -53,6 +53,9 @@ function App() {
   const [resultPage, setResultPage] = useState(0);
   const [resultTotal, setResultTotal] = useState(0);
   const [resultSynced, setResultSynced] = useState(0);
+  const [projectResultRows, setProjectResultRows] = useState<Array<{task_id:string;platform_slug:string;item_index:number;raw_data:unknown}>>([]);
+  const [projectResultTotal, setProjectResultTotal] = useState(0);
+  const [projectResultOffset, setProjectResultOffset] = useState(0);
   const [analyticsTaskId, setAnalyticsTaskId] = useState('');
   const [taskLogs, setTaskLogs] = useState<Record<string,string[]>>({});
   const [analytics, setAnalytics] = useState<any>(null);
@@ -292,6 +295,15 @@ function App() {
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
+  async function loadProjectResults(projectId:string,offset=0) {
+    try {
+      const result=await api('tasks.project-results',{projectId,limit:100,offset});
+      setProjectResultRows(result.results??[]);
+      setProjectResultTotal(Number(result.total??0));
+      setProjectResultOffset(offset);
+    } catch(e) { setNotice({kind:'error',text:'跨平台数据加载失败：'+message(e)}); }
+  }
+
   async function viewTaskResults(task: Task, page = 0) {
     setBusy(true);
     try {
@@ -467,6 +479,8 @@ function App() {
             onSync={(task)=>void syncTask(task)}
             onView={(task)=>void viewTaskResults(task)}
             onAnalyze={(task)=>void loadAnalytics(task.id)}
+            projectResultRows={projectResultRows} projectResultTotal={projectResultTotal} projectResultOffset={projectResultOffset}
+            onLoadProjectResults={(id,offset)=>void loadProjectResults(id,offset)}
             analytics={analytics} analyticsTaskId={analyticsTaskId}
             taskLogs={taskLogs} onLoadLogs={(task)=>void loadTaskLogs(task)}
             onSaveAnalytics={()=>void saveAnalyticsReport()}
