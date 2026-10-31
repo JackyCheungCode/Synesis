@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, SideNav, SideNavItems, SideNavLink, Content,
   Button, InlineNotification, Tag, TextInput, PasswordInput, Tile,
-  Toggle, Select, SelectItem, TextArea, Modal, DataTable, Table, TableHead,
-  TableRow, TableHeader, TableBody, TableCell, Loading,
+  Toggle, Select, SelectItem, TextArea, Modal, Loading,
 } from '@carbon/react';
 import {
   Dashboard, Globe, Ai, Folder, ChartLine, Add, Renew, Play, Search as SearchIcon, UserAvatar,
