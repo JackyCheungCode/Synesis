@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useWorkspaceRoute, type WorkspacePage } from './lib/router';
+import { WorkspaceNavigation } from './components/WorkspaceNavigation';
+import { ResearchWizard } from './features/research/ResearchWizard';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content,
   Button, InlineNotification, Tag, TextInput, PasswordInput, Tile,
   Toggle, Select, SelectItem, TextArea, Modal, Loading, Accordion, AccordionItem, Link,
 } from '@carbon/react';
 import {
-  Dashboard, Globe, Ai, ChartLine, Add, Renew, Play, Search as SearchIcon, UserAvatar,
+  Add, Renew, Play, Search as SearchIcon, UserAvatar,
 } from '@carbon/icons-react';
 import { BrandIcon } from './components/BrandIcon';
 import { platforms, providers, apiIntegrations } from './data/catalog';
 import { useAuth } from './auth/AuthProvider';
 import { supabase } from './lib/supabase';
 
-type Page = 'dashboard' | 'vault' | 'projects' | 'tasks' | 'reports' | 'products';
+type Page = WorkspacePage;
 type Credential = { slug: string; name: string; kind: 'provider' | 'integration'; status: string; key_last4?: string; last_validated_at?: string };
 type Project = { id: string; name: string; objective: string; status: string; target_regions: string[]; platform_slugs: string[] };
 type Plan = { id: string; project_id: string; status: string; plan: Record<string, unknown>; estimated_cost: number | null; created_at: string };
@@ -31,8 +34,10 @@ const providerModels: Record<string, string> = {
 
 function App() {
   const { session, signOut } = useAuth();
-  const [page, setPage] = useState<Page>('dashboard');
-  const navigate = (next: Page) => { setPage(next); setNavExpanded(false); };
+  const route = useWorkspaceRoute();
+  const page = route.page;
+  const projectId = route.projectId;
+  const navigate = (next: Page, id?: string) => { route.navigate(next, id); setNavExpanded(false); };
   const [navExpanded, setNavExpanded] = useState(false);
   const [notice, setNotice] = useState<{kind:'info'|'success'|'error'|'warning'; text:string}|null>(null);
   const [busy, setBusy] = useState(false);
@@ -49,13 +54,8 @@ function App() {
   const [analyticsTaskId, setAnalyticsTaskId] = useState('');
   const [analytics, setAnalytics] = useState<any>(null);
   const [keyValues, setKeyValues] = useState<Record<string,string>>({});
-  const [projectName, setProjectName] = useState('');
-  const [objective, setObjective] = useState('');
-  const [regions, setRegions] = useState('美国, 欧洲');
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['amazon','ebay']);
   const [selectedProvider, setSelectedProvider] = useState('openai');
   const [approvalPlan, setApprovalPlan] = useState<Plan|null>(null);
-  const [approvalPlanText, setApprovalPlanText] = useState('');
   const [cloudflareAccountId, setCloudflareAccountId] = useState('');
   const [integrationMeta, setIntegrationMeta] = useState<Record<string,string>>({});
   const [search, setSearch] = useState('');
@@ -96,6 +96,7 @@ function App() {
     finally { setBusy(false); }
   }
   useEffect(() => { void loadAll(); }, []);
+  useEffect(() => { if (page === 'products') void loadProducts(0); }, [page]);
 
   async function saveCredential(slug: string, name: string, kind: 'provider'|'integration') {
     const value = keyValues[slug]?.trim();
@@ -118,30 +119,34 @@ function App() {
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
-  async function createProject() {
-    if (!projectName.trim() || !objective.trim()) return;
+  async function createProject(brief: string) {
+    const researchBrief = brief.trim();
+    if (!researchBrief) return;
     setBusy(true);
     try {
       const {data,error} = await supabase.from('research_projects').insert({
-        name:projectName.trim(), objective:objective.trim(),
-        target_regions:regions.split(',').map(x=>x.trim()).filter(Boolean),
-        platform_slugs:selectedPlatforms, status:'draft',
+        name:researchBrief.length > 56 ? researchBrief.slice(0,56) + '…' : researchBrief,
+        objective:researchBrief, target_regions:[], platform_slugs:[], scope:{input_mode:'natural_language'}, status:'planning',
       }).select().single();
       if(error) throw error;
-      setProjectName(''); setObjective('');
+      navigate('projects', data.id);
       await api('plans.generate',{projectId:data.id,provider:selectedProvider});
-      setNotice({kind:'success',text:'研究项目已创建，AI 研究计划已生成并进入待人工审批状态。'});
-      navigate('projects'); await loadAll();
+      setNotice({kind:'success',text:'研究需求已提交，AI 正在生成采集计划。'});
+      await loadAll();
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
   async function approvePlan(plan: Plan) {
     setBusy(true);
     try {
-      const approvedPlan = JSON.parse(approvalPlanText);
-      await api('plans.approve',{planId:plan.id, plan:approvedPlan});
-      setApprovalPlan(null); setNotice({kind:'success',text:'计划已由你批准。系统已创建待执行采集任务；任务仍需单独启动。'});
-      await loadAll(); navigate('tasks');
+      await api('plans.approve',{planId:plan.id});
+      const {data:queued,error}=await supabase.from('collection_tasks')
+        .select('id').eq('plan_id',plan.id).eq('status','queued').eq('user_id',session?.user.id);
+      if(error) throw error;
+      for (const task of queued ?? []) await api('tasks.execute',{taskId:task.id});
+      setApprovalPlan(null);
+      setNotice({kind:'success',text:`采集计划已批准，已自动启动 ${queued?.length ?? 0} 个 Apify 任务。后续同步和分析将在项目内跟踪。`});
+      await loadAll(); navigate('projects',plan.project_id);
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
@@ -288,9 +293,8 @@ function App() {
     finally { setBusy(false); }
   }
 
-  const title: Record<Page,string> = {dashboard:'全球外贸情报总览',vault:'Key Vault 与连接管理',projects:'研究项目中心',tasks:'采集任务中心',reports:'市场研究报告',products:'标准化商品库'};
+  const title: Record<Page,string> = {dashboard:'情报总览',vault:'AI 模型与 Key Vault',projects:projectId?'研究项目详情':'研究项目中心',products:'标准化商品库'};
   const pendingPlans = plans.filter(p => p.status === 'pending_approval');
-  const pageRows = tasks.filter(t => !search || t.platform_slug.includes(search.toLowerCase()));
 
   return (
     <div className="synesis-app cds--white">
@@ -302,31 +306,7 @@ function App() {
           <HeaderGlobalAction aria-label="账户（点击退出登录）" tooltipAlignment="end" onClick={()=>void signOut()}><UserAvatar/></HeaderGlobalAction>
         </HeaderGlobalBar>
       </Header>
-      <button className={`synesis-nav-backdrop${navExpanded ? ' is-visible' : ''}`} type="button" aria-label="关闭导航菜单" tabIndex={navExpanded ? 0 : -1} onClick={()=>setNavExpanded(false)} />
-      <aside className={`synesis-nav-panel${navExpanded ? ' is-open' : ''}`} aria-label="Synesis 主导航" aria-hidden={!navExpanded}>
-        <div className="synesis-nav-heading"><Globe size={20}/><span>跨境市场分析</span></div>
-        <nav className="synesis-nav-tree" aria-label="跨境市场分析菜单">
-          <details className="synesis-nav-group" open>
-            <summary><Dashboard size={16}/><span>工作台</span></summary>
-            <button type="button" className={`synesis-nav-leaf${page==='dashboard' ? ' is-active' : ''}`} onClick={()=>navigate('dashboard')}>情报总览</button>
-          </details>
-          <details className="synesis-nav-group" open>
-            <summary><Globe size={16}/><span>情报与数据</span></summary>
-            <button type="button" className="synesis-nav-leaf" onClick={()=>navigate('dashboard')}>全球外贸情报</button>
-            <button type="button" className={`synesis-nav-leaf${page==='tasks' ? ' is-active' : ''}`} onClick={()=>navigate('tasks')}>采集任务中心</button>
-            <button type="button" className={`synesis-nav-leaf${page==='products' ? ' is-active' : ''}`} onClick={()=>{navigate('products');void loadProducts(0);}}>标准化商品库</button>
-          </details>
-          <details className="synesis-nav-group" open>
-            <summary><ChartLine size={16}/><span>研究与决策</span></summary>
-            <button type="button" className={`synesis-nav-leaf${page==='projects' ? ' is-active' : ''}`} onClick={()=>navigate('projects')}>研究项目中心</button>
-            <button type="button" className={`synesis-nav-leaf${page==='reports' ? ' is-active' : ''}`} onClick={()=>navigate('reports')}>市场监控与报告</button>
-          </details>
-          <details className="synesis-nav-group" open>
-            <summary><Ai size={16}/><span>平台管理</span></summary>
-            <button type="button" className={`synesis-nav-leaf${page==='vault' ? ' is-active' : ''}`} onClick={()=>navigate('vault')}>AI 模型与 Key Vault</button>
-          </details>
-        </nav>
-      </aside>
+      <WorkspaceNavigation page={page} open={navExpanded} onNavigate={(target)=>navigate(target)} onClose={()=>setNavExpanded(false)}/>
       <Content className="synesis-content">
         <div className="page-wrap">
           <div className="page-title-row"><div><p className="eyebrow">SYNESIS / WORKSPACE</p><h1>{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue">个人工作空间</Tag></div>
@@ -355,30 +335,19 @@ function App() {
             </Tile>)}</div></section>
             <Tile><h3>统一 AI 模型路由</h3><p>系统通过单一后端入口路由至 OpenAI、Gemini、DeepSeek、Claude、Workers AI。各供应商凭证独立保存，按用户隔离。</p><Select id="default-provider" labelText="默认模型 Provider" value={selectedProvider} onChange={e=>setSelectedProvider(e.target.value)}>{providers.map(p=><SelectItem key={p.slug} value={p.slug} text={p.name}/>)}</Select></Tile>
           </section>}
-          {page==='projects' && <section className="module-stack">
-            <Tile><h2>创建研究项目</h2><div className="project-form">
-              <TextInput id="project-name" labelText="项目名称" placeholder="例如：美国站家居收纳市场机会研究" value={projectName} onChange={e=>setProjectName(e.target.value)}/>
-              <TextArea id="project-objective" labelText="研究目标与问题" placeholder="描述目标市场、产品品类、竞争格局、目标客户与需要回答的问题…" value={objective} onChange={e=>setObjective(e.target.value)} rows={4}/>
-              <TextInput id="project-regions" labelText="目标市场（逗号分隔）" value={regions} onChange={e=>setRegions(e.target.value)}/>
-              <fieldset className="platform-picker"><legend>研究平台</legend>{platforms.map(p=><Toggle key={p.slug} id={`platform-${p.slug}`} labelText={p.name} toggled={selectedPlatforms.includes(p.slug)} onToggle={on=>setSelectedPlatforms(v=>on?[...v,p.slug]:v.filter(x=>x!==p.slug))}/>)}</fieldset>
-              <Select id="plan-provider" labelText="生成研究计划的 AI Provider" value={selectedProvider} onChange={e=>setSelectedProvider(e.target.value)}>{providers.map(p=><SelectItem key={p.slug} value={p.slug} text={p.name}/>)}</Select>
-              <Button kind="primary" renderIcon={Ai} onClick={()=>void createProject()} disabled={!projectName.trim()||!objective.trim()||busy}>创建项目并生成 AI 计划</Button>
-            </div></Tile>
-            <h2>项目列表</h2>
-            <div className="project-card-grid">{projects.map(p=><Tile key={p.id} className="list-tile"><div><h3>{p.name}</h3><p>{p.objective}</p><div className="tag-row">{p.target_regions.map(r=><Tag key={r}>{r}</Tag>)}<Tag type="blue">{p.status}</Tag></div></div><Button kind="ghost" onClick={()=>navigate('tasks')}>查看任务</Button></Tile>)}</div>
-            <h2>等待人工审批的 AI 研究计划</h2>
-            <div className="project-card-grid">{pendingPlans.map(p=><Tile key={p.id} className="list-tile"><div><h3>研究计划 · {projects.find(x=>x.id===p.project_id)?.name ?? p.project_id}</h3><p>{JSON.stringify(p.plan).slice(0,500)}</p><Tag type="warm-gray">待人工审批</Tag></div><Button kind="primary" onClick={()=>{setApprovalPlan(p);setApprovalPlanText(JSON.stringify(p.plan,null,2));}}>审阅并审批</Button></Tile>)}</div>
-          </section>}
-          {page==='tasks' && <section className="module-stack"><div className="module-heading"><div><h2>Apify 采集任务</h2><p>只有通过人工审批的研究计划才会产生可执行任务。</p></div><Button kind="tertiary" renderIcon={Renew} onClick={()=>void loadAll()}>刷新</Button></div>
-            <div className="task-table-wrap"><table className="task-table"><thead><tr><th>平台</th><th>状态</th><th>进度</th><th>结果接收</th><th>Apify Actor</th><th>创建时间</th><th>操作</th></tr></thead><tbody>
-              {pageRows.map(task=><tr key={task.id}><td>{task.platform_slug}</td><td><Tag type={task.status==='succeeded'?'green':task.status==='failed'?'red':'blue'}>{task.status}</Tag></td><td>{task.progress??0}%</td><td>{(task.result_synced_count??0).toLocaleString()} / {(task.result_count??0).toLocaleString()}</td><td>{task.actor_id??'—'}</td><td>{new Date(task.created_at).toLocaleString()}</td><td><div className="card-actions">
-                {task.status==='queued'&&<Button size="sm" kind="tertiary" renderIcon={Play} onClick={()=>void runTask(task)}>执行</Button>}
-                {['queued','running'].includes(task.status)&&<Button size="sm" kind="danger--tertiary" onClick={()=>void cancelTask(task)} disabled={busy}>取消任务</Button>}{task.status==='failed'&&<Button size="sm" kind="tertiary" renderIcon={Renew} onClick={()=>void retryTask(task)}>创建重试</Button>}
-                {(['running','queued'].includes(task.status)||(task.status==='succeeded'&&(task.result_synced_count??0)<(task.result_count??0)))&&<Button size="sm" kind="ghost" renderIcon={Renew} onClick={()=>void syncTask(task)}>同步 / 继续接收</Button>}
-                {task.status==='succeeded'&&<Button size="sm" kind="ghost" onClick={()=>void viewTaskResults(task)}>查看结果</Button>}
-              </div></td></tr>)}
-            </tbody></table></div>
-          </section>}
+          {page==='projects' && <ResearchWizard
+            projects={projects} plans={plans} tasks={tasks} reports={reports} projectId={projectId} busy={busy}
+            onCreate={(brief)=>void createProject(brief)}
+            onOpen={(id)=>navigate('projects',id)}
+            onBack={()=>navigate('projects')}
+            onApprove={(plan)=>setApprovalPlan(plan)}
+            onCancel={(task)=>cancelTask(task)}
+            onRetry={(task)=>void retryTask(task)}
+            onSync={(task)=>void syncTask(task)}
+            onView={(task)=>void viewTaskResults(task)}
+            onAnalyze={(task)=>void loadAnalytics(task.id)}
+          />}
+          {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存分析结果到当前研究项目</Button></section>}
           {page==='products' && <section className="module-stack">
             <Tile>
               <div className="module-heading"><div><h2>跨平台商品目录</h2><p>统一查看采集任务中识别的商品主档、来源平台与历史价格。原始采集记录仍独立保留。</p></div><Tag type="blue">{productTotal.toLocaleString()} 件商品</Tag></div>
@@ -396,14 +365,6 @@ function App() {
             </Tile>}
             {!products.length&&<Tile><p>暂时没有标准化商品。完成采集任务并成功同步结果后，符合身份识别条件的商品会自动进入商品库。</p></Tile>}
           </section>}
-          {page==='reports' && <section className="module-stack">
-            <Tile><div className="module-heading"><div><h2>产品数据分析工作台</h2><p>从完整采集明细中计算价格、评分、品牌、类目、关键词、商品信息完整度和转化漏斗。</p></div><Tag type="blue">多维分析</Tag></div>
-              <Select id="analytics-task" labelText="选择已完成采集的数据集" value={analyticsTaskId} onChange={e=>{setAnalyticsTaskId(e.target.value);setAnalytics(null);}}><SelectItem value="" text="请选择采集任务"/>{tasks.filter(t=>t.status==='succeeded').map(t=><SelectItem key={t.id} value={t.id} text={`${t.platform_slug} · ${t.id.slice(0,8)} · ${t.result_synced_count??0} 条`}/>)}</Select>
-              <Button kind="primary" renderIcon={ChartLine} disabled={!analyticsTaskId||busy} onClick={()=>void loadAnalytics(analyticsTaskId)}>生成多维分析</Button>
-            </Tile>
-            {analytics && <><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存分析快照为报告</Button></>}
-            <Tile><h2>已保存的市场研究报告</h2>{reports.length?reports.map(report=><div className="report-row" key={report.id}><div><strong>{report.title}</strong><p>{new Date(report.created_at).toLocaleString()} · {report.status}</p></div><Tag type="green">已保存</Tag></div>):<p>暂无报告。选择数据集生成分析后，可将分析快照保存到这里。</p>}</Tile>
-          </section>}
         </div>
       </Content>
       {searchOpen && <Modal open modalHeading="全局搜索" primaryButtonText="完成" secondaryButtonText="清除" onRequestClose={()=>setSearchOpen(false)} onRequestSubmit={()=>setSearchOpen(false)} onSecondarySubmit={()=>setSearch('')}>
@@ -416,8 +377,12 @@ function App() {
         <p>任务 ID：{resultTask.id} · 当前页显示 {taskResults.length} 条；总计 {resultTotal.toLocaleString()} 条，已同步 {resultSynced.toLocaleString()} 条。</p>
         <div className="card-actions"><Button kind="secondary" size="sm" disabled={resultPage===0} onClick={()=>void viewTaskResults(resultTask,resultPage-1)}>上一页</Button><Tag type="blue">第 {resultPage+1} / {Math.max(1,Math.ceil(resultTotal/100))} 页</Tag><Button kind="secondary" size="sm" disabled={(resultPage+1)*100>=resultSynced} onClick={()=>void viewTaskResults(resultTask,resultPage+1)}>下一页</Button><Button kind="tertiary" size="sm" onClick={()=>void exportTaskResults(resultTask)}>导出已接收 CSV</Button></div><RawResultsTable rows={taskResults}/><Accordion><AccordionItem title="查看完整原始 JSON"><pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre></AccordionItem></Accordion>
       </Modal>}
-      {approvalPlan && <Modal open modalHeading="审批 AI 研究计划" primaryButtonText="批准并创建采集任务" secondaryButtonText="返回审阅" onRequestClose={()=>setApprovalPlan(null)} onRequestSubmit={()=>void approvePlan(approvalPlan)} primaryButtonDisabled={busy}>
-        <p>请审阅研究范围与采集任务。AI 不会猜测 Apify Actor ID；请在下方 JSON 的 platform_tasks[].actor_id 填入你确认的 Actor ID。批准后只创建待执行任务，不会自动启动 Apify。</p><TextArea id="approval-plan-json" labelText="研究计划（可编辑 JSON）" rows={14} value={approvalPlanText} onChange={e=>setApprovalPlanText(e.target.value)} />
+      {approvalPlan && <Modal open modalHeading="确认 Apify 数据采集" primaryButtonText="批准并自动开始采集" secondaryButtonText="返回" onRequestClose={()=>setApprovalPlan(null)} onRequestSubmit={()=>void approvePlan(approvalPlan)} primaryButtonDisabled={busy}>
+        <p>{String(approvalPlan.plan.executive_summary??'请确认本次研究计划的采集范围。批准后 Synesis 将自动启动已验证的 Apify 任务，并继续执行数据同步。')}</p>
+        <h4>采集任务</h4>
+        {(Array.isArray(approvalPlan.plan.platform_tasks)?approvalPlan.plan.platform_tasks:[]).map((item:any,index:number)=><div className="research-plan-row" key={index}><b>{String(item.platform_slug??'未知平台')}</b><p>{String(item.purpose??'按研究目标采集数据')}</p></div>)}
+        <p>预计费用：{approvalPlan.estimated_cost===null?'暂不可估算':`$ ${Number(approvalPlan.estimated_cost).toFixed(2)}`}</p>
+        <p className="subheading">批准后，采集、结果同步和后续研究步骤将自动推进。</p>
       </Modal>}
     </div>
   );
