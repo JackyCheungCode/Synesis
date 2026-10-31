@@ -328,13 +328,32 @@ Deno.serve(async (req: Request) => {
       const plan=JSON.parse(String(raw).replace(/^```json\s*/,'').replace(/```$/,''));
       const candidateById=new Map(actorCandidates.map(actor=>[String(actor.id),actor]));
       const platformTasks=Array.isArray(plan.platform_tasks)?plan.platform_tasks:[];
+      const collectionSettings=(project.scope as Record<string,any>|null)?.collection_settings??{};
+      const requestedItems=Math.min(5000,Math.max(10,Number(collectionSettings.itemsPerPlatform)||100));
+      const requestedDepth=collectionSettings.depth==='light'||collectionSettings.depth==='deep'?collectionSettings.depth:'standard';
+      const countFieldPriority=['maxItems','maxResults','maxResultsPerSearch','resultsLimit','limit','itemLimit','itemsLimit','maxRecords','recordLimit','numberOfResults','numResults','maxProducts','maxVideos','maxPosts','maxListings','count'];
       plan.platform_tasks=platformTasks.map((task:Record<string,unknown>)=>{
         const candidate=typeof task.actor_id==='string'?candidateById.get(task.actor_id):undefined;
         if(!candidate) return {...task,actor_id:null,schema_valid:false,validation_errors:['未从 Apify Store 的候选 Actor 中选择有效 Actor']};
         const schema=candidate.input_schema as CompactInputSchema;
-        const validationErrors=validateActorInput(task.input,schema);
+        const properties=schema.properties??{};
+        const input=task.input&&typeof task.input==='object'&&!Array.isArray(task.input)?{...(task.input as Record<string,unknown>)}:{};
+        const numericFields=Object.entries(properties).filter(([,definition])=>['number','integer'].includes(String(definition?.type)));
+        const countField=countFieldPriority.find(key=>numericFields.some(([name])=>name.toLowerCase()===key.toLowerCase()))
+          ??numericFields.find(([name])=>/(limit|max(items|results|records|products|videos|posts|listings)|numberofresults|numresults|^count$)/i.test(name))?.[0];
+        const settingsWarnings:string[]=[];
+        if(countField) input[countField]=requestedItems;
+        else settingsWarnings.push('该 Actor Schema 未发现明确的记录数量参数，目标数量可能无法由 Actor 强制限制。');
+        const depthFields=Object.entries(properties).filter(([name,definition])=>definition?.type==='boolean'&&/(include|enable|fetch|get|scrape|with).*(comments?|reviews?|replies|details?)|(comments?|reviews?|replies|details?).*(enabled|included)/i.test(name));
+        if(requestedDepth==='deep') {
+          if(depthFields.length) for(const [name] of depthFields) input[name]=true;
+          else settingsWarnings.push('该 Actor Schema 未提供评论、详情或关联内容开关，深度采集将受平台能力限制。');
+        }
+        const validationErrors=validateActorInput(input,schema);
         return {
-          ...task,actor_id:candidate.id,actor_title:candidate.title,actor_rating:candidate.rating,
+          ...task,input,estimated_items:requestedItems,collection_depth:requestedDepth,
+          collection_limit_field:countField??null,settings_warnings:settingsWarnings,
+          actor_id:candidate.id,actor_title:candidate.title,actor_rating:candidate.rating,
           pricing_model:candidate.pricing_model,input_schema:schema,
           schema_valid:validationErrors.length===0,validation_errors:validationErrors,
         };
