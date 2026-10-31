@@ -784,7 +784,7 @@ Deno.serve(async (req: Request) => {
       const SAMPLE_LIMIT = 10000;
       const currencyStats = new Map<string,{count:number;sum:number;min:number;max:number;sample:number[];bands:number[]}>();
       let priceCount = 0;
-      const fieldCounts = { title:0, price:0, currency:0, rating:0, reviews:0, brand:0, category:0, image:0, link:0, sku:0, description:0, sales:0, sales_rank:0, stock:0, country:0, review_text:0 };
+      const fieldCounts = { title:0, price:0, currency:0, rating:0, reviews:0, brand:0, category:0, image:0, link:0, sku:0, description:0, sales:0, sales_rank:0, stock:0, country:0, review_text:0, views:0, likes:0, comments:0, shares:0, followers:0, rank:0, salary:0 };
       const trendMap = new Map<string, {count:number;priceCount:number;priceSum:number}>();
       const funnel = { total: 0, titled: 0, priced: 0, rated: 0, imaged: 0, linked: 0 };
       const stop = new Set(['the','and','for','with','from','this','that','you','your','new','pack','set','inch','inches','of','to','a','an','on','by','is','are','（','）']);
@@ -849,7 +849,7 @@ Deno.serve(async (req: Request) => {
           }
         }
         if (currencyValue) fieldCounts.currency++;
-        for (const [key,value] of Object.entries({views,likes,comments,shares,followers,rank,salary})) if(value!==null&&value>=0){engagementStats[key as keyof typeof engagementStats].sum+=value;engagementStats[key as keyof typeof engagementStats].count++;}
+        for (const [key,value] of Object.entries({views,likes,comments,shares,followers,rank,salary})) if(value!==null&&value>=0){engagementStats[key as keyof typeof engagementStats].sum+=value;engagementStats[key as keyof typeof engagementStats].count++;fieldCounts[key as keyof typeof fieldCounts]++;}
         if (rating !== null && rating >= 0) { ratingStats.sum+=rating; ratingStats.count++; funnel.rated++; fieldCounts.rating++; const bucket=String(Math.round(rating*2)/2); ratingBuckets.set(bucket,(ratingBuckets.get(bucket)??0)+1); }
         if (reviews !== null && reviews >= 0) { reviewStats.sum+=reviews; reviewStats.count++; fieldCounts.reviews++; }
         if (image) { funnel.imaged++; fieldCounts.image++; }
@@ -897,7 +897,7 @@ Deno.serve(async (req: Request) => {
         distributions:{entity_types:top(entityTypes),price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),countries:top(countries),review_words:top(reviewWords),rating_distribution:[...ratingBuckets.entries()].sort((a,b)=>Number(a[0])-Number(b[0])).map(([rating,count])=>({rating:Number(rating),count})),price_by_currency:[...currencyStats.entries()].map(([currency,stats])=>({currency,count:stats.count,average:average(stats.sum,stats.count),min:stats.min,max:stats.max})).sort((a,b)=>b.count-a.count)},
         trends,
         funnel, field_counts:fieldCounts,
-        quality:{title_rate:analyzed?fieldCounts.title/analyzed:0,price_rate:analyzed?fieldCounts.price/analyzed:0,currency_rate:analyzed?fieldCounts.currency/analyzed:0,rating_rate:analyzed?fieldCounts.rating/analyzed:0,reviews_rate:analyzed?fieldCounts.reviews/analyzed:0,brand_rate:analyzed?fieldCounts.brand/analyzed:0,category_rate:analyzed?fieldCounts.category/analyzed:0,image_rate:analyzed?fieldCounts.image/analyzed:0,link_rate:analyzed?fieldCounts.link/analyzed:0,sku_rate:analyzed?fieldCounts.sku/analyzed:0,description_rate:analyzed?fieldCounts.description/analyzed:0,sales_rate:analyzed?fieldCounts.sales/analyzed:0,sales_rank_rate:analyzed?fieldCounts.sales_rank/analyzed:0,stock_rate:analyzed?fieldCounts.stock/analyzed:0,country_rate:analyzed?fieldCounts.country/analyzed:0,review_text_rate:analyzed?fieldCounts.review_text/analyzed:0}
+        quality:{title_rate:analyzed?fieldCounts.title/analyzed:0,price_rate:analyzed?fieldCounts.price/analyzed:0,currency_rate:analyzed?fieldCounts.currency/analyzed:0,rating_rate:analyzed?fieldCounts.rating/analyzed:0,reviews_rate:analyzed?fieldCounts.reviews/analyzed:0,brand_rate:analyzed?fieldCounts.brand/analyzed:0,category_rate:analyzed?fieldCounts.category/analyzed:0,image_rate:analyzed?fieldCounts.image/analyzed:0,link_rate:analyzed?fieldCounts.link/analyzed:0,sku_rate:analyzed?fieldCounts.sku/analyzed:0,description_rate:analyzed?fieldCounts.description/analyzed:0,sales_rate:analyzed?fieldCounts.sales/analyzed:0,sales_rank_rate:analyzed?fieldCounts.sales_rank/analyzed:0,stock_rate:analyzed?fieldCounts.stock/analyzed:0,country_rate:analyzed?fieldCounts.country/analyzed:0,review_text_rate:analyzed?fieldCounts.review_text/analyzed:0,views_rate:analyzed?fieldCounts.views/analyzed:0,likes_rate:analyzed?fieldCounts.likes/analyzed:0,comments_rate:analyzed?fieldCounts.comments/analyzed:0,shares_rate:analyzed?fieldCounts.shares/analyzed:0,followers_rate:analyzed?fieldCounts.followers/analyzed:0,rank_rate:analyzed?fieldCounts.rank/analyzed:0,salary_rate:analyzed?fieldCounts.salary/analyzed:0}
       });
     }
 
