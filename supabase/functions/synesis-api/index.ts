@@ -226,11 +226,37 @@ Deno.serve(async (req: Request) => {
       const {data:claimed,error:claimError}=await admin.from('collection_tasks').update({status:'running',started_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId).eq('status','queued').select('id').maybeSingle();
       if(claimError||!claimed) return json({error:'任务已被执行或状态已变化'},409);
       const actor=encodeURIComponent(task.actor_id).replace(/%2F/g,'~');
-      const response=await fetch(`https://api.apify.com/v2/acts/${actor}/runs`,{method:'POST',headers:{Authorization:`Bearer ${apifyToken}`,'Content-Type':'application/json'},body:JSON.stringify(task.input??{})});
-      const result=await response.json();
-      if(!response.ok) { await admin.from('collection_tasks').update({status:'failed',error_message:result?.error?.message??'Apify task failed',finished_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId); return json({error:result?.error?.message??'Apify 任务提交失败'},502); }
-      await admin.from('collection_tasks').update({external_run_id:result.data?.id}).eq('id',taskId).eq('user_id',userId);
-      return json({ok:true,runId:result.data?.id});
+      let response: Response;
+      try {
+        response=await fetch(`https://api.apify.com/v2/acts/${actor}/runs`,{
+          method:'POST',headers:{Authorization:`Bearer ${apifyToken}`,'Content-Type':'application/json'},
+          body:JSON.stringify(task.input??{}),
+        });
+      } catch (networkError) {
+        const message = networkError instanceof Error ? networkError.message.slice(0,300) : 'Network error';
+        await admin.from('collection_tasks').update({
+          status:'failed',error_message:`无法连接 Apify：${message}`,finished_at:new Date().toISOString(),
+        }).eq('id',taskId).eq('user_id',userId).eq('status','running');
+        return json({error:'连接 Apify 失败，任务已标记为失败，可检查网络后重新创建任务'},502);
+      }
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok || !result.data?.id) {
+        const detail=String(result?.error?.message??result?.message??'Apify 未返回有效 Run ID').slice(0,500);
+        await admin.from('collection_tasks').update({
+          status:'failed',error_message:detail,finished_at:new Date().toISOString(),
+        }).eq('id',taskId).eq('user_id',userId).eq('status','running');
+        return json({error:detail},502);
+      }
+      const {error:runIdError}=await admin.from('collection_tasks')
+        .update({external_run_id:result.data.id,updated_at:new Date().toISOString()})
+        .eq('id',taskId).eq('user_id',userId).eq('status','running');
+      if(runIdError) {
+        await fetch(`https://api.apify.com/v2/actor-runs/${encodeURIComponent(result.data.id)}/abort`,{
+          method:'POST',headers:{Authorization:`Bearer ${apifyToken}`},
+        }).catch(()=>undefined);
+        throw runIdError;
+      }
+      return json({ok:true,runId:result.data.id});
     }
 
     if (action === 'tasks.sync') {
