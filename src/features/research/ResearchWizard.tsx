@@ -223,6 +223,10 @@ export function ResearchWizard(props:Props) {
    {profile.missing_information.length>0&&<div className="research-profile-notes"><b>尚未明确的信息</b>{profile.missing_information.map((item,index)=><p key={index}>{item}</p>)}</div>}
    <div className="research-profile-hint">研究条件已整理完成。点击底部「下一步」保存并进入调研平台选择。</div>
   </Tile>}
+
+  <div className="module-heading"><div><h2>我的研究项目</h2><p>每项研究都保留需求、采集、统计与报告记录。</p></div><Tag type="blue">{projects.length} 个项目</Tag></div>
+  <div className="project-card-grid">{projects.map(item=><Tile key={item.id} className="list-tile"><div><h3>{item.name}</h3><p>{item.objective}</p><Tag type={item.status==='completed'?'green':'blue'}>{item.status}</Tag></div><Button kind="ghost" renderIcon={ArrowRight} onClick={()=>onOpen(item.id)}>打开研究工作区</Button></Tile>)}</div>
+  {!projects.length&&<Tile><p>还没有研究项目。填写上方研究需求即可开始。</p></Tile>}
   <div className="research-step-footer research-workflow-actions research-intake-sticky-footer">
    <Button className="research-workflow-button" kind="tertiary" disabled>上一步</Button>
    <div className="research-workflow-spacer"/>
@@ -230,9 +234,6 @@ export function ResearchWizard(props:Props) {
    <Button className="research-workflow-button" kind="tertiary" disabled={busy||(!brief.trim()&&!Object.values(formValues).some(v=>v.trim())&&!profile)} onClick={()=>onSaveDraft({brief:[fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\n'),brief.trim()].filter(Boolean).join('\n\n'),formValues,profile,activeStep:0,selectedSources},project?.id)}>暂存</Button>
    {profile?<Button className="research-workflow-button" kind="primary" disabled={busy||!profile.dimensions.some(item=>item.values.length>0)} onClick={()=>onCreate([fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\n'),brief.trim()].filter(Boolean).join('\n\n'),profile,project?.id)}>下一步：调研平台 <ArrowRight size={16}/></Button>:<Button className="research-workflow-button" kind="primary" renderIcon={Renew} disabled={busy||(!brief.trim()&&!Object.values(formValues).some(v=>v.trim()))} onClick={()=>void parseBrief()}>AI 整理研究需求</Button>}
   </div>
-  <div className="module-heading"><div><h2>我的研究项目</h2><p>每项研究都保留需求、采集、统计与报告记录。</p></div><Tag type="blue">{projects.length} 个项目</Tag></div>
-  <div className="project-card-grid">{projects.map(item=><Tile key={item.id} className="list-tile"><div><h3>{item.name}</h3><p>{item.objective}</p><Tag type={item.status==='completed'?'green':'blue'}>{item.status}</Tag></div><Button kind="ghost" renderIcon={ArrowRight} onClick={()=>onOpen(item.id)}>打开研究工作区</Button></Tile>)}</div>
-  {!projects.length&&<Tile><p>还没有研究项目。填写上方研究需求即可开始。</p></Tile>}
  </section>;
 
  const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
