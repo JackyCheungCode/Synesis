@@ -24,6 +24,11 @@ export const providers: CatalogItem[] = [
 
 export const apiIntegrations = [
   { name: 'Apify', slug: 'apify', fallback: 'A', credentialLabel: 'Apify API Token', placeholder: '填写 Apify API Token' },
+  { name: 'Amazon Selling Partner API', slug: 'amazon', fallback: 'a', credentialLabel: 'LWA Credential Bundle (JSON)', placeholder: '{ clientId, clientSecret, refreshToken }' },
+  { name: 'eBay Developer API', slug: 'ebay', fallback: 'e', credentialLabel: 'OAuth Credential Bundle (JSON)', placeholder: '{ clientId, clientSecret }' },
+  { name: 'Walmart Marketplace API', slug: 'walmart', fallback: 'W', credentialLabel: 'OAuth Credential Bundle (JSON)', placeholder: '{ clientId, clientSecret }' },
+  { name: 'Alibaba Open Platform', slug: 'alibaba', fallback: 'A', credentialLabel: 'App Credential Bundle (JSON)', placeholder: '{ appKey, appSecret, refreshToken }' },
+  { name: 'AliExpress Open Platform', slug: 'aliexpress', fallback: 'A', credentialLabel: 'App Credential Bundle (JSON)', placeholder: '{ appKey, appSecret, refreshToken }' },
   { name: 'Google Cloud APIs', slug: 'google', fallback: 'G', credentialLabel: 'Google API Key', placeholder: '填写 Google API Key' },
   { name: 'YouTube Data API', slug: 'youtube', fallback: '▶', credentialLabel: 'YouTube Data API Key', placeholder: '填写 YouTube Data API Key' },
   { name: 'Reddit API', slug: 'reddit', fallback: 'r', credentialLabel: 'Reddit Client Secret', placeholder: '填写 Reddit OAuth Client Secret' },
