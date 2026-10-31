@@ -123,7 +123,8 @@ export function ResearchWizard(props:Props) {
  const [customLabel,setCustomLabel]=React.useState('');
  const [customValue,setCustomValue]=React.useState('');
  const [activeStep,setActiveStep]=React.useState(0);
- const [selectedSources,setSelectedSources]=React.useState<string[]>([]);\n const [openPanels,setOpenPanels]=React.useState([true,false,false,false]);
+ const [selectedSources,setSelectedSources]=React.useState<string[]>([]);
+ const [openPanels,setOpenPanels]=React.useState([true,false,false,false]);
  const project=projects.find(p=>p.id===projectId);
  const projectPlans=plans.filter(p=>p.project_id===projectId); const plan=projectPlans[0];
  const projectTasks=tasks.filter(t=>t.project_id===projectId); const projectReports=reports.filter(r=>r.project_id===projectId);
