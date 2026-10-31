@@ -19,7 +19,7 @@ import { useAuth } from './auth/AuthProvider';
 import { supabase } from './lib/supabase';
 
 type Page = WorkspacePage;
-type Credential = { slug: string; name: string; kind: 'provider' | 'integration'; status: string; key_last4?: string; last_validated_at?: string };
+type Credential = { slug: string; name: string; kind: 'provider' | 'integration'; status: string; key_last4?: string; last_validated_at?: string; account_id?: string; selected_model?: string | null };
 type Project = { id: string; name: string; objective: string; status: string; target_regions: string[]; platform_slugs: string[]; scope?: Record<string,any> };
 type Plan = { id: string; project_id: string; status: string; plan: Record<string, unknown>; estimated_cost: number | null; created_at: string };
 type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string; progress?: number; result_count?: number; run_status?: string | null; external_run_id?: string | null; error_message?: string | null; finished_at?: string | null; result_synced_count?: number };
