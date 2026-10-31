@@ -197,6 +197,69 @@ Deno.serve(async (req: Request) => {
       return json({result});
     }
 
+    if (action === 'research.parse') {
+      const { brief, provider } = body;
+      if (typeof brief !== 'string' || !brief.trim() || brief.length > 16000) return json({error:'研究需求不能为空，且最多 16,000 个字符'},400);
+      if (typeof provider !== 'string' || !/^[a-z0-9_-]{2,48}$/.test(provider)) return json({error:'AI Provider 参数无效'},400);
+      const { clear } = await getCredential(provider,'provider');
+      const fields = [
+        ['keywords','核心关键词'],['languages','研究语言'],['countries','目标国家'],['regions','目标地区'],
+        ['time_range','研究时间范围'],['product_categories','产品类别'],['product_attributes','产品属性与规格'],
+        ['brands','品牌'],['models_identifiers','产品型号与标识符'],['price_range','价格范围与币种'],
+        ['usage_scenarios','使用场景'],['certifications','认证与合规要求'],['target_customers','目标客户群体'],
+        ['sales_channels','销售渠道'],['competitors','竞争对手'],['reference_urls','参考 URL 与账号'],
+        ['origin_supply_markets','原产地与供应链市场'],['logistics_attributes','包装与物流属性'],
+        ['exclusions','排除条件'],['purchase_requirements','采购数量与成本要求'],
+        ['business_goals','商业目标与研究问题'],['other_constraints','其他约束条件'],
+      ] as const;
+      const system = 'You are the structured research-intake analyst for Synesis, a global cross-border business intelligence platform. Analyze the user brief and return valid JSON only. Shape: {summary:string, dimensions:[{key:string,label:string,values:string[],status:"provided"|"suggested"|"needs_confirmation",note?:string}], research_goals:string[], assumptions:string[], missing_information:string[]}. Return one dimension for EVERY supplied key, preserving its exact key and label. "provided" means explicitly present in the user text; "suggested" means a clearly useful AI proposal that is not a fact and must be visibly marked as a suggestion; "needs_confirmation" means absent or ambiguous and values must be empty. Never invent countries, brands, product specifications, prices, dates, URLs, customer attributes, market facts, or competitors. Expand keywords with translations/synonyms only as suggestions and label their language. Keep user-provided URLs exactly. Separate countries from subnational regions. Parse units and currency literally. Do not infer protected or sensitive personal traits. research_goals should reflect explicit goals and may include clearly labeled suggested goals. assumptions and missing_information must be concise. Values should be short strings, not paragraphs. Do not treat a generic example in the prompt as user data.';
+      const prompt = JSON.stringify({user_brief:brief,required_dimensions:fields.map(([key,label])=>({key,label}))});
+      let response: Response;
+      if (provider==='openai'||provider==='deepseek'||provider==='mistral'||provider==='x') {
+        const base=provider==='openai'?'https://api.openai.com/v1':provider==='deepseek'?'https://api.deepseek.com':provider==='mistral'?'https://api.mistral.ai/v1':'https://api.x.ai/v1';
+        const model=provider==='openai'?'gpt-4.1-mini':provider==='deepseek'?'deepseek-chat':provider==='mistral'?'mistral-small-latest':'grok-3-mini';
+        response=await fetch(`${base}/chat/completions`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({model,messages:[{role:'system',content:system},{role:'user',content:prompt}],response_format:{type:'json_object'},max_tokens:5000})});
+      } else if(provider==='googlegemini') {
+        response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(clear)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:5000}})});
+      } else if(provider==='anthropic') {
+        response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':clear,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-3-7-sonnet-latest',max_tokens:5000,system,messages:[{role:'user',content:prompt}]})});
+      } else if(provider==='cloudflare') {
+        const {config}=await getCredential(provider,'provider');
+        if(!config.base_url) return json({error:'请先配置 Cloudflare Account ID'},400);
+        response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/@cf/meta/llama-3.3-70b-instruct`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:system},{role:'user',content:prompt}],max_tokens:5000})});
+      } else return json({error:'该 AI Provider 暂不支持研究需求解析'},400);
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok) return json({error:result?.error?.message??'AI 研究需求解析失败'},502);
+      const raw=provider==='googlegemini'?result.candidates?.[0]?.content?.parts?.[0]?.text:provider==='anthropic'?result.content?.[0]?.text:provider==='cloudflare'?result.result?.response:result.choices?.[0]?.message?.content;
+      let parsed:Record<string,unknown>;
+      try { parsed=JSON.parse(String(raw??'').replace(/^```json\s*/,'').replace(/```$/,'')); }
+      catch { return json({error:'AI 返回内容不是有效 JSON，请重新解析'},502); }
+      const returned=Array.isArray(parsed.dimensions)?parsed.dimensions as Record<string,unknown>[]:[];
+      const byKey=new Map(returned.filter(item=>typeof item.key==='string').map(item=>[String(item.key),item]));
+      const dimensions=fields.map(([key,label])=>{
+        const item=byKey.get(key);
+        const rawStatus=String(item?.status??'needs_confirmation');
+        const status=['provided','suggested','needs_confirmation'].includes(rawStatus)?rawStatus:'needs_confirmation';
+        const values=Array.isArray(item?.values)?item!.values.filter((value):value is string=>typeof value==='string').map(value=>value.trim()).filter(Boolean).slice(0,30):[];
+        return {key,label,values:status==='needs_confirmation'?[]:values,status:status==='needs_confirmation'||!values.length?'needs_confirmation':status,note:typeof item?.note==='string'?item.note.slice(0,500):undefined};
+      });
+      for(const item of returned) {
+        const key=String(item.key??'');
+        if(!key||fields.some(field=>field[0]===key)||!/^custom_[a-z0-9_-]{1,40}$/.test(key)) continue;
+        const values=Array.isArray(item.values)?item.values.filter((value):value is string=>typeof value==='string').map(value=>value.trim()).filter(Boolean).slice(0,30):[];
+        dimensions.push({key,label:typeof item.label==='string'?item.label.slice(0,80):key,values,status:'suggested',note:typeof item.note==='string'?item.note.slice(0,500):undefined});
+      }
+      const asStringArray=(value:unknown)=>Array.isArray(value)?value.filter((item):item is string=>typeof item==='string').map(item=>item.trim()).filter(Boolean).slice(0,30):[];
+      const profile={
+        summary:typeof parsed.summary==='string'?parsed.summary.slice(0,1000):'已完成研究需求结构化解析，请检查各维度。',
+        dimensions,
+        research_goals:asStringArray(parsed.research_goals),
+        assumptions:asStringArray(parsed.assumptions),
+        missing_information:asStringArray(parsed.missing_information),
+      };
+      return json({ok:true,profile});
+    }
+
     if (action === 'plans.generate') {
       const { projectId, provider } = body;
       const { data: project, error: projectError } = await admin.from('research_projects').select('*').eq('id',projectId).eq('user_id',userId).single();
