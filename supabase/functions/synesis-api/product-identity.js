@@ -88,7 +88,7 @@ function readFieldEntry(record, aliases) {
       return null;
     }
     for (const [key, nested] of Object.entries(value)) {
-      if (matches(key) && nested !== null && nested !== undefined && nested !== '') return { key, value: nested };
+      if (matches(key) && nested !== null && nested !== undefined && nested !== '' && typeof nested !== 'object') return { key, value: nested };
     }
     for (const nested of Object.values(value)) { const found = visit(nested, depth + 1); if (found) return found; }
     return null;
