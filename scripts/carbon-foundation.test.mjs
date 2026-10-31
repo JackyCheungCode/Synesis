@@ -11,6 +11,7 @@ const navigation = read('../src/components/WorkspaceNavigation.tsx');
 const collection = read('../src/features/settings/CollectionSettingsPage.tsx');
 const research = read('../src/features/research/ResearchWizard.tsx');
 const workflow = read('../.github/workflows/ci.yml');
+const pkg = JSON.parse(read('../package.json'));
 const vault = read('../src/features/settings/CredentialVault.tsx');
 
 test('application styling uses Carbon semantic color tokens', () => {
@@ -58,6 +59,7 @@ test('custom selection and async controls expose selected and busy states', () =
   assert.match(vault, /busy\?:boolean/);
   assert.match(vault, /disabled=\{busy\|\|/);
   assert.match(research, /<ProgressIndicator/);
+  assert.equal(pkg.dependencies['@carbon/charts-react'], '1.27.24');
   assert.match(app, /<LineChart/);
   assert.match(app, /<DonutChart/);
   assert.match(workflow, /IBM_TELEMETRY_DISABLED: 'true'/);
