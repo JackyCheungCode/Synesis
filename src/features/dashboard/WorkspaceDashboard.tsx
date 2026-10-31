@@ -35,6 +35,13 @@ export function WorkspaceDashboard({ projectCount, pendingPlanCount, taskCount, 
         ))}
       </section>
 
+      {projectCount === 0 && (
+        <div className="dashboard-empty" role="status">
+          <h2>还没有研究项目</h2>
+          <p>创建第一个研究项目，开始定义市场、商品与目标客户。</p>
+        </div>
+      )}
+
       <section className="dashboard-workflow" aria-labelledby="dashboard-workflow-title">
         <Tile className="dashboard-workflow-tile">
           <div className="dashboard-workflow-heading">
