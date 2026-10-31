@@ -218,6 +218,22 @@ Deno.serve(async (req: Request) => {
       return json({ok:true,created_tasks:rows.length});
     }
 
+    if (action === 'tasks.retry') {
+      const { taskId } = body;
+      const { data: task, error } = await admin.from('collection_tasks')
+        .select('id,user_id,project_id,plan_id,platform_slug,actor_id,input,status,ai_research_plans!inner(status)')
+        .eq('id',taskId).eq('user_id',userId).maybeSingle();
+      if(error||!task) return json({error:'采集任务不存在'},404);
+      if(task.status!=='failed'||task.ai_research_plans.status!=='approved') return json({error:'只有已批准研究计划中的失败任务可以重试'},409);
+      if(!task.actor_id) return json({error:'任务缺少已确认的 Apify Actor ID，无法重试'},400);
+      const {data:retry,error:insertError}=await admin.from('collection_tasks').insert({
+        user_id:userId,project_id:task.project_id,plan_id:task.plan_id,platform_slug:task.platform_slug,
+        actor_id:task.actor_id,input:task.input??{},status:'queued',
+      }).select('id').single();
+      if(insertError||!retry) throw insertError??new Error('创建重试任务失败');
+      return json({ok:true,taskId:retry.id,sourceTaskId:task.id});
+    }
+
     if (action === 'tasks.execute') {
       const {taskId}=body;
       const {data:task,error}=await admin.from('collection_tasks').select('*,ai_research_plans!inner(status)').eq('id',taskId).eq('user_id',userId).single();
