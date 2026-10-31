@@ -41,7 +41,6 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 .synesis-app .synesis-carbon-side-nav.cds--side-nav--hidden { visibility: hidden; }
 .synesis-app .synesis-carbon-side-nav.cds--side-nav--expanded { visibility: visible; }
 .synesis-app .synesis-carbon-side-nav {
-  z-index: 9000;
   color: var(--cds-text-primary);
   background: var(--cds-background);
   border-right: 1px solid var(--cds-border-subtle);
