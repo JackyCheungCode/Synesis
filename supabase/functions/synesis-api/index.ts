@@ -278,7 +278,7 @@ Deno.serve(async (req: Request) => {
     if (action === 'tasks.sync') {
       const { taskId } = body;
       const { data: task, error: taskError } = await admin.from('collection_tasks')
-        .select('id,user_id,external_run_id,status,result_dataset_id,result_synced_count,result_count')
+        .select('id,user_id,platform_slug,external_run_id,status,result_dataset_id,result_synced_count,result_count')
         .eq('id', taskId).eq('user_id', userId).maybeSingle();
       if (taskError || !task) return json({ error: '采集任务不存在' }, 404);
       if (!task.external_run_id) return json({ error: '任务尚未取得 Apify Run ID' }, 409);
@@ -387,8 +387,9 @@ Deno.serve(async (req: Request) => {
               image:readField(record,[/^(image|image.?url|thumbnail|picture)$/i]),
               price:price!==null&&Number.isFinite(price)&&price>=0?price:null,currency};
           }).filter(item=>item.identity);
-          if (normalized.length) {
-            const productRows=normalized.map(item=>({
+          const uniqueNormalized = [...new Map(normalized.map(item=>[item.identity!,item])).values()];
+          if (uniqueNormalized.length) {
+            const productRows=uniqueNormalized.map(item=>({
               user_id:userId,canonical_key:`${task.platform_slug}:${item.identity}`,
               title:item.title?String(item.title):null,brand:item.brand?String(item.brand):null,
               category:item.category?String(item.category):null,description:item.description?String(item.description):null,
@@ -399,7 +400,7 @@ Deno.serve(async (req: Request) => {
               .select('id,canonical_key');
             if(productError) throw productError;
             const productIds=new Map((products??[]).map(product=>[product.canonical_key,product.id]));
-            const sourceRows=normalized.map(item=>({
+            const sourceRows=uniqueNormalized.map(item=>({
               user_id:userId,product_id:productIds.get(`${task.platform_slug}:${item.identity}`),
               platform_slug:task.platform_slug,external_product_id:item.identity!,
               source_url:item.sourceUrl,source_sku:item.sku,raw_data:item.record,last_seen_at:new Date().toISOString(),
@@ -409,7 +410,7 @@ Deno.serve(async (req: Request) => {
               .select('id,external_product_id,product_id');
             if(sourceError) throw sourceError;
             const sourceIds=new Map((sources??[]).map(source=>[source.external_product_id,source]));
-            const priceRows=normalized.filter(item=>item.price!==null&&item.currency&&sourceIds.has(item.identity!))
+            const priceRows=uniqueNormalized.filter(item=>item.price!==null&&item.currency&&sourceIds.has(item.identity!))
               .map(item=>{
                 const source=sourceIds.get(item.identity!)!;
                 return {user_id:userId,product_id:source.product_id,source_record_id:source.id,
