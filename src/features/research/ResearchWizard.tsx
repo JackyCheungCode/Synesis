@@ -76,12 +76,12 @@ const fieldSpecs=[
 ];
 function flagImageUrl(code:string){return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;}
 const legacyCountryNames=new Intl.DisplayNames(['zh-Hant'],{type:'region'});
-const ISO_3166_1_CODES='AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'.split(' ');
+const ISO_3166_1_CODES='AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW'.split(' ');
 function buildCountryOptions() {
  const names=new Intl.DisplayNames(['zh-CN'],{type:'region'});
  return ISO_3166_1_CODES.map(code=>{
   const name=names.of(code)??code;
-  const text=code==='CN'?'中国大陆':code==='HK'?'中国香港':code==='MO'?'中国澳门':code==='TW'?'中国台湾':name;
+  const text=code==='CN'?'中国大陆':code==='HK'?'中国香港':code==='MO'?'中国澳门':code==='TW'?'中国台湾':code==='XK'?'科索沃':name;
   return {id:code,text,legacyText:legacyCountryNames.of(code)??code,flag:flagImageUrl(code)};
  }).sort((a,b)=>a.text.localeCompare(b.text,'zh-CN'));
 }
@@ -121,7 +121,7 @@ function CountrySelectionMap({selectedCodes}:{selectedCodes:string[]}) {
  },[]);
  const features=React.useMemo(()=>{
   if(!world?.features?.length||!selectedCodes.length)return [];
-  const nameAliases:Record<string,string[]>={CN:['China'],HK:['Hong Kong'],MO:['Macao','Macau'],TW:['Taiwan'],US:['United States','United States of America'],GB:['United Kingdom'],KR:['South Korea','Republic of Korea'],KP:['North Korea','Dem. Rep. Korea'],RU:['Russia','Russian Federation'],IR:['Iran'],SY:['Syria'],BO:['Bolivia'],VE:['Venezuela'],TZ:['Tanzania'],MD:['Moldova'],VN:['Vietnam'],LA:['Laos'],BN:['Brunei'],CZ:['Czechia','Czech Republic'],MK:['North Macedonia'],PS:['Palestine'],VA:['Vatican'],FM:['Federated States of Micronesia']};
+  const nameAliases:Record<string,string[]>={CN:['China'],HK:['Hong Kong'],MO:['Macao','Macau'],TW:['Taiwan'],US:['United States','United States of America'],GB:['United Kingdom'],KR:['South Korea','Republic of Korea'],KP:['North Korea','Dem. Rep. Korea'],RU:['Russia','Russian Federation'],IR:['Iran'],SY:['Syria'],BO:['Bolivia'],VE:['Venezuela'],TZ:['Tanzania'],MD:['Moldova'],VN:['Vietnam'],LA:['Laos'],BN:['Brunei'],CZ:['Czechia','Czech Republic'],MK:['North Macedonia'],PS:['Palestine'],VA:['Vatican'],FM:['Federated States of Micronesia'],XK:['Kosovo','Republic of Kosovo']};
   const selectedNames=new Set(selectedCodes.flatMap(code=>[englishRegionNames.of(code)??'',...(nameAliases[code]??[])].map(name=>name.trim().toLocaleLowerCase('en')).filter(Boolean)));
   return world.features.filter((feature:any)=>{
    const props=feature.properties??{};
