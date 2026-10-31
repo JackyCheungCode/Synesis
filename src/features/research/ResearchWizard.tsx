@@ -14,6 +14,7 @@ type Props = {
  onOpen:(id:string)=>void; onBack:()=>void; onGeneratePlan:(project:ResearchProject,categories:string[])=>void;
  onApprove:(plan:ResearchPlan)=>void; onCancel:(task:ResearchTask)=>void;
  onRetry:(task:ResearchTask)=>void; onSync:(task:ResearchTask)=>void; onView:(task:ResearchTask)=>void; onAnalyze:(task:ResearchTask)=>void;
+ analytics?:any; analyticsTaskId?:string;
 };
 const stages=['研究需求','调研平台','数据抓取','数据统计','AI 分析报告'];
 const statusLabel:Record<ResearchDimension['status'],string>={provided:'用户已提供',suggested:'AI 建议',needs_confirmation:'待补充确认',user_confirmed:'用户已确认'};
@@ -67,7 +68,7 @@ function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:Res
 }
 const splitValues=(value:string)=>value.split(/\n|,/).map(v=>v.trim()).filter(Boolean);
 export function ResearchWizard(props:Props) {
- const {projects,plans,tasks,reports,projectId,busy,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze}=props;
+ const {projects,plans,tasks,reports,projectId,busy,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId}=props;
  const [brief,setBrief]=React.useState('');
  const [formValues,setFormValues]=React.useState<Record<string,string>>({});
  const [profile,setProfile]=React.useState<ResearchProfile|null>(null);
@@ -136,12 +137,13 @@ export function ResearchWizard(props:Props) {
   ...(task.finished_at?[{time:task.finished_at,label:task.platform_slug+' 运行结束',detail:task.status+(task.error_message?' · '+task.error_message:'')}]:[]),
   ...(Number(task.result_synced_count??0)>0?[{time:task.updated_at??task.finished_at??task.created_at,label:task.platform_slug+' 数据同步进度',detail:(task.result_synced_count??0)+' / '+(task.result_count??0)+' 条'}]:[]),
  ]).sort((a,b)=>new Date(b.time).getTime()-new Date(a.time).getTime()).slice(0,30);
- const stepReady=[true,Boolean(plan),projectTasks.length>0,allSynced,projectReports.length>0];
+ const stepReady=[true,true,projectTasks.length>0,allSynced,allSynced];
+ const maxUnlockedStep=stepReady.reduce((max,ready,index)=>ready?index:max,-1);
  return <section className="module-stack research-workspace research-fullwidth">
   <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><p className="eyebrow">RESEARCH PROJECT WORKSPACE</p><h2>{project.name}</h2><p>{savedProfile?.summary??project.objective}</p></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
   <Tile className="research-progress-tile">
    <div className="module-heading"><div><h3>五步研究工作流</h3><p>每一步独立保存进度；可返回查看前序结果。只有批准采集计划后才会启动 Apify。</p></div><Tag type="blue">第 {activeStep+1} / 5 步</Tag></div>
-   <div className="research-stepper">{stages.map((label,index)=><button type="button" key={label} className={'research-step research-step-button'+(index===activeStep?' is-current':'')+(stepReady[index]?' is-complete':'')} onClick={()=>setActiveStep(index)}><span>{stepReady[index]&&index!==activeStep?<CheckmarkFilled size={18}/>:index+1}</span><b>{label}</b></button>)}</div>
+   <div className="research-stepper">{stages.map((label,index)=><button type="button" key={label} className={'research-step research-step-button'+(index===activeStep?' is-current':'')+(stepReady[index]?' is-complete':'')} disabled={index>maxUnlockedStep} onClick={()=>setActiveStep(index)}><span>{stepReady[index]&&index!==activeStep?<CheckmarkFilled size={18}/>:index+1}</span><b>{label}</b></button>)}</div>
   </Tile>
   {activeStep===0&&<Tile><div className="module-heading"><div><h3>第一步 · 已确认的研究需求</h3><p>查看第一步保存的结构化画像。修改需求时应重新评估后续采集计划。</p></div><Tag type="green">已保存</Tag></div><p>{savedProfile?.summary??project.objective}</p>{savedProfile?.dimensions.filter(item=>item.values.length).map(item=><div className="research-saved-row" key={item.key}><b>{item.label} <Tag type={statusType[item.status]}>{statusLabel[item.status]}</Tag></b><p>{item.values.join(' · ')}</p></div>)}{!savedProfile&&<p>{project.objective}</p>}<Button kind="primary" onClick={()=>setActiveStep(1)}>下一步：选择调研平台 <ArrowRight size={16}/></Button></Tile>}
   {activeStep===1&&<Tile className="research-source-tile"><div className="module-heading"><div><p className="eyebrow">STEP 2 / DATA SOURCE MARKETPLACE</p><h3>选择调研平台与数据类别</h3><p>先选择需要覆盖的数据类别和具体平台。Synesis 将据此搜索 Apify Store 中真实存在且有输入 Schema 的 Actor。</p></div>{plan?<Tag type="green">平台方案已生成</Tag>:<Tag type="blue">待选择</Tag>}</div>
@@ -165,6 +167,6 @@ export function ResearchWizard(props:Props) {
    {projectReports.map(report=><div className="research-saved-report" key={report.id}><div className="report-row"><div><strong>{report.title}</strong><p>{new Date(report.created_at).toLocaleString()} · {report.status}</p></div><Tag type="green">已保存</Tag></div><details><summary>查看报告内容</summary><pre className="result-json">{JSON.stringify(report.content,null,2)}</pre></details></div>)}
    {!projectReports.length&&<p>完成所有数据同步后，系统会自动执行 AI 分析并保存报告。报告内容必须区分数据事实、AI 推断和商业建议。</p>}
   </Tile>}
-  <div className="research-step-footer"><Button kind="ghost" disabled={activeStep===0} onClick={()=>setActiveStep(v=>Math.max(0,v-1))}>上一步</Button><Button kind="secondary" disabled={activeStep===4||(!stepReady[activeStep+1]&&activeStep>=2)} onClick={()=>setActiveStep(v=>Math.min(4,v+1))}>下一步 <ArrowRight size={16}/></Button></div>
+  <div className="research-step-footer"><Button kind="ghost" disabled={activeStep===0} onClick={()=>setActiveStep(v=>Math.max(0,v-1))}>上一步</Button><Button kind="secondary" disabled={activeStep===4||!stepReady[activeStep+1]} onClick={()=>setActiveStep(v=>Math.min(4,v+1))}>下一步 <ArrowRight size={16}/></Button></div>
  </section>;
 }
