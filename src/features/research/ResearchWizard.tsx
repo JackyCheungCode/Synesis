@@ -9,7 +9,7 @@ import {
  unstable__FluidComboBox as FluidComboBox,
  unstable__FluidNumberInput as FluidNumberInput,
 } from '@carbon/react';
-import { Add, ArrowLeft, ArrowRight, Renew, ChartLine } from '@carbon/icons-react';
+import { Add, ArrowLeft, ArrowRight, Renew, ChartLine, Close } from '@carbon/icons-react';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -86,8 +86,9 @@ function buildCountryOptions() {
   return {id:code,text,flag:flagEmoji(code)};
  }).sort((a,b)=>a.text.localeCompare(b.text,'zh-Hant'));
 }
-const countryOptions=buildCountryOptions();
-function CountryOptionElement(value:CountryOptionItem) {
+type CountryOptionItem={id:string;text:string;flag:string};
+const countryOptions:CountryOptionItem[]=buildCountryOptions();
+function CountryOptionElement(value:CountryOptionItem):React.ReactElement {
  return <span className="research-country-option"><span className="research-country-flag" aria-hidden="true">{value.flag}</span><span>{value.text}</span></span>;
 }
 const englishRegionNames=new Intl.DisplayNames(['en'],{type:'region'});
@@ -251,8 +252,8 @@ export function ResearchWizard(props:Props) {
      <AccordionItem title={<span className="research-accordion-title"><b>01</b> 核心研究目标 <small>研究范围、关键词与目标市场</small></span>} open={openPanels[0]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===0?!isOpen:x))}>
       <div className="research-fluid-grid">
        <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setTouchedRequired(v=>({...v,keywords:true}))}><FluidTextInput id="intake-keywords" labelText="核心关键词 *" value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" invalid={touchedRequired.keywords&&!formValues.keywords?.trim()} invalidText="请输入至少一个核心关键词。"  onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/><small className="cds--form__helper-text">必填。多个关键词请使用逗号分隔。</small></div>
-       <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setTouchedRequired(v=>({...v,countries:true}))}><FluidMultiSelect id="intake-countries" titleText="目标国家 / 地区 *" label="搜索并选择国家或地区" items={countryOptions} itemToString={(item:any)=>item?.text??''} itemToElement={CountryOptionElement} selectedItems={countryOptions.filter(item=>splitValues(formValues.countries??'').includes(item.text))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:selectedItems.map((x:any)=>x.text).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen" invalid={touchedRequired.countries&&!formValues.countries?.trim()} invalidText="请至少选择一个目标国家或地区。" /></div>
-       <div className="research-fluid-field research-fluid-span"><div className="research-selected-countries" aria-label="已选择的国家和地区">{countryOptions.filter(item=>splitValues(formValues.countries??'').includes(item.text)).map(item=><span className="research-selected-country" key={item.id}><img src={`https://flagcdn.com/w40/${item.id.toLowerCase()}.png`} alt="" loading="lazy"/><span>{item.text}</span></span>)}</div></div>
+       <div className="research-fluid-field research-fluid-span research-country-field" onBlurCapture={()=>setTouchedRequired(v=>({...v,countries:true}))}><FluidMultiSelect id="intake-countries" titleText="目标国家 / 地区 *" label={selectedLabels.length?`已选择 ${selectedLabels.length} 个国家 / 地区，可继续搜索`:"搜索并选择国家或地区"} items={countryOptions} itemToString={(item:any)=>item?.text??''} itemToElement={CountryOptionElement} selectedItems={countryOptions.filter(item=>selectedLabels.includes(item.text))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:(selectedItems??[]).map((x:any)=>x.text).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen" invalid={touchedRequired.countries&&!formValues.countries?.trim()} invalidText="请至少选择一个目标国家或地区。"/></div>
+       <div className="research-fluid-field research-fluid-span"><div className="research-selected-countries" aria-label="已选择的国家和地区">{countryOptions.filter(item=>selectedLabels.includes(item.text)).map(item=><span className="research-selected-country" key={item.id}><span className="research-selected-country-flag" aria-hidden="true">{item.flag}</span><span className="research-selected-country-name">{item.text}</span><Button kind="ghost" size="sm" hasIconOnly renderIcon={Close} iconDescription={`移除${item.text}`} onClick={()=>{setFormValues(v=>({...v,countries:splitValues(v.countries??'').filter(value=>value!==item.text).join(', ')}));setProfile(null);}}/></span>)}</div></div>
         <div className="research-fluid-field research-fluid-span"><CountrySelectionMap selectedCodes={selectedCountryCodes}/></div>
        <div className="research-fluid-field"><FluidTextInput id="intake-regions" labelText="目标地区 / 城市" value={formValues.regions??''} placeholder="例如：加州、巴伐利亚州、伦敦" onChange={(e:any)=>{setFormValues(v=>({...v,regions:e.target.value}));setProfile(null);}}/></div>
        <div className="research-fluid-field" onBlurCapture={()=>setTouchedRequired(v=>({...v,languages:true}))}><FluidDropdown id="intake-languages" titleText="研究语言 *" label="选择研究语言" items={toItems(languageOptions)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(languageOptions).find(x=>x.id===formValues.languages)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,languages:selectedItem?.id??''}));setProfile(null);}} invalid={touchedRequired.languages&&!formValues.languages?.trim()} invalidText="请选择研究语言。" /></div>
@@ -313,13 +314,14 @@ export function ResearchWizard(props:Props) {
    <div className="research-profile-hint">研究条件已整理完成。点击底部「下一步」保存并进入调研平台选择。</div>
   </Tile>}
 
+  <div className="research-step-footer research-workflow-actions research-intake-actions">
+   <Button className="research-workflow-button" kind="secondary" disabled>上一步</Button>
+   <Button className="research-workflow-button" kind="primary" disabled={busy||!requiredReady} onClick={proceedToSources}>下一步：调研平台 <ArrowRight size={16}/></Button>
+  </div>
   <div className="module-heading"><div><h2>我的研究项目</h2><p>每项研究都保留需求、采集、统计与报告记录。</p></div><Tag type="blue">{projects.length} 个项目</Tag></div>
   <div className="project-card-grid">{projects.map(item=><Tile key={item.id} className="list-tile"><div><h3>{item.name}</h3><p>{item.objective}</p><Tag type={item.status==='completed'?'green':'blue'}>{item.status}</Tag></div><Button kind="ghost" renderIcon={ArrowRight} onClick={()=>onOpen(item.id)}>打开研究工作区</Button></Tile>)}</div>
   {!projects.length&&<Tile><p>还没有研究项目。填写上方研究需求即可开始。</p></Tile>}
-  <div className="research-step-footer research-workflow-actions research-intake-actions">
-    <Button className="research-workflow-button" kind="secondary" disabled>上一步</Button>
-    <Button className="research-workflow-button" kind="primary" disabled={busy||!requiredReady} onClick={proceedToSources}>下一步</Button>
-   </div>
+
   </section>;
 
  const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
