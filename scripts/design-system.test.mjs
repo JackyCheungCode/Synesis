@@ -17,15 +17,16 @@ test('native navigation and primitives do not depend on a vendor component frame
  for(const file of files) assert.doesNotMatch(read(file),/carbon|cds--|IBM Plex|@ibm/i);
 });
 
-test('tracked application, documentation and pipeline contain no legacy framework references',()=>{
- const roots=['../src','../docs'];
+test('entire product repository contains no former framework or typeface residue',()=>{
+ const roots=['../src','../docs','../worker','../supabase','../scripts','../.github'];
  const scan=(dir)=>readdirSync(new URL(dir,import.meta.url),{withFileTypes:true}).flatMap(entry=>{
+  if(entry.name==='node_modules'||entry.name==='.git'||entry.name==='dist'||entry.name==='design-system.test.mjs') return [];
   const child=join(dir,entry.name);
   return entry.isDirectory()?scan(child):[child];
  });
- const files=[...roots.flatMap(scan),'../README.md','../package.json','../.github/workflows/ci.yml'];
+ const files=[...roots.flatMap(scan),'../README.md','../package.json','../index.html','../vite.config.ts','../wrangler.jsonc'];
  for(const file of files) if(existsSync(new URL(file,import.meta.url))){
   const body=read(file);
-  assert.doesNotMatch(body,/@carbon|cds--|IBM Plex|IBM Carbon|carbon-foundation|carbon-grid/i,file);
+  assert.doesNotMatch(body,/@carbon|cds--|IBM Plex|IBM Carbon|carbon-foundation|carbon-grid|g100|IBM_TELEMETRY_DISABLED/i,file);
  }
 });
