@@ -10,7 +10,7 @@ type Props={
   cloudflareAccountId:string; setCloudflareAccountId:(value:string)=>void;
   integrationMeta:Record<string,string>; setIntegrationMeta:(value:Record<string,string>|((current:Record<string,string>)=>Record<string,string>))=>void;
   providerModels:Record<string,string>; selectedProvider:string; setSelectedProvider:(value:string)=>void;
-  models:Record<string,ProviderModel[]>; selectedModels:Record<string,string>; onLoadModels:(slug:string)=>void; onSelectModel:(slug:string,model:string)=>void;
+  models:Record<string,ProviderModel[]>; selectedModels:Record<string,string>; onLoadModels:(slug:string,force?:boolean)=>void; onSelectModel:(slug:string,model:string)=>void;
   onSave:(slug:string,name:string,kind:'provider'|'integration')=>void; onTest:(slug:string,kind:'provider'|'integration')=>void; busy?:boolean;
 };
 export function CredentialVault(props:Props) {
