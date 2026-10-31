@@ -1,3 +1,5 @@
+@use '@carbon/type';
+
 /* Synesis Carbon Design Foundation — all application surfaces consume Carbon semantic tokens. */
 :root {
   font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
@@ -24,6 +26,10 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 }
 .synesis-app :where(h1,h2,h3,h4,p,small,span,label,li,th,td,strong,b) { text-wrap: pretty; }
 .synesis-app :where(h1,h2,h3,h4) { color: var(--cds-text-primary); }
+.synesis-app h2 { @include type.type-style('heading-03'); }
+.synesis-app h3 { @include type.type-style('heading-02'); }
+.synesis-app .eyebrow { @include type.type-style('label-01'); }
+.synesis-app .auth-side-copy strong { font-weight: 300; }
 .synesis-app :where(p,small,.subheading,.eyebrow,.metric-label,.collection-setting-heading p,.collection-depth-descriptions p) {
   color: var(--cds-text-secondary);
 }
