@@ -112,11 +112,12 @@ test('Dashboard uses semantic metric descriptions and a responsive ordered workf
   assert.match(dashboard, /<ol className="dashboard-workflow-steps">/);
   assert.match(dashboard, /projectCount === 0/);
   assert.match(dashboard, /role="status"/);
-  assert.match(dashboard, /开始新研究/);
+  assert.match(dashboard, /创建研究项目/);
+  assert.match(dashboard, /dashboard-welcome/);
   assert.doesNotMatch(dashboard, /<Tag/);
   assert.match(foundation, /\.dashboard-metrics\s*\{[\s\S]*?grid-template-columns: repeat\(4,/);
   assert.match(foundation, /\.dashboard-workflow-steps\s*\{[\s\S]*?grid-template-columns: repeat\(5,/);
-  assert.match(foundation, /dashboard-workflow-heading \.cds--btn/);
+  assert.match(foundation, /dashboard-workflow-caption/);
 });
 
 
