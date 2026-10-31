@@ -375,6 +375,7 @@ Deno.serve(async (req: Request) => {
       const brands = new Map<string, number>();
       const categories = new Map<string, number>();
       const words = new Map<string, number>();
+      const trendMap = new Map<string, {count:number;prices:number[]}>();
       const funnel = { total: records.length, titled: 0, priced: 0, rated: 0, imaged: 0, linked: 0 };
       const stop = new Set(['the','and','for','with','from','this','that','you','your','new','pack','set','inch','inches','of','to','a','an','on','by','is','are','（','）']);
       for (const row of records) {
@@ -386,6 +387,18 @@ Deno.serve(async (req: Request) => {
         const category = pick(row, [/category|department|product.?type/i]);
         const image = pick(row, [/image|thumbnail|picture/i]);
         const link = pick(row, [/^(url|link|product.?url|item.?url)$/i]);
+        const dateValue = pick(row, [/^(date|created.?at|published.?at|scraped.?at|timestamp|date.?created)$/i]);
+        if (dateValue !== null) {
+          const rawTime = typeof dateValue === 'number' ? dateValue : Date.parse(String(dateValue));
+          const date = new Date(typeof rawTime === 'number' && Number.isFinite(rawTime) ? (rawTime < 100000000000 ? rawTime * 1000 : rawTime) : NaN);
+          if (!Number.isNaN(date.getTime())) {
+            const key = date.toISOString().slice(0,10);
+            const point = trendMap.get(key) ?? {count:0,prices:[]};
+            point.count++;
+            if (price !== null && price >= 0) point.prices.push(price);
+            trendMap.set(key,point);
+          }
+        }
         if (title) funnel.titled++;
         if (price !== null && price >= 0) { priceValues.push(price); funnel.priced++; }
         if (rating !== null && rating >= 0) { ratingValues.push(rating); funnel.rated++; }
@@ -403,6 +416,7 @@ Deno.serve(async (req: Request) => {
       const percentile = (p:number) => sorted.length ? sorted[Math.min(sorted.length-1,Math.floor((sorted.length-1)*p))] : null;
       const average = (values:number[]) => values.length ? values.reduce((sum,value)=>sum+value,0)/values.length : null;
       const top = (map:Map<string,number>) => [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10).map(([label,count])=>({label,count}));
+      const trends = [...trendMap.entries()].sort((a,b)=>a[0].localeCompare(b[0])).slice(-30).map(([date,point])=>({date,count:point.count,average_price:average(point.prices)}));
       const bands = [
         {label:'0–25',count:priceValues.filter(v=>v>=0&&v<25).length},
         {label:'25–50',count:priceValues.filter(v=>v>=25&&v<50).length},
@@ -414,6 +428,7 @@ Deno.serve(async (req: Request) => {
         task, coverage:{analyzed:records.length,available:total,complete:total<=analysisLimit},
         metrics:{average_price:average(priceValues),median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),average_rating:average(ratingValues),average_reviews:average(reviewValues),price_count:priceValues.length,rating_count:ratingValues.length},
         distributions:{price_bands:bands,brands:top(brands),categories:top(categories),words:top(words)},
+        trends,
         funnel, quality:{title_rate:records.length?funnel.titled/records.length:0,price_rate:records.length?funnel.priced/records.length:0,rating_rate:records.length?funnel.rated/records.length:0,image_rate:records.length?funnel.imaged/records.length:0,link_rate:records.length?funnel.linked/records.length:0}
       });
     }
