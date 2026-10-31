@@ -4,6 +4,7 @@ import { WorkspaceNavigation } from './components/WorkspaceNavigation';
 import { ResearchWizard, type ResearchProfile } from './features/research/ResearchWizard';
 import { WorkspaceDashboard } from './features/dashboard/WorkspaceDashboard';
 import { CredentialVault } from './features/settings/CredentialVault';
+import { CollectionSettingsPage, type CollectionSettings } from './features/settings/CollectionSettingsPage';
 import { ProductLibrary } from './features/products/ProductLibrary';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content,
@@ -57,6 +58,7 @@ function App() {
   const [analytics, setAnalytics] = useState<any>(null);
   const [keyValues, setKeyValues] = useState<Record<string,string>>({});
   const [selectedProvider, setSelectedProvider] = useState('openai');
+  const [collectionSettings, setCollectionSettings] = useState<CollectionSettings>({ itemsPerPlatform:100, depth:'standard' });
   const [approvalPlan, setApprovalPlan] = useState<Plan|null>(null);
   const [cloudflareAccountId, setCloudflareAccountId] = useState('');
   const [integrationMeta, setIntegrationMeta] = useState<Record<string,string>>({});
@@ -98,7 +100,25 @@ function App() {
     finally { setBusy(false); }
   }
   useEffect(() => { void loadAll(); }, []);
+  useEffect(() => {
+    const saved = session?.user.user_metadata?.research_collection_settings;
+    if (saved && typeof saved === 'object') {
+      const items = Number(saved.itemsPerPlatform);
+      const depth = saved.depth;
+      setCollectionSettings({ itemsPerPlatform:Number.isFinite(items)?Math.min(5000,Math.max(10,items)):100, depth:depth==='light'||depth==='deep'?depth:'standard' });
+    }
+  }, [session?.user.id]);
   useEffect(() => { if (page === 'products') void loadProducts(0); }, [page]);
+
+  async function saveCollectionSettings() {
+    setBusy(true);
+    try {
+      const {error} = await supabase.auth.updateUser({ data:{ research_collection_settings:collectionSettings } });
+      if(error) throw error;
+      setNotice({kind:'success',text:'调研采集设置已保存到当前账户，将用于后续新建的调研任务。'});
+    } catch(e) { setNotice({kind:'error',text:'保存采集设置失败：'+message(e)}); }
+    finally { setBusy(false); }
+  }
 
   async function saveCredential(slug: string, name: string, kind: 'provider'|'integration') {
     const value = keyValues[slug]?.trim();
@@ -195,9 +215,9 @@ function App() {
         };
         return labels[id] ?? id;
       });
-      const selectedScope = { ...(project.scope ?? {}), selected_data_sources:selectedSources, selected_data_source_labels:sourceLabels };
-      const enrichedObjective = project.objective + '\\n\\n用户选择的数据来源类别：' + sourceLabels.join('、') +
-        '。请优先寻找这些类别对应的真实可用 Apify Actor；没有合适 Actor 时明确说明，不得虚构。';
+      const selectedScope = { ...(project.scope ?? {}), selected_data_sources:selectedSources, selected_data_source_labels:sourceLabels, collection_settings:collectionSettings };
+      const enrichedObjective = project.objective + '\\n\\n用户选择的数据来源平台：' + sourceLabels.join('、') +
+        '。采集默认设置：每个平台目标返回 '+collectionSettings.itemsPerPlatform+' 条；采集深度为 '+({light:'快速采集（列表与核心字段）',standard:'标准采集（核心字段与关键互动/评分/基础详情）',deep:'深度采集（在 Actor 支持时扩展详情、评论及关联信息）'}[collectionSettings.depth])+'。请优先寻找这些平台对应的真实可用 Apify Actor，并依据各 Actor 的 Input Schema 将数量和深度映射到有效参数；无法支持的字段要明确说明，不得虚构。';
       const {error} = await supabase.from('research_projects').update({
         objective:enrichedObjective, platform_slugs:selectedSources, scope:selectedScope,
       }).eq('id',project.id).eq('user_id',session?.user.id);
@@ -403,7 +423,7 @@ function App() {
     finally { setBusy(false); }
   }
 
-  const title: Record<Page,string> = {dashboard:'情报总览',vault:'AI 模型与 Key Vault',projects:projectId?'研究项目详情':'研究项目中心',products:'标准化商品库'};
+  const title: Record<Page,string> = {dashboard:'情报总览',vault:'AI 模型与 Key Vault',settings:'调研采集设置',projects:projectId?'研究项目详情':'研究项目中心',products:'标准化商品库'};
   const pendingPlans = plans.filter(p => p.status === 'pending_approval');
 
   return (
@@ -423,6 +443,7 @@ function App() {
           {notice && <InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
           {busy && <Loading small withOverlay={false} description="处理中"/>}
           {page==='dashboard' && <WorkspaceDashboard projectCount={projects.length} pendingPlanCount={pendingPlans.length} taskCount={tasks.length} credentialCount={credentials.length} onCreateResearch={()=>navigate('projects')}/>}
+          {page==='settings' && <CollectionSettingsPage settings={collectionSettings} onChange={setCollectionSettings} onSave={()=>void saveCollectionSettings()} saving={busy}/>}
           {page==='vault' && <CredentialVault
             credentials={credentials} keyValues={keyValues} setKeyValues={setKeyValues}
             cloudflareAccountId={cloudflareAccountId} setCloudflareAccountId={setCloudflareAccountId}
