@@ -990,22 +990,7 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
 .synesis-app .research-start-tile .cds--form__helper-text {
   font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
 }
-.synesis-app .research-intake-sticky-footer {
-  position: sticky !important;
-  bottom: 0 !important;
-  z-index: 20 !important;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  width: 100%;
-  margin: 0;
-  padding: 16px;
-  background: var(--cds-layer-01);
-  border: 1px solid var(--cds-border-subtle);
-  border-top: 1px solid var(--cds-border-strong);
-  box-shadow: none !important;
-}
+/* Deprecated sticky intake footer styles removed: actions remain in document flow. */
 .synesis-app .research-intake-sticky-footer .cds--btn {
   min-width: 112px;
   border-radius: 0 !important;
@@ -1676,4 +1661,30 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
   border-radius: 50% !important;
   overflow: hidden !important;
   background: #ffffff !important;
+}
+
+/* Country flag images use a real image element, never render the CDN URL as text. */
+.synesis-app .research-country-option .research-country-flag,
+.synesis-app .research-selected-country-flag {
+  display:block!important;
+  width:23px!important;
+  height:23px!important;
+  min-width:23px!important;
+  flex:0 0 23px!important;
+  object-fit:cover!important;
+  border:1px solid var(--cds-border-subtle)!important;
+  border-radius:50%!important;
+  background:var(--cds-layer-01)!important;
+}
+/* Last rule wins at every breakpoint: workflow buttons scroll with the page. */
+.synesis-app .research-intake-actions,
+.synesis-app .research-step-footer.research-intake-actions {
+  position:static!important;
+  inset:auto!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  left:auto!important;
+  z-index:auto!important;
+  box-shadow:none!important;
 }
