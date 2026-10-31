@@ -90,10 +90,6 @@ function buildCountryOptions() {
  return [...values.values()].sort((a,b)=>a.text.localeCompare(b.text,'zh-Hant'));
 }
 type CountryOptionItem={id:string;text:string;flag:string};
-function CountryOptionElement(value:unknown) {
- const item=value as CountryOptionItem;
- return <span className="research-country-option"><img src={`https://flagcdn.com/w40/${item.id.toLowerCase()}.png`} alt="" loading="lazy"/><span>{item.text}</span></span>;
-}
 const countryOptions=buildCountryOptions();
 const countryByLabel=new Map(countryOptions.map(item=>[item.text,item]));
 const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
@@ -126,7 +122,7 @@ function CountrySelectionMap({selectedCodes}:{selectedCodes:string[]}) {
    {features.length>0&&<GeoJSON key={selectedCodes.join('-')} data={{type:'FeatureCollection',features} as any} style={()=>({color:'#0f62fe',weight:2,fillColor:'#0f62fe',fillOpacity:.28})}/>}
    <CountryMapViewport features={features}/>
   </MapContainer>
-  {loadError&&<p className="research-map-note">地图边界数据暂时无法载入；国家选择仍可正常使用。</p>}
+  {loadError&&<p className="research-map-note">地图边界数据暂时无法载入，请检查网络连接后重试。</p>}{!loadError&&selectedCodes.length>0&&world&&!features.length&&<p className="research-map-note">暂未找到所选地区的边界数据（{selectedCodes.join(', ')}）。</p>}
  </div>;
 }
 const languageOptions=['英语','中文','德语','法语','西班牙语','意大利语','日语','韩语','荷兰语','阿拉伯语','多语言 / 自动识别'];
@@ -246,7 +242,7 @@ export function ResearchWizard(props:Props) {
      <AccordionItem title={<span className="research-accordion-title"><b>01</b> 核心研究目标 <small>研究范围、关键词与目标市场</small></span>} open={openPanels[0]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===0?!isOpen:x))}>
       <div className="research-fluid-grid">
        <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setAttemptedNext(true)}><FluidTextInput id="intake-keywords" labelText="核心关键词 *" value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" invalid={attemptedNext&&!formValues.keywords?.trim()} invalidText="请输入至少一个核心关键词。"  onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/><small className="cds--form__helper-text">必填。多个关键词请使用逗号分隔。</small></div>
-       <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setAttemptedNext(true)}><FluidMultiSelect id="intake-countries" titleText="目标国家 / 地区 *" label="搜索并选择国家或地区" items={countryOptions} itemToString={(item:any)=>item?.text??''} itemToElement={CountryOptionElement} selectedItems={countryOptions.filter(item=>splitValues(formValues.countries??'').includes(item.text))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:selectedItems.map((x:any)=>x.text).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen" invalid={attemptedNext&&!formValues.countries?.trim()} invalidText="请至少选择一个目标国家或地区。" /></div>
+       <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setAttemptedNext(true)}><FluidMultiSelect id="intake-countries" titleText="目标国家 / 地区 *" label="搜索并选择国家或地区" items={countryOptions} itemToString={(item:any)=>item?item.flag+'  '+item.text:''} selectedItems={countryOptions.filter(item=>splitValues(formValues.countries??'').includes(item.text))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:selectedItems.map((x:any)=>x.text).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen" invalid={attemptedNext&&!formValues.countries?.trim()} invalidText="请至少选择一个目标国家或地区。" /></div>
        <div className="research-fluid-field research-fluid-span"><CountrySelectionMap selectedCodes={selectedCountryCodes}/></div>
        <div className="research-fluid-field"><FluidTextInput id="intake-regions" labelText="目标地区 / 城市" value={formValues.regions??''} placeholder="例如：加州、巴伐利亚州、伦敦" onChange={(e:any)=>{setFormValues(v=>({...v,regions:e.target.value}));setProfile(null);}}/></div>
        <div className="research-fluid-field" onBlurCapture={()=>setAttemptedNext(true)}><FluidDropdown id="intake-languages" titleText="研究语言 *" label="选择研究语言" items={toItems(languageOptions)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(languageOptions).find(x=>x.id===formValues.languages)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,languages:selectedItem?.id??''}));setProfile(null);}} invalid={attemptedNext&&!formValues.languages?.trim()} invalidText="请选择研究语言。" /></div>
@@ -312,7 +308,7 @@ export function ResearchWizard(props:Props) {
   {!projects.length&&<Tile><p>还没有研究项目。填写上方研究需求即可开始。</p></Tile>}
   <div className="research-step-footer research-workflow-actions research-intake-actions">
     <Button className="research-workflow-button" kind="secondary" disabled>上一步</Button>
-    <Button className="research-workflow-button" kind="primary" disabled={busy||!requiredReady} onClick={proceedToSources}>下一步：调研平台 <ArrowRight size={16}/></Button>
+    <Button className="research-workflow-button" kind="primary" disabled={busy||!requiredReady} onClick={proceedToSources}>下一步</Button>
    </div>
   </section>;
 
