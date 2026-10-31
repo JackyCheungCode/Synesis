@@ -170,7 +170,7 @@ test('ResearchWizard keeps hooks before conditional returns and isolates render 
  const component=research.slice(start,end);
  const early=component.indexOf("if(!project||project.scope?.workflow_state==='draft')");
  assert.ok(early>0);
- assert.doesNotMatch(component.slice(early),/React\.use(?:State|Effect|Memo|Callback|Ref)\\(/);
+ assert.doesNotMatch(component.slice(early),/React\.use(?:State|Effect|Memo|Callback|Ref)\(/);
  assert.match(research,/class ResearchWizardErrorBoundary extends React\.Component/);
  assert.match(research,/页面遇到异常，但你的研究记录不会因此被删除/);
 });
