@@ -975,6 +975,67 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (action === 'tasks.project-normalization-summary') {
+      const projectId=String(body.projectId??'').trim();
+      if(!projectId) return json({error:'缺少研究项目 ID'},400);
+      const {data:projectTasks,error:taskError}=await admin.from('collection_tasks')
+        .select('id,platform_slug,result_synced_count')
+        .eq('project_id',projectId).eq('user_id',userId).order('created_at',{ascending:true});
+      if(taskError) throw taskError;
+      const tasks=projectTasks??[];
+      if(!tasks.length) return json({project_id:projectId,coverage:{total_records:0,normalized_records:0,normalization_rate:0},average_quality_score:null,warning_records:0,entity_type_distribution:[],normalization_version:1});
+      const entityCounts=new Map<string,number>();
+      let totalRecords=0,normalizedRecords=0,qualitySum=0,warningRecords=0;
+      for(const task of tasks) {
+        const taskTotal=Math.max(0,Number(task.result_synced_count??0));
+        totalRecords+=taskTotal;
+        const pageSize=500;
+        for(let offset=0;offset<taskTotal;offset+=pageSize) {
+          const end=Math.min(taskTotal-1,offset+pageSize-1);
+          const {data:rawRows,error:rawError}=await admin.from('collection_task_results')
+            .select('task_id,item_index,raw_data').eq('task_id',task.id).eq('user_id',userId)
+            .order('item_index',{ascending:true}).range(offset,end);
+          if(rawError) throw rawError;
+          const rows=rawRows??[];
+          if(!rows.length) continue;
+          const indices=rows.map(row=>row.item_index);
+          const {data:existingRows,error:existingError}=await admin.from('research_normalized_records')
+            .select('item_index,entity_type,quality_score,warnings')
+            .eq('task_id',task.id).eq('user_id',userId).in('item_index',indices);
+          if(existingError) throw existingError;
+          const existingByIndex=new Map((existingRows??[]).map(row=>[row.item_index,row]));
+          const missing=rows.filter(row=>!existingByIndex.has(row.item_index));
+          if(missing.length) {
+            const backfill=missing.map(row=>{
+              const result=normalizeResearchRecord(task.platform_slug,row.raw_data as Record<string,unknown>);
+              return {user_id:userId,project_id:projectId,task_id:task.id,item_index:row.item_index,platform_slug:task.platform_slug,entity_type:result.entityType,canonical_key:result.canonicalKey,normalized_data:result.normalizedData,field_sources:result.fieldSources,quality_score:result.qualityScore,warnings:result.warnings,normalization_version:result.normalizationVersion,normalized_at:new Date().toISOString()};
+            });
+            const {error:backfillError}=await admin.from('research_normalized_records').upsert(backfill,{onConflict:'task_id,item_index'});
+            if(backfillError) throw backfillError;
+            for(const row of backfill) existingByIndex.set(row.item_index,{item_index:row.item_index,entity_type:row.entity_type,quality_score:row.quality_score,warnings:row.warnings});
+          }
+          for(const row of rows) {
+            const normalized=existingByIndex.get(row.item_index);
+            if(!normalized) continue;
+            normalizedRecords++;
+            qualitySum+=Number(normalized.quality_score??0);
+            if(Array.isArray(normalized.warnings)&&normalized.warnings.length) warningRecords++;
+            const type=String(normalized.entity_type??'generic');
+            entityCounts.set(type,(entityCounts.get(type)??0)+1);
+          }
+        }
+      }
+      return json({
+        project_id:projectId,
+        coverage:{total_records:totalRecords,normalized_records:normalizedRecords,normalization_rate:totalRecords?normalizedRecords/totalRecords:0},
+        average_quality_score:normalizedRecords?Math.round(qualitySum/normalizedRecords):null,
+        warning_records:warningRecords,
+        entity_type_distribution:[...entityCounts.entries()].sort((a,b)=>b[1]-a[1]).map(([entity_type,count])=>({entity_type,count})),
+        normalization_version:1,
+        quality_score_definition:'按实体类型预期字段计算的字段完整度，不代表事实准确率或模型置信度。',
+      });
+    }
+
     if (action === 'tasks.results') {
       const { taskId, limit = 100, offset = 0 } = body;
       const safeLimit = Math.min(250, Math.max(1, Number(limit) || 100));
