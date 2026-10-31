@@ -378,3 +378,10 @@ Carbon 官方依据：
 - 字体：全局 UI 字体栈统一为 IBM Plex Sans；移除 Noto Sans TC 后备字体声明。代码字体继续使用 IBM Plex Mono。
 - 自动化：新增 LAY-01 静态断言，覆盖字体栈、gutter token、画布宽度、网格 token、移动端 KPI 列数及禁止旧式 important 网格覆盖。
 - 证据边界：本次为源码与静态测试整改；未取得真实浏览器控制与 320/375/768/1024/1440px 截图，故 LAY-01 运行时视觉验收仍未关闭。需回归 Dashboard、Research、Products、Settings、Vault。
+
+
+#### LAY-01 首轮 CI 修正说明
+
+- 首轮 CI run 41214545083：Product identity 与 Carbon Foundation 11 项静态测试全部通过；TypeScript 检查通过；Vite 在 Sass 解析阶段失败。
+- 失败原因：批量移除重复 page-wrap 规则时，残留了独立的 .synesis-app 选择器，导致 Sass 报错 expected "{", 定位 src/styles.scss:398。
+- 本次修复：清理残留空选择器及空 media block；未改变既定 gutter 与 16/8/4 栅格策略。修复后的 CI 需再次通过后，LAY-01 才能标记为静态构建通过。
