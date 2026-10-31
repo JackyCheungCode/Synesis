@@ -69,3 +69,14 @@ test('custom selection and async controls expose selected and busy states', () =
   assert.match(app, /<DonutChart/);
   assert.match(workflow, /IBM_TELEMETRY_DISABLED: 'true'/);
 });
+
+
+test('Carbon shell provides a first-focus skip link with a visible focus state', () => {
+  const skipIndex = app.indexOf('className="synesis-skip-link"');
+  const menuIndex = app.indexOf('<HeaderMenuButton');
+  assert.ok(skipIndex >= 0 && menuIndex > skipIndex, 'Skip link must precede the header menu trigger');
+  assert.match(app, /href="#main-content"/);
+  assert.match(app, /document\.getElementById\('main-content'\)\?\.focus\(\)/);
+  assert.match(foundation, /\.synesis-skip-link:focus-visible/);
+  assert.match(foundation, /transform: translateY\(-150%\)/);
+});
