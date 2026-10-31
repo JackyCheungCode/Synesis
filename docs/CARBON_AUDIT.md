@@ -85,17 +85,17 @@
 
 | ID | 验收项 | 证据/位置 | 初始结论 | 修复/验收记录 |
 |---|---|---|---|---|
-| S-01 | Carbon Header 与品牌入口 | `App.tsx:547-553` | 部分通过：已使用 Carbon Header；品牌链接需验证实际路由与返回行为 | 待浏览器验收 |
-| S-02 | 单一一级菜单与二/三级导航结构 | `WorkspaceNavigation.tsx:41-58` | 静态通过：一个 SideNavMenu，页面项为子菜单 | 确认无多余一级入口 |
+| S-01 | Carbon Header 与品牌入口 | `App.tsx:547-560`、`carbon-foundation.scss` | 静态通过：使用 Carbon Header/Name/GlobalAction，Header surface、hover 与 icon 已映射到 UI Shell 专用 tokens；品牌链接指向 dashboard。运行时布局待验收 | 桌面/移动端 Header 截图、键盘实测 |
+| S-02 | 单一一级菜单与二/三级导航结构 | `WorkspaceNavigation.tsx:41-58` | 静态通过：一个 SideNavMenu，页面项为子菜单；符合 Carbon 左侧面板不支持三级层级的限制 | 确认无多余一级入口 |
 | S-03 | 导航覆盖展开，不挤压内容区 | `WorkspaceNavigation.tsx:31-39`、`carbon-foundation.scss` | 部分通过：使用 Carbon SideNav overlay 模式；实际遮罩/层级/滚动待测 | 桌面/移动端实测 |
-| S-04 | 当前导航项语义 | `WorkspaceNavigation.tsx:48-58` | 静态通过：isActive 与 aria-current | 屏幕阅读器抽测 |
+| S-04 | 当前导航项语义 | `WorkspaceNavigation.tsx:48-58`、`carbon-foundation.scss` | 静态通过：isActive、aria-current=page；选中背景/边框/图标使用 Carbon background-selected、border-interactive、icon-primary | 屏幕阅读器抽测 |
 | S-05 | 菜单打开/关闭、Escape、遮罩 | `WorkspaceNavigation.tsx:8-21,31-39` | 部分通过：存在 close/focus handler；需验证 Carbon SideNav 事件顺序 | 键盘实测 |
 | S-06 | 焦点返回与导航后主内容焦点 | `WorkspaceNavigation.tsx:8-24`、`App.tsx:557` | 部分通过：代码存在 focus 调用；未进行浏览器验证 | 键盘实测 |
 | S-07 | 主内容 landmark | `App.tsx:565` | 静态通过：Carbon Content 带 id 与 tabIndex=-1；最终 DOM landmark 语义待 axe/Accessibility Tree 验证 | axe + 屏幕阅读器 |
 | S-08 | 明暗主题 token 一致性 | `App.tsx:552`、`carbon-foundation.scss` | 部分通过：主题切换存在；所有自定义/Carbon 图表主题需逐屏核对 | 两主题截图对照 |
 | S-09 | 全局搜索入口与账户操作可访问名称 | `App.tsx:551-553` | 静态通过：有 aria-label；tooltip、语义和触控尺寸待测 | 键盘/触屏 |
 | S-10 | Shell 响应式、层级和页面边距 | `styles.scss`、`carbon-foundation.scss` | 未检查：没有视口截图与溢出记录 | 320/375/768/1024/1440px |
-| S-11 | Skip to main 内容跳过链接 | `App.tsx:547-555`、`carbon-foundation.scss` | 已实现，静态通过：Header 内第一项可聚焦链接；点击后聚焦 `#main-content`。需浏览器验证显示时机、焦点与滚动 | Tab 首焦点、Enter 跳转、NVDA/VoiceOver 抽测 |
+| S-11 | Skip to main 内容跳过链接 | `App.tsx:547-555`、`carbon-foundation.scss` | 已实现，静态通过：Header 内第一项可聚焦链接；点击后聚焦 `#main-content`；仅焦点时显示。需浏览器验证显示时机、焦点与滚动 | Tab 首焦点、Enter 跳转、NVDA/VoiceOver 抽测 |
 
 ### Layer 2 — 页面布局
 
@@ -202,6 +202,7 @@
 |---|---|---|---|---|---|
 | RUN-001 | 2026-10-31 | `5517df3b97a5c224ebc047635325f1828fb4febb` | GitHub Actions：Build、产品身份测试、Carbon Foundation 静态测试、TypeScript/Vite 构建 | 成功 | [GitHub Actions run 41209410457](https://github.com/JackyCheungCode/Synesis/actions/runs/41209410457) |
 | RUN-002 | 2026-10-31 | 同上 | 浏览器全站手动验收、axe、键盘、屏幕阅读器、响应式截图 | 未执行 | 尚无证据 |
+| RUN-003 | 2026-10-31 | Shell remediation commits: `a8ba9a2e`, `51fc540d`, `3c4f83cf`, `052fa8a7`, `3b60d3b7`, `d7894c80`, `8ad390b2` | 新增 skip link；按 Carbon UI Shell spec 修正 Header/SideNav surface 与交互 tokens；增加静态回归断言 | CI 待确认 | [最新工作流](https://github.com/JackyCheungCode/Synesis/actions) |
 
 ## 6. 修复优先级与变更治理
 
@@ -234,6 +235,7 @@
 | SH-01 | Carbon Shell 缺少跳过重复导航的入口；Carbon UI Shell 键盘指导建议在首个可聚焦控件前提供 Skip to main | 在 Carbon Header 中增加“跳至主要内容”链接；点击后聚焦 `#main-content`，并用 Carbon 语义 token 实现仅在焦点时显示 | `src/App.tsx` Header 首个子元素；`src/styles/carbon-foundation.scss` `.synesis-skip-link` | 静态实现完成；浏览器/屏幕阅读器复测待执行 |
 | SH-02 | 旧样式中存在未被 React Shell 渲染的 `.nav-dismiss-overlay` 样式和多组历史 SideNav z-index 规则 | 本轮暂不删除：需先通过全仓库引用与运行时 DOM 核对，避免清理仍被间接使用的规则 | `src/styles.scss` 早期移动端规则；当前 `WorkspaceNavigation.tsx` 使用 Carbon SideNav 内置 overlay | 待核实，不作为已修复 |
 | SH-03 | SideNav 自定义 z-index 为 9000，需与 Carbon Modal/Toast/Tooltip 层级核对 | 未修改，避免凭猜测改变浮层层级 | `src/styles/carbon-foundation.scss` `.synesis-carbon-side-nav` | 待层级实测 |
+| SH-04 | Header 与 SideNav 使用 layer/layer-hover/layer-selected 作为 Shell 表面，偏离 Carbon v11 UI Shell 专用 token 规范；选中边框宽度为 3px | Header/SideNav surface 改为 `background`，hover 改为 `background-hover`，选中态改为 `background-selected` + 4px `border-interactive`，图标状态改用 `icon-secondary`/`icon-primary`；同步修正早期重复规则以避免 cascade 回退 | `src/styles.scss`、`src/styles/carbon-foundation.scss` | 静态整改完成；需 light/dark 浏览器视觉回归 |
 
 ### Shell 代码审查结论
 
