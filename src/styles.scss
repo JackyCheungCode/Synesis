@@ -276,3 +276,6 @@ h3 { color:#161616; font-size:15px; margin:0 0 6px; font-weight:600; }
 .raw-results-table td { white-space:normal; }
 .raw-json-details { margin-top:1rem; }
 .raw-json-details summary { cursor:pointer; font-weight:600; }
+
+.report-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.8rem 0; border-top:1px solid var(--cds-border-subtle,#e0e0e0); }
+.report-row p { margin:.3rem 0 0; color:var(--cds-text-secondary,#525252); font-size:.78rem; }
