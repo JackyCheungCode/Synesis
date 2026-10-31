@@ -7,7 +7,7 @@ export type ResearchProfile = { summary:string; dimensions:ResearchDimension[]; 
 export type ResearchProject = { id:string; name:string; objective:string; status:string; target_regions:string[]; platform_slugs:string[]; scope?:Record<string,any> };
 export type ResearchPlan = { id:string; project_id:string; status:string; plan:Record<string,any>; estimated_cost:number|null; created_at:string };
 export type ResearchTask = { id:string; project_id:string; platform_slug:string; status:string; actor_id:string|null; created_at:string; started_at?:string|null; finished_at?:string|null; updated_at?:string|null; progress?:number; result_count?:number; result_synced_count?:number; run_status?:string|null; error_message?:string|null };
-export type ResearchReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; content:Record<string,any> };
+export type ResearchReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; report_type?:string; content:Record<string,any> };
 type Props = {
  projects:ResearchProject[]; plans:ResearchPlan[]; tasks:ResearchTask[]; reports:ResearchReport[];
  projectId?:string; busy:boolean; onParse:(brief:string)=>Promise<ResearchProfile>; onCreate:(brief:string,profile:ResearchProfile)=>void;
@@ -77,7 +77,7 @@ function ResearchAnalyticsView({data}:{data:any}) {
  </div>;
 }
 function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:ResearchReport[]) {
- if(reports.length)return 4;
+ if(reports.some(report=>report.report_type==='market_research'))return 4;
  if(tasks.length&&tasks.every(t=>t.status==='succeeded'&&Number(t.result_synced_count??0)>=Number(t.result_count??0)))return 3;
  if(tasks.length)return 2;
  if(plan)return 1;
@@ -154,7 +154,7 @@ export function ResearchWizard(props:Props) {
   ...(task.finished_at?[{time:task.finished_at,label:task.platform_slug+' 运行结束',detail:task.status+(task.error_message?' · '+task.error_message:'')}]:[]),
   ...(Number(task.result_synced_count??0)>0?[{time:task.updated_at??task.finished_at??task.created_at,label:task.platform_slug+' 数据同步进度',detail:(task.result_synced_count??0)+' / '+(task.result_count??0)+' 条'}]:[]),
  ]).sort((a,b)=>new Date(b.time).getTime()-new Date(a.time).getTime()).slice(0,30);
- const stepReady=[true,true,projectTasks.length>0,allSynced,allSynced];
+ const stepReady=[true,true,projectTasks.length>0,allSynced,projectReports.some(report=>report.report_type==='market_research')];
  const maxUnlockedStep=stepReady.reduce((max,ready,index)=>ready?index:max,-1);
  return <section className="module-stack research-workspace research-fullwidth">
   <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><p className="eyebrow">RESEARCH PROJECT WORKSPACE</p><h2>{project.name}</h2><p>{savedProfile?.summary??project.objective}</p></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
