@@ -640,6 +640,55 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (action === 'products.list') {
+      const limit=Math.min(100,Math.max(1,Number(body.limit)||25));
+      const offset=Math.max(0,Number(body.offset)||0);
+      const search=String(body.search??'').trim().slice(0,120);
+      let query=admin.from('products')
+        .select('id,canonical_key,title,brand,category,description,image_url,created_at,updated_at',{count:'exact'})
+        .eq('user_id',userId).order('updated_at',{ascending:false})
+        .range(offset,offset+limit-1);
+      if(search) query=query.or(`title.ilike.%${search.replace(/[,%()]/g,' ')}%,brand.ilike.%${search.replace(/[,%()]/g,' ')}%,canonical_key.ilike.%${search.replace(/[,%()]/g,' ')}%`);
+      const {data,error,count}=await query;
+      if(error) throw error;
+      const ids=(data??[]).map(item=>item.id);
+      let sources:Record<string,unknown>[]=[];
+      if(ids.length) {
+        const result=await admin.from('product_source_records')
+          .select('id,product_id,platform_slug,external_product_id,source_url,source_sku,first_seen_at,last_seen_at')
+          .eq('user_id',userId).in('product_id',ids).order('last_seen_at',{ascending:false});
+        if(result.error) throw result.error;
+        sources=result.data??[];
+      }
+      return json({products:data??[],sources,total:count??0,limit,offset});
+    }
+
+    if (action === 'products.history') {
+      const productId=String(body.productId??'').trim();
+      if(!productId) return json({error:'缺少商品 ID'},400);
+      const limit=Math.min(250,Math.max(1,Number(body.limit)||100));
+      const offset=Math.max(0,Number(body.offset)||0);
+      const {data:product,error:productError}=await admin.from('products')
+        .select('id,canonical_key,title,brand,category').eq('id',productId)
+        .eq('user_id',userId).maybeSingle();
+      if(productError||!product) return json({error:'商品不存在'},404);
+      const {data:history,error,count}=await admin.from('product_price_history')
+        .select('id,price,currency,observed_at,source_task_id,source_item_index,source_record_id',{count:'exact'})
+        .eq('product_id',productId).eq('user_id',userId)
+        .order('observed_at',{ascending:true}).range(offset,offset+limit-1);
+      if(error) throw error;
+      const sourceIds=[...new Set((history??[]).map(item=>item.source_record_id))];
+      let sourceMap:Record<string,unknown>={};
+      if(sourceIds.length) {
+        const result=await admin.from('product_source_records')
+          .select('id,platform_slug,external_product_id,source_url')
+          .eq('user_id',userId).in('id',sourceIds);
+        if(result.error) throw result.error;
+        sourceMap=Object.fromEntries((result.data??[]).map(source=>[source.id,source]));
+      }
+      return json({product,history:(history??[]).map(item=>({...item,source:sourceMap[item.source_record_id]??null})),total:count??0,limit,offset});
+    }
+
     return json({error:'未知操作'},404);
   } catch (error) {
     return json({error:error instanceof Error?error.message:'服务器内部错误'},500);
