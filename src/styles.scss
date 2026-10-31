@@ -1355,3 +1355,25 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
 .synesis-app .research-selected-country img{display:block;width:20px;height:20px;flex:0 0 20px;object-fit:cover;border-radius:50%;border:1px solid var(--cds-border-subtle)}
 .synesis-app .research-country-map .leaflet-pane{z-index:1}
 .synesis-app .research-country-map .leaflet-overlay-pane path{fill:#0f62fe;fill-opacity:.32;stroke:#0f62fe;stroke-width:2;stroke-opacity:1}
+
+/* Country selector: keep selected values legible in Carbon's list box and tags. */
+.synesis-app .research-fluid-form .cds--multi-select,
+.synesis-app .research-fluid-form .cds--multi-select .cds--list-box__field,
+.synesis-app .research-fluid-form .cds--multi-select .cds--list-box__selection {
+  background-color:#fff !important;
+  color:#161616 !important;
+}
+.synesis-app .research-fluid-form .cds--multi-select .cds--tag,
+.synesis-app .research-fluid-form .cds--multi-select .cds--tag--filter {
+  background-color:#e0e0e0 !important;
+  color:#161616 !important;
+  border-radius:0 !important;
+}
+.synesis-app .research-fluid-form .cds--multi-select .cds--tag__label,
+.synesis-app .research-fluid-form .cds--multi-select .cds--tag__close-icon {
+  color:#161616 !important;
+}
+.synesis-app .research-country-option{display:flex;align-items:center;gap:9px;min-width:0;color:#161616}
+.synesis-app .research-country-flag{display:inline-grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border-radius:50%;overflow:hidden;font-size:18px;line-height:1}
+.synesis-app .research-country-map .leaflet-overlay-pane path{fill:#0f62fe!important;fill-opacity:.34!important;stroke:#0f62fe!important;stroke-width:2!important;stroke-opacity:1!important}
+.synesis-app .research-intake-actions{position:sticky!important;bottom:0!important}
