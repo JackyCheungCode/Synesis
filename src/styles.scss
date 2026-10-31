@@ -399,8 +399,6 @@ html, body { overflow-x:clip; }
   .list-tile { align-items:stretch; flex-direction:column; justify-content:flex-start; }
   .list-tile .cds--btn { align-self:stretch; }
   .platform-picker { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .nav-dismiss-overlay.cds--btn { position:fixed; inset:3rem 0 0; z-index:8998; width:100%; max-width:none; height:calc(100vh - 3rem); min-height:0; padding: 0; border:0; border-radius:0; background:rgba(22,22,22,.32); cursor:pointer; }
-  .nav-dismiss-overlay.cds--btn svg { display:none; }
   .raw-json-details { margin-top: 0; }
 }
 @media (max-width:380px) {
@@ -411,48 +409,6 @@ html, body { overflow-x:clip; }
 }
 
 
-/* Synesis navigation: one root menu with grouped third-level destinations, rendered as an overlay. */
-.synesis-app .synesis-nav-backdrop {
-  position:fixed; inset:3rem 0 0; z-index:8998; width:100%; height:calc(100vh - 3rem);
-  padding: 0; border:0; background:rgba(22,22,22,.34); opacity:0; visibility:hidden;
-  transition:opacity .16s ease, visibility .16s ease; cursor:pointer;
-}
-.synesis-app .synesis-nav-backdrop.is-visible { opacity:1; visibility:visible; }
-.synesis-app .synesis-nav-panel {
-  position:fixed; top:3rem; bottom:0; left:0; z-index:8999; width:min(19rem, calc(100vw - 2.5rem));
-  overflow-y:auto; overscroll-behavior:contain; padding: 1rem 0 2rem; background:var(--cds-layer-01);
-  border-right:1px solid var(--cds-border-subtle); box-shadow:0 12px 32px rgba(0,0,0,.18);
-  transform:translateX(-105%); visibility:hidden; transition:transform .18s ease, visibility .18s ease;
-}
-.synesis-app .synesis-nav-panel.is-open { transform:translateX(0); visibility:visible; }
-.synesis-app .synesis-nav-heading {
-  display:flex; align-items:center; gap: 0.75rem; min-height:3rem; padding: 0 1.25rem 1rem;
-  color:var(--cds-text-primary); font-size:1rem; font-weight:600; border-bottom:1px solid var(--cds-border-subtle);
-}
-.synesis-app .synesis-nav-heading svg { color:var(--cds-interactive); flex:0 0 auto; }
-.synesis-app .synesis-nav-tree { padding: 0.5rem 0.75rem; }
-.synesis-app .synesis-nav-group { margin: 0.25rem 0; }
-.synesis-app .synesis-nav-group > summary {
-  display:flex; align-items:center; gap: 0.75rem; min-height:2.75rem; padding: 0 0.75rem;
-  color:var(--cds-text-secondary); font-size:.875rem; font-weight:600; list-style:none; cursor:pointer; border-radius:4px;
-}
-.synesis-app .synesis-nav-group > summary::-webkit-details-marker { display:none; }
-.synesis-app .synesis-nav-group > summary::after {
-  content:""; width:.45rem; height:.45rem; margin-left: auto; border-right:1.5px solid currentColor;
-  border-bottom:1.5px solid currentColor; transform:rotate(45deg) translateY(-2px); transition:transform .15s ease;
-}
-.synesis-app .synesis-nav-group:not([open]) > summary::after { transform:rotate(-45deg); }
-.synesis-app .synesis-nav-group > summary:hover { background:var(--cds-background); }
-.synesis-app .synesis-nav-group > summary svg { color:var(--cds-text-secondary); flex:0 0 auto; }
-.synesis-app .synesis-nav-leaf {
-  display:flex; align-items:center; width:calc(100% - 1.75rem); min-height:2.5rem; margin: 0.25rem 0 0.25rem 1.75rem;
-  padding: 0.5rem 0.75rem; border:0; border-radius:4px; background:transparent; color:var(--cds-text-secondary);
-  text-align:left; font:inherit; font-size:.8125rem; cursor:pointer;
-}
-.synesis-app .synesis-nav-leaf:hover { background:var(--cds-background); color:var(--cds-text-primary); }
-.synesis-app .synesis-nav-leaf.is-active { background:var(--cds-layer-selected); color:var(--cds-link-primary); font-weight:600; box-shadow:inset 3px 0 var(--cds-interactive); }
-.synesis-app .synesis-nav-panel button:focus-visible,
-.synesis-app .synesis-nav-group > summary:focus-visible { outline:2px solid var(--cds-interactive); outline-offset:2px; }
 .synesis-app .cds--content,
 .synesis-app .synesis-content { margin-left: 0 !important; width:100%; min-width:0; }
 .synesis-app .page-wrap {
@@ -461,12 +417,6 @@ html, body { overflow-x:clip; }
 }
 @media (max-width:672px) {
   .synesis-app .page-wrap { padding: 16px 12px 28px; }
-  .synesis-app .synesis-nav-panel { width:min(18rem, calc(100vw - 2.25rem)); }
-}
-@media (prefers-reduced-motion:reduce) {
-  .synesis-app .synesis-nav-panel,
-  .synesis-app .synesis-nav-backdrop,
-  .synesis-app .synesis-nav-group > summary::after { transition:none; }
 }
 
 
