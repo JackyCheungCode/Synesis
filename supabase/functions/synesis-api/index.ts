@@ -233,6 +233,45 @@ Deno.serve(async (req: Request) => {
       return json({ok:true,runId:result.data?.id});
     }
 
+    if (action === 'tasks.sync') {
+      const { taskId } = body;
+      const { data: task, error: taskError } = await admin.from('collection_tasks').select('id,external_run_id,status,result_dataset_id').eq('id', taskId).eq('user_id', userId).maybeSingle();
+      if (taskError || !task) return json({ error: '采集任务不存在' }, 404);
+      if (!task.external_run_id) return json({ error: '任务尚未取得 Apify Run ID' }, 409);
+      const { clear: apifyToken } = await getCredential('apify', 'integration');
+      const runResponse = await fetch(`https://api.apify.com/v2/actor-runs/${encodeURIComponent(task.external_run_id)}`, { headers: { Authorization: `Bearer ${apifyToken}` } });
+      const runPayload = await runResponse.json();
+      if (!runResponse.ok) return json({ error: runPayload?.error?.message ?? '无法读取 Apify 运行状态' }, 502);
+      const run = runPayload.data ?? {};
+      const runStatus = String(run.status ?? 'UNKNOWN').toUpperCase();
+      const terminal = ['SUCCEEDED','FAILED','ABORTED','TIMED-OUT'].includes(runStatus);
+      const status = runStatus === 'SUCCEEDED' ? 'succeeded' : runStatus === 'FAILED' ? 'failed' : runStatus === 'ABORTED' ? 'aborted' : runStatus === 'TIMED-OUT' ? 'timed_out' : runStatus === 'READY' ? 'queued' : 'running';
+      const datasetId = run.defaultDatasetId ?? task.result_dataset_id ?? null;
+      let items: unknown[] = [];
+      if (runStatus === 'SUCCEEDED' && datasetId) {
+        const dataResponse = await fetch(`https://api.apify.com/v2/datasets/${encodeURIComponent(datasetId)}/items?clean=true&format=json&limit=250&offset=0`, { headers: { Authorization: `Bearer ${apifyToken}` } });
+        if (!dataResponse.ok) return json({ error: `采集已完成，但结果集读取失败（HTTP ${dataResponse.status}），可稍后重试同步` }, 502);
+        const payload = await dataResponse.json();
+        items = Array.isArray(payload) ? payload : [];
+      }
+      const update: Record<string, unknown> = { status, run_status: runStatus, progress: terminal ? 100 : runStatus === 'RUNNING' ? 50 : 10, result_dataset_id: datasetId, updated_at: new Date().toISOString(), synced_at: new Date().toISOString() };
+      if (runStatus === 'SUCCEEDED') { update.result_data = items; update.result_count = items.length; update.finished_at = run.finishedAt ?? new Date().toISOString(); update.error_message = null; }
+      else if (terminal) { update.finished_at = run.finishedAt ?? new Date().toISOString(); update.error_message = run.statusMessage ?? `Apify run ${runStatus}`; }
+      const { error: updateError } = await admin.from('collection_tasks').update(update).eq('id', taskId).eq('user_id', userId);
+      if (updateError) throw updateError;
+      return json({ ok: true, task: { id: taskId, status, run_status: runStatus, progress: update.progress, result_dataset_id: datasetId, result_count: runStatus === 'SUCCEEDED' ? items.length : undefined, error_message: update.error_message ?? null }, result_truncated: runStatus === 'SUCCEEDED' && Number(run.stats?.output ?? items.length) > items.length });
+    }
+
+    if (action === 'tasks.results') {
+      const { taskId, limit = 100, offset = 0 } = body;
+      const safeLimit = Math.min(250, Math.max(1, Number(limit) || 100));
+      const safeOffset = Math.max(0, Number(offset) || 0);
+      const { data: task, error } = await admin.from('collection_tasks').select('id,status,run_status,result_dataset_id,result_count,result_data,error_message,finished_at,synced_at').eq('id', taskId).eq('user_id', userId).maybeSingle();
+      if (error || !task) return json({ error: '采集任务不存在' }, 404);
+      const all = Array.isArray(task.result_data) ? task.result_data : [];
+      return json({ task: { ...task, result_data: undefined }, results: all.slice(safeOffset, safeOffset + safeLimit), limit: safeLimit, offset: safeOffset, total: task.result_count ?? all.length });
+    }
+
     return json({error:'未知操作'},404);
   } catch (error) {
     return json({error:error instanceof Error?error.message:'服务器内部错误'},500);
