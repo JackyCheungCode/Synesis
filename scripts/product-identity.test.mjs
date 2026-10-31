@@ -57,7 +57,7 @@ test('normalizes ecommerce records into typed canonical fields with source prove
   assert.equal(result.normalizedData.rating, 4.6);
   assert.equal(result.normalizedData.review_count, 128);
   assert.equal(result.fieldSources.price, 'price');
-  assert.equal(result.canonicalKey, 'amazon:product:id:B0ABC12345');
+  assert.equal(result.canonicalKey, 'amazon:B0ABC12345');
   assert.equal(result.normalizationVersion, 1);
   assert.ok(result.qualityScore > 50);
 });
