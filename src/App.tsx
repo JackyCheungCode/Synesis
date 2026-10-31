@@ -74,7 +74,7 @@ function App() {
       const [p, pl, t, c] = await Promise.all([
         supabase.from('research_projects').select('id,name,objective,status,target_regions,platform_slugs').order('updated_at',{ascending:false}),
         supabase.from('ai_research_plans').select('id,project_id,status,plan,estimated_cost,created_at').order('created_at',{ascending:false}),
-        supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at,progress,result_count,run_status,external_run_id,error_message,finished_at').order('created_at',{ascending:false}),
+        supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at,progress,result_count,result_synced_count,run_status,external_run_id,error_message,finished_at').order('created_at',{ascending:false}),
         api('credentials.list'),
       ]);
       if (p.error) throw p.error; if (pl.error) throw pl.error; if (t.error) throw t.error;
