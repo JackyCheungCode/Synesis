@@ -1,14 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles.scss';
-import '@carbon/charts-react/styles.css';
-import './styles/carbon-foundation.scss';
-import './styles/synesis-design.scss';
 import App from './App';
 import { AuthProvider } from './auth/AuthProvider';
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <AuthProvider><App /></AuthProvider>
-  </React.StrictMode>,
-);
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><AuthProvider><App/></AuthProvider></React.StrictMode>);
