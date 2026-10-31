@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "deploy": "npm run build && wrangler deploy",
-    "test:product-identity": "node --test scripts/product-identity.test.mjs"
+    "test:product-identity": "node --test scripts/product-identity.test.mjs",
+    "test:carbon-foundation": "node --test scripts/carbon-foundation.test.mjs"
   },
   "dependencies": {
     "@carbon/icons-react": "11.91.0",
