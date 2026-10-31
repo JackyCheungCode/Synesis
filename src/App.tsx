@@ -424,7 +424,7 @@ function App() {
       {approvalPlan && <Modal open modalHeading="确认 Apify 数据采集" primaryButtonText="批准并自动开始采集" secondaryButtonText="返回" onRequestClose={()=>setApprovalPlan(null)} onRequestSubmit={()=>void approvePlan(approvalPlan)} primaryButtonDisabled={busy}>
         <p>{String(approvalPlan.plan.executive_summary??'请确认本次研究计划的采集范围。批准后 Synesis 将自动启动已验证的 Apify 任务，并继续执行数据同步。')}</p>
         <h4>采集任务</h4>
-        {(Array.isArray(approvalPlan.plan.platform_tasks)?approvalPlan.plan.platform_tasks:[]).map((item:any,index:number)=><div className="research-plan-row" key={index}><b>{String(item.platform_slug??'未知平台')}</b><p>{String(item.purpose??'按研究目标采集数据')}</p></div>)}
+        {(Array.isArray(approvalPlan.plan.platform_tasks)?approvalPlan.plan.platform_tasks:[]).map((item:any,index:number)=><div className="research-plan-row" key={index}><b>{String(item.platform_slug??'未知平台')} · {String(item.actor_title??'Apify Actor')}</b><p>{String(item.purpose??'按研究目标采集数据')}</p><Tag type="green">输入 Schema 已校验</Tag>{item.actor_rating&&<span> · 评分 {String(item.actor_rating)}</span>}</div>)}
         <p>预计费用：{approvalPlan.estimated_cost===null?'暂不可估算':`$ ${Number(approvalPlan.estimated_cost).toFixed(2)}`}</p>
         <p className="subheading">批准后，采集、结果同步和后续研究步骤将自动推进。</p>
       </Modal>}
