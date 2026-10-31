@@ -32,3 +32,10 @@ test('model catalogue errors do not return provider secrets', () => {
   assert.doesNotMatch(branch, /return json\(\{[^}]*clear/);
   assert.doesNotMatch(branch, /return json\(\{[^}]*apiKey/);
 });
+
+test('Cloudflare Workers AI model namespaces remain path segments', () => {
+  assert.match(backend, /function cloudflareModelPath\(value: string\)/);
+  assert.match(backend, /segments\.map\(segment => encodeURIComponent\(segment\).*join\('\/'\)/);
+  assert.equal((backend.match(/cloudflareModelPath\(model \|\| '@cf\/meta\/llama-3\.3-70b-instruct'\)/g) ?? []).length, 2);
+  assert.doesNotMatch(backend, /encodeURIComponent\(model \|\| '@cf\/meta\/llama-3\.3-70b-instruct'\)/);
+});
