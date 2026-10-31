@@ -842,9 +842,8 @@ Deno.serve(async (req: Request) => {
         .select('id,status,external_run_id').eq('id',taskId).eq('user_id',userId).maybeSingle();
       if(error||!task) return json({error:'采集任务不存在'},404);
       if(!task.external_run_id) return json({logs:'等待 Apify Run 启动，暂时没有运行日志。',available:false});
-      const {clear:apifyToken}=await getCredential('apify','integration');
       const response=await fetch(`https://api.apify.com/v2/actor-runs/${encodeURIComponent(task.external_run_id)}/log?raw=0`,{
-        headers:{Authorization:`Bearer ${apifyToken}`,Accept:'text/plain'},
+        headers:{Accept:'text/plain'},
       });
       if(!response.ok) {
         const detail=(await response.text()).slice(0,300);
