@@ -29,7 +29,7 @@ type Props = {
  onApprove:(plan:ResearchPlan)=>void; onCancel:(task:ResearchTask)=>void;
  onRetry:(task:ResearchTask)=>void; onSync:(task:ResearchTask)=>void; onView:(task:ResearchTask)=>void; onAnalyze:(task:ResearchTask)=>void;
  analytics?:any; analyticsTaskId?:string; taskLogs?:Record<string,string[]>; onLoadLogs:(task:ResearchTask)=>void;
- onSaveAnalytics:()=>void; onSaveProjectAnalytics:(projectId:string)=>void; onGenerateReport:(projectId:string)=>void;
+ onSaveAnalytics:()=>void; onSaveProjectAnalytics:(projectId:string)=>void; onGenerateReport:(projectId:string)=>void; onStepChange:(projectId:string,step:number)=>void;
 };
 const stages=['研究需求','调研平台','数据抓取','数据统计','AI 分析报告'];
 const statusLabel:Record<ResearchDimension['status'],string>={provided:'用户已提供',suggested:'AI 建议',needs_confirmation:'待补充确认',user_confirmed:'用户已确认'};
@@ -213,6 +213,22 @@ function CrossPlatformResultsTable({rows}:{rows:UnifiedResultRow[]}) {
 
 
 const reportSectionLabels:Record<string,string>={executive_summary:'执行摘要',research_scope:'研究范围与方法',market_overview:'市场概览',cross_platform_comparison:'跨平台对比',product_development_strategy:'产品开发策略',pricing_strategy:'定价策略',market_entry_strategy:'目标市场与进入策略',customer_persona_strategy:'消费者画像与需求',competitive_strategy:'竞争策略',marketing_channel_strategy:'营销与销售渠道',opportunities:'商业机会',risks:'风险与约束',action_roadmap:'30 / 60 / 90 天行动路线图',data_quality_assessment:'数据质量评估',limitations:'数据局限',assumptions_to_validate:'待验证假设'};
+function downloadResearchReport(report:ResearchReport,format:'json'|'markdown'){
+ const safeName=report.title.replace(/[\\/:*?"<>|]/g,'-').slice(0,80)||'synesis-research-report';
+ let body:string,mime:string,extension:string;
+ if(format==='json'){
+  body=JSON.stringify({title:report.title,created_at:report.created_at,content:report.content,evidence:report.evidence??[]},null,2);
+  mime='application/json;charset=utf-8';extension='json';
+ }else{
+  const labels:Record<string,string>={executive_summary:'执行摘要',research_scope:'研究范围与方法',market_overview:'市场概览',cross_platform_comparison:'跨平台对比',product_development_strategy:'产品开发策略',pricing_strategy:'定价策略',market_entry_strategy:'目标市场进入策略',customer_persona_strategy:'消费者画像与需求',competitive_strategy:'竞争策略',marketing_channel_strategy:'营销与销售渠道',opportunities:'商业机会',risks:'风险与约束',action_roadmap:'30 / 60 / 90 天行动路线图',data_quality_assessment:'数据质量评估',limitations:'数据局限',assumptions_to_validate:'待验证假设'};
+  const render=(value:unknown):string=>Array.isArray(value)?value.map(item=>'- '+(typeof item==='object'?JSON.stringify(item):String(item))).join('\\n'):value&&typeof value==='object'?'\\n'+JSON.stringify(value,null,2):String(value??'暂无数据');
+  body='# '+report.title+'\\n\\n生成时间：'+new Date(report.created_at).toLocaleString()+'\\n\\n'+Object.entries(labels).filter(([key])=>report.content?.[key]!==undefined).map(([key,label])=>'## '+label+'\\n\\n'+render(report.content[key])).join('\\n\\n')+'\\n\\n## 数据来源\\n\\n'+(report.evidence??[]).map(item=>'- '+(item.platform_slug??'未知平台')+' · 任务 '+(item.task_id??'')).join('\\n');
+  mime='text/markdown;charset=utf-8';extension='md';
+ }
+ const blob=new Blob(['\\uFEFF',body],{type:mime});
+ const url=URL.createObjectURL(blob);const link=document.createElement('a');
+ link.href=url;link.download=safeName+'.'+extension;link.click();URL.revokeObjectURL(url);
+}
 function ResearchReportContent({content}:{content:Record<string,any>}) {
  const entries=Object.entries(reportSectionLabels).filter(([key])=>content?.[key]!==undefined&&content?.[key]!==null);
  const renderValue=(value:unknown):React.ReactNode=>{
@@ -253,7 +269,7 @@ function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:Res
 const splitValues=(value:string)=>value.split(/\n|,/).map(v=>v.trim()).filter(Boolean);
 const formatPriceRange=(min:string|undefined,max:string|undefined,currency:string|undefined)=>{const values=[min,max].filter((value):value is string=>Boolean(value?.trim()));return values.length?values.join(' - ')+' '+(currency||'USD'):'';};
 export function ResearchWizard(props:Props) {
- const {projects,plans,tasks,reports,projectId,busy,projectResultRows=[],projectResultTotal=0,projectResultOffset=0,onLoadProjectResults,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs,onSaveAnalytics,onSaveProjectAnalytics,onGenerateReport,onSaveDraft}=props;
+ const {projects,plans,tasks,reports,projectId,busy,projectResultRows=[],projectResultTotal=0,projectResultOffset=0,onLoadProjectResults,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs,onSaveAnalytics,onSaveProjectAnalytics,onGenerateReport,onStepChange,onSaveDraft}=props;
  const [brief,setBrief]=React.useState('');
  const [formValues,setFormValues]=React.useState<Record<string,string>>({});
  const [profile,setProfile]=React.useState<ResearchProfile|null>(null);
@@ -423,6 +439,15 @@ export function ResearchWizard(props:Props) {
  const analyticsSavedForCurrentTask=Boolean(analyticsTaskId&&projectReports.some(report=>report.report_type==='dataset_analytics'&&report.evidence?.some(item=>item.task_id===analyticsTaskId)));
  const stepReady=[true,true,projectTasks.length>0,allSynced,statsSavedForAllTasks];
  let maxUnlockedStep=0; for(let index=1;index<stepReady.length;index++){if(!stepReady[index])break;maxUnlockedStep=index;}
+ function changeStep(next:number){
+  const safe=Math.max(0,Math.min(maxUnlockedStep,Math.min(4,next)));
+  setActiveStep(safe);
+  if(project)onStepChange(project.id,safe);
+ }
+ React.useEffect(()=>{if(activeStep>maxUnlockedStep){setActiveStep(maxUnlockedStep);if(project)onStepChange(project.id,maxUnlockedStep);}},[activeStep,maxUnlockedStep,project?.id]);
+ const syncRate=expected>0?Math.min(100,Math.round(synced/expected*100)):0;
+ const normalizedCurrentPage=(projectResultRows??[]).filter(row=>row.normalized);
+ const normalizedWarningRows=(projectResultRows??[]).filter(row=>(row.normalized?.warnings?.length??0)>0);
  return <section className="module-stack research-workspace research-fullwidth">
   <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><p className="eyebrow">RESEARCH PROJECT WORKSPACE</p><h2>{project.name}</h2><p>{savedProfile?.summary??project.objective}</p></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
   <ResearchProgress activeStep={activeStep} maxUnlockedStep={maxUnlockedStep} stepReady={stepReady}/>
@@ -455,13 +480,15 @@ export function ResearchWizard(props:Props) {
   </Tile>}
   {activeStep===2&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 3 / COLLECTION MONITOR</p><h3>数据抓取与动态运行状态</h3><p>状态每 12 秒自动刷新；Apify Run 完成后继续同步 Dataset，直至所有结果写入数据库。</p></div><Tag type={allSynced?'green':'blue'}>{allSynced?'全部同步完成':'采集进行中'}</Tag></div>
    <div className="research-run-kpis"><div><strong>{projectTasks.length}</strong><span>采集任务</span></div><div><strong>{completedCount}</strong><span>同步完成</span></div><div><strong>{synced.toLocaleString()}</strong><span>已同步记录</span></div><div><strong>{expected.toLocaleString()}</strong><span>预期记录</span></div></div>
+   <div className="research-collection-progress"><div><span>结果同步进度</span><b>{syncRate}%</b></div><ProgressBar label="已同步记录占比" value={syncRate} max={100} size="lg"/><small>{synced.toLocaleString()} / {expected.toLocaleString()} 条已写入 Synesis 数据库。任务运行完成不代表数据已全部同步。</small></div>
    {projectTasks.map(task=><div className="research-task-row" key={task.id}><div><b>{task.platform_slug}</b><p>{({queued:'排队中',running:'运行中',succeeded:'已完成',failed:'失败',cancelled:'已取消'} as Record<string,string>)[task.status]??task.status} · Apify {task.run_status??'等待运行'} · {Number(task.result_synced_count??0).toLocaleString()} / {Number(task.result_count??0).toLocaleString()}</p>{task.error_message&&<p className="error-text">{task.error_message}</p>}{task.external_run_id&&<div className="research-live-log"><div><b>Apify 实时运行日志</b><Button size="sm" kind="ghost" onClick={()=>onLoadLogs(task)}>刷新日志</Button></div><pre>{(taskLogs[task.id]??[]).join('\n')||'正在等待 Apify 输出日志…'}</pre></div>}</div><div className="card-actions">{task.status==='failed'&&<Button size="sm" kind="tertiary" renderIcon={Renew} onClick={()=>onRetry(task)}>重试</Button>}{(['queued','running'].includes(task.status)||(task.status==='succeeded'&&Number(task.result_synced_count??0)<Number(task.result_count??0)))&&<Button size="sm" kind="ghost" renderIcon={Renew} onClick={()=>onSync(task)}>同步 / 刷新</Button>}{['queued','running'].includes(task.status)&&<Button size="sm" kind="danger--tertiary" onClick={()=>onCancel(task)}>取消</Button>}{task.status==='succeeded'&&<Button size="sm" kind="ghost" onClick={()=>onView(task)}>查看结果</Button>}</div></div>)}
    <div className="research-dimension-group"><h4>动态运行事件</h4>{taskEvents.length?taskEvents.map((event,index)=><div className="research-event-row" key={index}><time>{new Date(event.time).toLocaleString()}</time><b>{event.label}</b><span>{event.detail}</span></div>):<p className="research-profile-hint">尚无采集事件。完成第二步平台选择并批准后，运行状态将在这里显示。</p>}</div>
-   {allSynced&&<Button kind="primary" onClick={()=>setActiveStep(3)}>数据已同步，进入统计分析 <ArrowRight size={16}/></Button>}
+   {allSynced&&<Button kind="primary" onClick={()=>changeStep(3)}>数据已同步，进入统计分析 <ArrowRight size={16}/></Button>}
   </Tile>}
   {activeStep===3&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 4 / BUSINESS INTELLIGENCE</p><h3>跨平台数据整理与统计分析</h3><p>先将不同平台的同类字段统一映射，再按数据源查看平台专属统计；原始记录始终独立保留。</p></div><Tag type={allSynced?'green':projectTasks.length?'warm-gray':'blue'}>{allSynced?'数据已就绪':projectTasks.length?'部分数据同步中':'等待采集结果'}</Tag></div>
    <div className="research-run-kpis"><div><strong>{projectTasks.length}</strong><span>数据来源</span></div><div><strong>{Number(projectResultTotal??0).toLocaleString()}</strong><span>已汇总记录</span></div><div><strong>{projectTasks.reduce((sum,task)=>sum+Number(task.result_synced_count??0),0).toLocaleString()}</strong><span>已同步记录</span></div><div><strong>{savedAnalyticsTaskCount}/{projectTasks.length}</strong><span>统计快照已保存</span></div></div>
-   <div className="research-normalization-summary"><div><span>当前页标准化记录</span><b>{(projectResultRows??[]).filter(row=>row.normalized).length} / {(projectResultRows??[]).length}</b></div><div><span>当前页平均字段完整度</span><b>{(projectResultRows??[]).filter(row=>row.normalized).length?Math.round((projectResultRows??[]).filter(row=>row.normalized).reduce((sum,row)=>sum+Number(row.normalized?.quality_score??0),0)/(projectResultRows??[]).filter(row=>row.normalized).length)+'%':'待计算'}</b></div><div><span>需要关注的记录</span><b>{(projectResultRows??[]).filter(row=>(row.normalized?.warnings?.length??0)>0).length}</b></div></div>
+   <div className="research-normalization-summary"><div><span>当前页标准化记录</span><b>{normalizedCurrentPage.length} / {(projectResultRows??[]).length}</b></div><div><span>当前页平均字段完整度</span><b>{normalizedCurrentPage.length?Math.round(normalizedCurrentPage.reduce((sum,row)=>sum+Number(row.normalized?.quality_score??0),0)/normalizedCurrentPage.length)+'%':'待计算'}</b></div><div><span>需要关注的记录</span><b>{normalizedWarningRows.length}</b></div></div>
+   {normalizedWarningRows.length>0&&<details className="research-normalization-warnings"><summary>查看当前页 {normalizedWarningRows.length} 条数据质量提醒</summary><ul>{normalizedWarningRows.map(row=><li key={row.task_id+'-'+row.item_index}><b>{row.platform_slug} · #{row.item_index+1}</b><span>{row.normalized?.warnings.join('；')}</span></li>)}</ul></details>}
    <div className="research-project-analytics-action"><div><b>项目级批量统计</b><p>一次分析全部已完成的数据源，自动保存每个平台的统计快照；已保存的平台会自动跳过。</p></div><Button kind="primary" renderIcon={ChartLine} disabled={busy||!allSynced||statsSavedForAllTasks} onClick={()=>projectId&&onSaveProjectAnalytics(projectId)}>{statsSavedForAllTasks?'全部统计已完成':'生成全部数据源统计 ('+savedAnalyticsTaskCount+'/'+projectTasks.length+')'}</Button></div>
    {projectTasks.map(task=><div className="research-task-row" key={task.id}><div><b>{task.platform_slug}</b><p>{Number(task.result_synced_count??0).toLocaleString()} / {Number(task.result_count??0).toLocaleString()} 条已同步 · {savedAnalyticsTaskIds.has(task.id)?'统计已保存':'等待统计'}</p></div><Button size="sm" kind="tertiary" renderIcon={ChartLine} disabled={busy||task.status!=='succeeded'||Number(task.result_synced_count??0)<Number(task.result_count??0)} onClick={()=>onAnalyze(task)}>查看单平台统计</Button></div>)}
    {projectAnalyticsReports.length>0&&<section className="research-cross-platform-comparison"><div className="module-heading"><div><h4>跨平台统计对比</h4><p>按平台展示各自适用的统计指标；价格只在同币种且字段可比时解读。</p></div><Tag type="green">{projectAnalyticsReports.length} 份快照</Tag></div><div className="cross-platform-results-wrap"><table className="cross-platform-results-table"><thead><tr><th>数据来源</th><th>统计记录</th><th>平均价格</th><th>平均评分</th><th>平均浏览 / 播放</th><th>平均点赞</th><th>互动率</th></tr></thead><tbody>{projectAnalyticsReports.map(report=>{const metrics=(report.content as any)?.metrics??{};const coverage=(report.content as any)?.coverage??{};const evidence=report.evidence?.[0];return <tr key={report.id}><td>{evidence?.platform_slug??report.title.split(' ')[0]}</td><td>{Number(coverage.analyzed??evidence?.result_synced_count??0).toLocaleString()}</td><td>{metrics.average_price==null?'—':Number(metrics.average_price).toFixed(2)+' '+String(metrics.price_currency??'')}</td><td>{metrics.average_rating==null?'—':Number(metrics.average_rating).toFixed(2)}</td><td>{metrics.average_views==null?'—':Number(metrics.average_views).toLocaleString()}</td><td>{metrics.average_likes==null?'—':Number(metrics.average_likes).toLocaleString()}</td><td>{metrics.engagement_rate==null?'—':(Number(metrics.engagement_rate)*100).toFixed(2)+'%'}</td></tr>;})}</tbody></table></div></section>}
@@ -476,15 +503,15 @@ export function ResearchWizard(props:Props) {
   {activeStep===4&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 5 / AI STRATEGY & REPORT</p><h3>AI 深度分析与商业策略报告</h3><p>基于已同步数据和统计结果，形成可追溯的市场研究报告。</p></div><Tag type={projectReports.some(report=>report.report_type==='market_research')?'green':'blue'}>{projectReports.some(report=>report.report_type==='market_research')?'报告已保存':'等待分析'}</Tag></div>
    <div className="research-report-topics"><span>产品开发策略</span><span>定价策略</span><span>目标市场策略</span><span>消费者人群策略</span><span>竞争策略</span><span>营销与渠道策略</span><span>风险与行动计划</span></div>
    <div className="research-report-evidence"><b>报告输入范围</b><span>{projectTasks.length} 个数据源</span><span>{projectTasks.reduce((sum,task)=>sum+Number(task.result_synced_count??0),0).toLocaleString()} 条已同步记录</span><span>{savedAnalyticsTaskCount} 份统计快照</span></div>
-   {projectReports.filter(report=>report.report_type==='market_research').map(report=><div className="research-saved-report" key={report.id}><div className="report-row"><div><strong>{report.title}</strong><p>{new Date(report.created_at).toLocaleString()} · {report.status}</p></div><Tag type="green">已保存</Tag></div><ResearchReportContent content={report.content}/><details><summary>查看完整结构化 JSON 与证据</summary><pre className="result-json">{JSON.stringify({content:report.content,evidence:report.evidence},null,2)}</pre></details></div>)}
+   {projectReports.filter(report=>report.report_type==='market_research').map(report=><div className="research-saved-report" key={report.id}><div className="report-row"><div><strong>{report.title}</strong><p>{new Date(report.created_at).toLocaleString()} · {report.status}</p></div><div className="card-actions"><Button kind="tertiary" size="sm" onClick={()=>downloadResearchReport(report,'json')}>导出 JSON</Button><Button kind="tertiary" size="sm" onClick={()=>downloadResearchReport(report,'markdown')}>导出 Markdown</Button><Tag type="green">已保存</Tag></div></div><ResearchReportContent content={report.content}/><details><summary>查看完整结构化 JSON 与证据</summary><pre className="result-json">{JSON.stringify({content:report.content,evidence:report.evidence},null,2)}</pre></details></div>)}
    <div className="research-ai-report-action"><p>{statsSavedForAllTasks?"第五步已就绪。AI 将综合全部平台的原始采集统计与研究需求，生成可追溯的商业策略报告。":"请先在第四步完成全部数据源的统计快照。当前 "+savedAnalyticsTaskCount+"/"+projectTasks.length+" 个数据源已完成。"}</p><Button kind="primary" disabled={busy||!statsSavedForAllTasks||!projectTasks.length} onClick={()=>onGenerateReport(project.id)}>{projectReports.some(report=>report.report_type==='market_research')?'重新生成 AI 研究报告':'开始 AI 深度分析并生成报告'}</Button></div>
   </Tile>}
   <div className="research-step-footer research-workflow-actions">
-   <Button className="research-workflow-button" kind="tertiary" disabled={activeStep===0} onClick={()=>setActiveStep(v=>Math.max(0,v-1))}>上一步</Button>
+   <Button className="research-workflow-button" kind="tertiary" disabled={activeStep===0} onClick={()=>changeStep(activeStep-1)}>上一步</Button>
    <div className="research-workflow-spacer"/>
    <Button className="research-workflow-button" kind="danger--ghost" disabled={busy} onClick={onBack}>取消</Button>
    <Button className="research-workflow-button" kind="tertiary" disabled={busy} onClick={()=>onSaveDraft({brief:project.objective,formValues,profile:savedProfile??null,activeStep,selectedSources},project.id)}>暂存</Button>
-   <Button className="research-workflow-button" kind="primary" disabled={activeStep===4||!stepReady[activeStep+1]} onClick={()=>setActiveStep(v=>Math.min(4,v+1))}>下一步</Button>
+   <Button className="research-workflow-button" kind="primary" disabled={activeStep===4||!stepReady[activeStep+1]} onClick={()=>changeStep(activeStep+1)}>下一步</Button>
   </div>
  </section>;
 }
