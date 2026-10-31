@@ -432,9 +432,10 @@ function App() {
     const savedByTask=new Map(savedAnalytics.flatMap(report=>(report.evidence??[]).filter(item=>item.task_id).map(item=>[item.task_id as string,report.content] as const)));
     if(projectTasks.some(task=>!savedByTask.has(task.id))) throw new Error('第四步的项目统计快照尚未全部保存。');
     const analyses = projectTasks.map(task=>({platform:task.platform_slug,taskId:task.id,analysis:savedByTask.get(task.id)}));
+    const normalizationSummary=await api('tasks.project-normalization-summary',{projectId});
     const response = await api('ai.invoke',{provider:selectedProvider,model:providerModels[selectedProvider],messages:[
-      {role:'system',content:'你是 Synesis 的跨境商业智能研究负责人。请用中文输出一份可供管理层决策的完整研究报告。严格依据研究目标、研究画像、目标地区、实际采集任务和各数据源统计快照。报告必须包含：执行摘要、研究范围与方法、市场概览、跨平台对比、产品开发策略、定价策略、目标市场进入策略、消费者画像与需求、竞争策略、营销与销售渠道、商业机会、风险、30/60/90天行动路线图、数据质量评估、数据局限和待验证假设。对每项关键结论标记“数据事实 / AI 推断 / 商业建议 / 待验证假设”，引用对应平台名称、统计覆盖数和实际字段/指标；不能把不同币种价格直接比较，不能把播放量、销量、搜索排名混为同一指标。不得虚构市场规模、销量、利润、人口属性、竞争份额或未提供的指标。没有证据时明确写“数据不足，暂不判断”。输出严格 JSON，不要 Markdown 代码围栏，字段使用 executive_summary、research_scope、market_overview、cross_platform_comparison、product_development_strategy、pricing_strategy、market_entry_strategy、customer_persona_strategy、competitive_strategy、marketing_channel_strategy、opportunities、risks、action_roadmap、data_quality_assessment、limitations、assumptions_to_validate。数组项应包含结论、依据、类型和来源。'},
-      {role:'user',content:JSON.stringify({research_objective:project.objective,research_profile:project.scope?.research_profile??null,intake_form:project.scope?.intake_form??{},target_regions:project.target_regions,selected_platforms:project.platform_slugs,collection_settings:project.scope?.collection_settings??null,data:analyses})}
+      {role:'system',content:'你是 Synesis 的跨境商业智能研究负责人。请用中文输出一份可供管理层决策的完整研究报告。严格依据研究目标、研究画像、目标地区、实际采集任务、各数据源统计快照及全项目标准化质量汇总。字段完整度评分不代表事实准确率或模型置信度；报告需披露标准化覆盖率、平均完整度和质量提醒数量。报告必须包含：执行摘要、研究范围与方法、市场概览、跨平台对比、产品开发策略、定价策略、目标市场进入策略、消费者画像与需求、竞争策略、营销与销售渠道、商业机会、风险、30/60/90天行动路线图、数据质量评估、数据局限和待验证假设。对每项关键结论标记“数据事实 / AI 推断 / 商业建议 / 待验证假设”，引用对应平台名称、统计覆盖数和实际字段/指标；不能把不同币种价格直接比较，不能把播放量、销量、搜索排名混为同一指标。不得虚构市场规模、销量、利润、人口属性、竞争份额或未提供的指标。没有证据时明确写“数据不足，暂不判断”。输出严格 JSON，不要 Markdown 代码围栏，字段使用 executive_summary、research_scope、market_overview、cross_platform_comparison、product_development_strategy、pricing_strategy、market_entry_strategy、customer_persona_strategy、competitive_strategy、marketing_channel_strategy、opportunities、risks、action_roadmap、data_quality_assessment、limitations、assumptions_to_validate。数组项应包含结论、依据、类型和来源。'},
+      {role:'user',content:JSON.stringify({research_objective:project.objective,research_profile:project.scope?.research_profile??null,intake_form:project.scope?.intake_form??{},target_regions:project.target_regions,selected_platforms:project.platform_slugs,collection_settings:project.scope?.collection_settings??null,normalization_summary:normalizationSummary,data:analyses})}
     ]});
     const raw = extractAIText(response.result,selectedProvider).trim();
     let content:Record<string,unknown>;
@@ -444,7 +445,7 @@ function App() {
     } catch { content={executive_summary:raw,analysis_format:'plain_text',limitations:['模型未返回可解析的结构化 JSON，请查看原始内容并重新生成。']}; }
     const {error}=await supabase.from('market_reports').insert({
       user_id:session.user.id,project_id:projectId,title:`${project.name} · AI 研究报告`,
-      report_type:'market_research',content,evidence:analyses.map(item=>({task_id:item.taskId,platform_slug:item.platform})),
+      report_type:'market_research',content,evidence:[...analyses.map(item=>({task_id:item.taskId,platform_slug:item.platform})),{normalization_summary:normalizationSummary}],
       status:'generated',generated_at:new Date().toISOString(),
     });
     if(error) throw error;
