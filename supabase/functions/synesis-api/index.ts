@@ -471,22 +471,27 @@ Deno.serve(async (req: Request) => {
           if (!stop.has(word) && !/^\d+$/.test(word)) words.set(word,(words.get(word)??0)+1);
         }
       }
-      const sorted = [...priceValues].sort((a,b)=>a-b);
+      const comparableCurrency = currencyPrices.size === 1 && !currencyPrices.has('UNKNOWN')
+        ? [...currencyPrices.keys()][0] : null;
+      const comparablePrices = comparableCurrency ? (currencyPrices.get(comparableCurrency) ?? []) : [];
+      const sorted = [...comparablePrices].sort((a,b)=>a-b);
       const percentile = (p:number) => sorted.length ? sorted[Math.min(sorted.length-1,Math.floor((sorted.length-1)*p))] : null;
       const average = (values:number[]) => values.length ? values.reduce((sum,value)=>sum+value,0)/values.length : null;
       const top = (map:Map<string,number>) => [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10).map(([label,count])=>({label,count}));
       const trends = [...trendMap.entries()].sort((a,b)=>a[0].localeCompare(b[0])).slice(-30).map(([date,point])=>({date,count:point.count,average_price:average(point.prices)}));
-      const bands = [
-        {label:'0–25',count:priceValues.filter(v=>v>=0&&v<25).length},
-        {label:'25–50',count:priceValues.filter(v=>v>=25&&v<50).length},
-        {label:'50–100',count:priceValues.filter(v=>v>=50&&v<100).length},
-        {label:'100–250',count:priceValues.filter(v=>v>=100&&v<250).length},
-        {label:'250+',count:priceValues.filter(v=>v>=250).length},
+      const makeBands = (values:number[]) => [
+        {label:'0–25',count:values.filter(v=>v>=0&&v<25).length},
+        {label:'25–50',count:values.filter(v=>v>=25&&v<50).length},
+        {label:'50–100',count:values.filter(v=>v>=50&&v<100).length},
+        {label:'100–250',count:values.filter(v=>v>=100&&v<250).length},
+        {label:'250+',count:values.filter(v=>v>=250).length},
       ];
+      const bands = comparableCurrency ? makeBands(comparablePrices) : [];
+      const bandsByCurrency = [...currencyPrices.entries()].map(([currency,values])=>({currency,bands:makeBands(values)}));
       return json({
         task, coverage:{analyzed:records.length,available:total,complete:total<=analysisLimit},
-        metrics:{average_price:average(priceValues),min_price:sorted.length?sorted[0]:null,max_price:sorted.length?sorted[sorted.length-1]:null,median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),average_rating:average(ratingValues),average_reviews:average(reviewValues),price_count:priceValues.length,rating_count:ratingValues.length,review_count:reviewValues.length},
-        distributions:{price_bands:bands,brands:top(brands),categories:top(categories),words:top(words),price_by_currency:[...currencyPrices.entries()].map(([currency,values])=>({currency,count:values.length,average:average(values),min:Math.min(...values),max:Math.max(...values)})).sort((a,b)=>b.count-a.count)},
+        metrics:{average_price:average(comparablePrices),min_price:sorted.length?sorted[0]:null,max_price:sorted.length?sorted[sorted.length-1]:null,median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),price_currency:comparableCurrency,price_comparable:Boolean(comparableCurrency),average_rating:average(ratingValues),average_reviews:average(reviewValues),price_count:priceValues.length,comparable_price_count:comparablePrices.length,rating_count:ratingValues.length,review_count:reviewValues.length},
+        distributions:{price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),price_by_currency:[...currencyPrices.entries()].map(([currency,values])=>({currency,count:values.length,average:average(values),min:Math.min(...values),max:Math.max(...values)})).sort((a,b)=>b.count-a.count)},
         trends,
         funnel, field_counts:fieldCounts,
         quality:{title_rate:records.length?fieldCounts.title/records.length:0,price_rate:records.length?fieldCounts.price/records.length:0,currency_rate:records.length?fieldCounts.currency/records.length:0,rating_rate:records.length?fieldCounts.rating/records.length:0,reviews_rate:records.length?fieldCounts.reviews/records.length:0,brand_rate:records.length?fieldCounts.brand/records.length:0,category_rate:records.length?fieldCounts.category/records.length:0,image_rate:records.length?fieldCounts.image/records.length:0,link_rate:records.length?fieldCounts.link/records.length:0,sku_rate:records.length?fieldCounts.sku/records.length:0,description_rate:records.length?fieldCounts.description/records.length:0,sales_rate:records.length?fieldCounts.sales/records.length:0,stock_rate:records.length?fieldCounts.stock/records.length:0}
