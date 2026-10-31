@@ -404,7 +404,7 @@ html, body { overflow-x:clip; }
   .raw-json-details { margin-top:0; }
 }
 @media (max-width:380px) {
-  .page-wrap { padding-left:3px !important; padding-right:3px !important; }
+  .page-wrap { padding-inline:var(--cds-spacing-03) !important; }
   .carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.product-grid,.project-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
   .vault-card,.analytics-card,.product-tile,.list-tile { padding:8px; }
   .card-actions { flex-wrap:wrap; }
