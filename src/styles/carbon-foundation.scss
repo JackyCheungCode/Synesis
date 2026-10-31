@@ -641,3 +641,26 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   .synesis-app .module-heading { align-items: flex-start; flex-wrap: wrap; }
   .synesis-app .module-heading p { max-width: none; }
 }
+
+
+/* Carbon Grid composition for module-level work surfaces. */
+.synesis-app .dashboard-carbon-grid,
+.synesis-app .product-carbon-grid,
+.synesis-app .collection-settings-carbon-grid,
+.synesis-app .vault-carbon-grid {
+  width: 100%;
+  min-width: 0;
+}
+.synesis-app .dashboard-carbon-grid > .cds--col,
+.synesis-app .product-carbon-grid > .cds--col,
+.synesis-app .collection-settings-carbon-grid > .cds--col,
+.synesis-app .vault-carbon-grid > .cds--col {
+  min-width: 0;
+}
+.synesis-app .dashboard-carbon-grid .dashboard-metric,
+.synesis-app .product-carbon-grid .product-tile,
+.synesis-app .collection-settings-carbon-grid .collection-setting-card,
+.synesis-app .vault-carbon-grid .vault-card {
+  height: 100%;
+  min-width: 0;
+}

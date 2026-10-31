@@ -1,4 +1,4 @@
-import { Button, NumberInput, RadioButton, RadioButtonGroup, Tag, Tile } from '@carbon/react';
+import { Button, Column, Grid, NumberInput, RadioButton, RadioButtonGroup, Tag, Tile } from '@carbon/react';
 import { Save } from '@carbon/icons-react';
 
 export type CollectionSettings = {
@@ -20,9 +20,9 @@ const depthOptions = [
 ] as const;
 
 export function CollectionSettingsPage({ settings, onChange, onSave, saving = false }: Props) {
-  return <section className="module-stack collection-settings-page">
+  return <section className="module-stack collection-settings-page" aria-label="调研采集设置">
     <div className="module-heading"><Tag type="blue">新研究默认值</Tag></div>
-    <Tile className="collection-setting-card">
+    <Grid condensed className="collection-settings-carbon-grid"><Column sm={4} md={8} lg={8} xlg={8}><Tile className="collection-setting-card">
       <div className="collection-setting-heading"><div><h3>每个平台返回数量</h3><p>每个平台分别应用此数量。</p></div><Tag type="cool-gray">数量上限</Tag></div>
       <NumberInput
         id="collection-items-per-platform"
@@ -42,7 +42,7 @@ export function CollectionSettingsPage({ settings, onChange, onSave, saving = fa
         {[50, 100, 300, 500, 1000].map(count => <Button key={count} kind={settings.itemsPerPlatform === count ? 'primary' : 'tertiary'} size="sm" aria-pressed={settings.itemsPerPlatform === count} disabled={saving} onClick={() => onChange({ ...settings, itemsPerPlatform: count })}>{count.toLocaleString()} 条</Button>)}
       </div>
     </Tile>
-    <Tile className="collection-setting-card">
+    <Column sm={4} md={8} lg={8} xlg={8}><Tile className="collection-setting-card">
       <div className="collection-setting-heading"><div><h3>默认采集深度</h3><p>决定默认数据范围。</p></div><Tag type="cool-gray">任务默认值</Tag></div>
       <RadioButtonGroup
         name="collection-depth"
@@ -56,7 +56,7 @@ export function CollectionSettingsPage({ settings, onChange, onSave, saving = fa
       <div className="collection-depth-descriptions">
         {depthOptions.map(option => <div className={settings.depth === option.value ? 'is-selected' : ''} key={option.value}><b>{option.label}</b><p>{option.description}</p></div>)}
       </div>
-    </Tile>
+    </Tile></Column></Grid>
     
     <div className="collection-settings-actions"><Button kind="primary" renderIcon={Save} onClick={onSave} disabled={saving} aria-busy={saving}>保存采集设置</Button></div>
   </section>;

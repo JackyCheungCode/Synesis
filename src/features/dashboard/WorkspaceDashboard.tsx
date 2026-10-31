@@ -1,4 +1,4 @@
-import { Button, Tile } from '@carbon/react';
+import { Button, Column, Grid, Tile } from '@carbon/react';
 import { Add } from '@carbon/icons-react';
 
 type Props = {
@@ -21,18 +21,18 @@ export function WorkspaceDashboard({ projectCount, pendingPlanCount, taskCount, 
 
   return (
     <div className="dashboard-layout">
-      <section className="dashboard-metrics" aria-label="工作空间关键指标">
+      <Grid condensed className="dashboard-carbon-grid" aria-label="工作空间关键指标">
         {metrics.map(metric => (
-          <Tile className="dashboard-metric" key={metric.key}>
+          <Column key={metric.key} sm={2} md={4} lg={4} xlg={4}><Tile className="dashboard-metric">
             <dl>
               <dt className="dashboard-metric-label">{metric.label}</dt>
               <dd className="dashboard-metric-value" aria-label={`${metric.label}：${values[metric.prop]}`}>
                 {values[metric.prop].toLocaleString('zh-CN')}
               </dd>
             </dl>
-          </Tile>
+          </Tile></Column>
         ))}
-      </section>
+      </Grid>
 
       {projectCount === 0 && (
         <div className="dashboard-empty" role="status">

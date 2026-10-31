@@ -204,3 +204,18 @@ test('Carbon page frame uses Carbon Grid and left-aligned page headings', () => 
   assert.match(foundation, /\.synesis-app \.page-title-row\s*\{[^}]*justify-content:\s*flex-start/s);
   assert.match(foundation, /\.synesis-app \.page-heading-copy h1\s*\{[^}]*text-align:\s*left/s);
 });
+
+
+test('Core module pages compose their content with Carbon Grid and Column', () => {
+  const dashboard = read('../src/features/dashboard/WorkspaceDashboard.tsx');
+  const products = read('../src/features/products/ProductLibrary.tsx');
+  const settings = read('../src/features/settings/CollectionSettingsPage.tsx');
+  const vault = read('../src/features/settings/CredentialVault.tsx');
+  for (const source of [dashboard, products, settings, vault]) {
+    assert.match(source, /\bGrid\b/);
+    assert.match(source, /\bColumn\b/);
+    assert.match(source, /<Grid condensed/);
+  }
+  assert.match(products, /<InlineLoading description="正在更新商品数据"/);
+  assert.match(products, /暂无标准化商品/);
+});

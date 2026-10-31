@@ -7,8 +7,8 @@
 | 层级 | 统一规则 | 当前证据 | 状态 |
 |---|---|---|---|
 | 1. 全局 Shell | Carbon Header、单一一级导航组、叠加式 SideNav、Skip link、主内容焦点目标 | `src/App.tsx`、`src/components/WorkspaceNavigation.tsx` | 源码已存在；键盘与移动端待浏览器验收 |
-| 2. 页面布局 | Carbon Grid/Column；左对齐 Page Header；统一标题、内容、操作区域；桌面/平板/手机 gutter | `src/App.tsx`、`src/styles/carbon-foundation.scss` | 本轮统一页面框架；逐页结构审查待完成 |
-| 3. 控件 | 优先使用 `@carbon/react` 正式组件与 Carbon token；可见 Label；不以 placeholder 代替 Label | Dashboard、Research、Products、Settings、Vault 页面组件 | 组件基础已使用；逐控件规格审查待完成 |
+| 2. 页面布局 | Carbon Grid/Column；左对齐 Page Header；统一标题、内容、操作区域；桌面/平板/手机 gutter | `src/App.tsx`、`src/styles/carbon-foundation.scss`、Dashboard / Products / Settings / Vault 页面组件 | 主页面框架及四个模块页使用 Carbon Grid；Research 详情逐段重构待完成 |
+| 3. 控件 | 优先使用 `@carbon/react` 正式组件与 Carbon token；可见 Label；不以 placeholder 代替 Label | Dashboard、Research、Products、Settings、Vault 页面组件 | 四个常规模块页的布局控件已改用 Carbon Grid；逐控件规格审查待完成 |
 | 4. 交互状态 | Loading、Empty、Error、Success、Disabled、Busy；错误不静默；保存和异步操作有反馈 | App 状态、Research ErrorBoundary、各页面状态组件 | 覆盖不完整；逐页面补齐与验证中 |
 | 5. 无障碍 | H1-H3 顺序、键盘可达、可见焦点、状态播报、焦点回归、缩放与对比度 | Skip link、aria-live、表单 Label、Research Progress | 源码检查部分完成；读屏与键盘实测待完成 |
 
