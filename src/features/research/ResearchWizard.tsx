@@ -212,7 +212,7 @@ function CrossPlatformResultsTable({rows}:{rows:UnifiedResultRow[]}) {
 }
 
 
-const reportSectionLabels:Record<string,string>={executive_summary:'执行摘要',market_overview:'市场概览',product_development_strategy:'产品开发策略',pricing_strategy:'定价策略',market_entry_strategy:'目标市场与进入策略',customer_persona_strategy:'消费者画像与需求',competitive_strategy:'竞争策略',marketing_channel_strategy:'营销与销售渠道',opportunities:'商业机会',risks:'风险与约束',action_roadmap:'30 / 60 / 90 天行动路线图',limitations:'数据局限与待验证假设'};
+const reportSectionLabels:Record<string,string>={executive_summary:'执行摘要',research_scope:'研究范围与方法',market_overview:'市场概览',cross_platform_comparison:'跨平台对比',product_development_strategy:'产品开发策略',pricing_strategy:'定价策略',market_entry_strategy:'目标市场与进入策略',customer_persona_strategy:'消费者画像与需求',competitive_strategy:'竞争策略',marketing_channel_strategy:'营销与销售渠道',opportunities:'商业机会',risks:'风险与约束',action_roadmap:'30 / 60 / 90 天行动路线图',data_quality_assessment:'数据质量评估',limitations:'数据局限',assumptions_to_validate:'待验证假设'};
 function ResearchReportContent({content}:{content:Record<string,any>}) {
  const entries=Object.entries(reportSectionLabels).filter(([key])=>content?.[key]!==undefined&&content?.[key]!==null);
  const renderValue=(value:unknown):React.ReactNode=>{
