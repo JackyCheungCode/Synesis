@@ -191,7 +191,7 @@ function CrossPlatformResultsTable({rows}:{rows:UnifiedResultRow[]}) {
  if(!records.length)return <div className="platform-results-empty"><p>当前项目还没有已同步的记录。</p><small>采集任务同步数据后，这里会自动汇总所有平台的共性字段。</small></div>;
  return <div className="cross-platform-results-wrap">
   <div className="cross-platform-normalization-note">优先展示标准化字段 · 原始数据完整保留 · 悬停字段值可查看原始字段名</div>
-  <table className="cross-platform-results-table"><thead><tr><th>数据来源</th><th>实体类型</th><th>记录序号</th><th>数据质量</th>{columns.map(column=><th key={column.key}>{column.label}</th>)}</tr></thead>
+  <table className="cross-platform-results-table"><thead><tr><th scope="col">数据来源</th><th scope="col">实体类型</th><th scope="col">记录序号</th><th scope="col">数据质量</th>{columns.map(column=><th key={column.key} scope="col">{column.label}</th>)}</tr></thead>
    <tbody>{records.map(({meta,record})=>{
     const normalized=meta.normalized;
     const warnings=normalized?.warnings??[];
@@ -199,7 +199,7 @@ function CrossPlatformResultsTable({rows}:{rows:UnifiedResultRow[]}) {
      <td><Tag type="blue">{meta.platform_slug}</Tag></td>
      <td>{normalized?.entity_type??'待标准化'}</td>
      <td>{meta.item_index+1}</td>
-     <td><span title={warnings.join('；')||'字段映射无警告'} className={warnings.length?'normalization-quality-warning':'normalization-quality-good'}>{normalized?normalized.quality_score+'%':'原始'}</span></td>
+     <td><span title={warnings.join('；')||'字段映射无警告'} className={warnings.length?'normalization-quality-warning':'normalization-quality-good'} aria-label={warnings.length?warnings.join('；'):'字段映射无警告'}>{normalized?normalized.quality_score+'%':'原始'}</span></td>
      {columns.map(column=>{
       const value=record[column.key];
       const source=normalized?.field_sources?.[column.key];
