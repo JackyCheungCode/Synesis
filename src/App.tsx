@@ -194,7 +194,8 @@ function App() {
       }
       const keys = Array.from(new Set(rows.flatMap(row=>Object.keys(row))));
       const csvCell = (value: unknown) => {
-        const text = value !== null && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '');
+        const raw = value !== null && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '');
+        const text = /^[=+\\-@\\t\\r]/.test(raw) ? `'${raw}` : raw;
         return `"${text.replace(/"/g,'""')}"`;
       };
       const csv = [keys.map(csvCell).join(','),...rows.map(row=>keys.map(key=>csvCell(row[key])).join(','))].join('\\r\\n');
