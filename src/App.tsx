@@ -18,7 +18,7 @@ import { supabase } from './lib/supabase';
 
 type Page = WorkspacePage;
 type Credential = { slug: string; name: string; kind: 'provider' | 'integration'; status: string; key_last4?: string; last_validated_at?: string };
-type Project = { id: string; name: string; objective: string; status: string; target_regions: string[]; platform_slugs: string[] };
+type Project = { id: string; name: string; objective: string; status: string; target_regions: string[]; platform_slugs: string[]; scope?: Record<string,any> };
 type Plan = { id: string; project_id: string; status: string; plan: Record<string, unknown>; estimated_cost: number | null; created_at: string };
 type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string; progress?: number; result_count?: number; run_status?: string | null; external_run_id?: string | null; error_message?: string | null; finished_at?: string | null; result_synced_count?: number };
 type MarketReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; content:Record<string,unknown> };
@@ -85,7 +85,7 @@ function App() {
     setBusy(true);
     try {
       const [p, pl, t, c, r] = await Promise.all([
-        supabase.from('research_projects').select('id,name,objective,status,target_regions,platform_slugs').order('updated_at',{ascending:false}),
+        supabase.from('research_projects').select('id,name,objective,status,target_regions,platform_slugs,scope').order('updated_at',{ascending:false}),
         supabase.from('ai_research_plans').select('id,project_id,status,plan,estimated_cost,created_at').order('created_at',{ascending:false}),
         supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at,progress,result_count,result_synced_count,run_status,external_run_id,error_message,finished_at').order('created_at',{ascending:false}),
         api('credentials.list'),
