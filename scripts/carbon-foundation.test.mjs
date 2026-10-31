@@ -80,3 +80,13 @@ test('Carbon shell provides a first-focus skip link with a visible focus state',
   assert.match(foundation, /\.synesis-skip-link:focus-visible/);
   assert.match(foundation, /transform: translateY\(-150%\)/);
 });
+
+
+test('Carbon UI shell uses official background, selection, and icon tokens', () => {
+  assert.match(foundation, /\.cds--header\s*\{[\s\S]*?background: var\(--cds-background\)/);
+  assert.match(foundation, /\.synesis-carbon-side-nav \.cds--side-nav__navigation\s*\{[\s\S]*?background: var\(--cds-background\)/);
+  assert.match(foundation, /background: var\(--cds-background-selected\)/);
+  assert.match(foundation, /border-left: 4px solid var\(--cds-border-interactive\)/);
+  assert.match(foundation, /var\(--cds-icon-secondary\)/);
+  assert.match(foundation, /var\(--cds-background-hover\)/);
+});
