@@ -2,7 +2,7 @@
 
 /* Synesis Carbon Design Foundation — all application surfaces consume Carbon semantic tokens. */
 :root {
-  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   font-optical-sizing: auto;
@@ -14,10 +14,10 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   min-height: 100vh;
   color: var(--cds-text-primary);
   background: var(--cds-background);
-  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
-  --synesis-page-gutter: clamp(1rem, 2vw, 2rem);
+  font-family: 'IBM Plex Sans', sans-serif;
+  --synesis-page-gutter: 32px;
   --synesis-section-gap: var(--cds-spacing-05);
-  --synesis-grid-gap: var(--cds-spacing-04);
+  --synesis-grid-gap: var(--cds-spacing-05);
 }
 .synesis-app *, .synesis-app *::before, .synesis-app *::after { box-sizing: border-box; }
 .synesis-app :where(code, pre, kbd, samp, .result-json, .research-live-log pre) {
@@ -99,8 +99,8 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 .synesis-app .cds--content { min-height: 100vh; color: var(--cds-text-primary); background: var(--cds-background); }
 .synesis-app .page-wrap {
   width: 100%;
-  max-width: none;
-  margin: 0;
+  max-width: 1376px;
+  margin: 0 auto;
   padding: var(--cds-spacing-06) var(--synesis-page-gutter) var(--cds-spacing-09);
   gap: var(--synesis-section-gap);
 }
@@ -211,12 +211,12 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   gap: var(--synesis-grid-gap);
 }
 /* 16-column desktop grid; each 4-column unit is one quarter of the canvas. */
-.synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) {
+.synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker,.product-grid,.project-card-grid) {
   display: grid;
   grid-template-columns: repeat(16, minmax(0, 1fr));
   gap: var(--synesis-grid-gap);
 }
-.synesis-app .carbon-grid > * { grid-column: span 4; }
+.synesis-app .carbon-grid > *,.synesis-app .product-grid > *,.synesis-app .project-card-grid > * { grid-column: span 4; }
 .synesis-app .carbon-grid > .wide-tile { grid-column: 1 / -1; }
 .synesis-app .vault-grid > *,.synesis-app .analytics-grid > * { grid-column: span 8; }
 .synesis-app :where(.analytics-kpis,.research-analytics-kpis,.research-intake-grid,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary) > * { grid-column: span 4; }
@@ -229,8 +229,9 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 }
 .synesis-app .synesis-layout-grid > * { min-width: 0; }
 @media (max-width: 1055px) {
+  .synesis-app { --synesis-page-gutter: 24px; }
   .synesis-app .synesis-layout-grid,
-  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) {
+  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker,.product-grid,.project-card-grid) {
     grid-template-columns: repeat(8, minmax(0, 1fr));
   }
   .synesis-app .carbon-grid > *,.synesis-app .vault-grid > *,.synesis-app .analytics-grid > *,.synesis-app :where(.analytics-kpis,.research-analytics-kpis,.research-intake-grid,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary) > * { grid-column: span 4; }
@@ -240,22 +241,23 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 @media (max-width: 672px) {
   .synesis-app { --synesis-page-gutter: 1rem; }
   .synesis-app .synesis-layout-grid,
-  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) {
+  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker,.product-grid,.project-card-grid) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .synesis-app .page-wrap { padding: var(--cds-spacing-05) var(--synesis-page-gutter) var(--cds-spacing-08); }
-  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) > * { grid-column: 1 / -1; }
+  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker,.product-grid,.project-card-grid) > * { grid-column: 1 / -1; }
   .synesis-app .platform-picker > legend { grid-column: 1 / -1; }
+  .synesis-app :where(.analytics-kpis,.research-analytics-kpis) > * { grid-column: span 2; }
   .synesis-app .research-source-grid,
   .synesis-app .research-dimension-grid { grid-template-columns: minmax(0, 1fr) !important; }
   .synesis-app .collection-settings-actions { align-items: stretch; flex-direction: column; }
 }
 @media (max-width: 380px) {
-  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) {
+  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker,.product-grid,.project-card-grid) {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   }
-  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) > * { grid-column: 1 / -1; }
-  .synesis-app .page-wrap { padding-inline: var(--cds-spacing-03); }
+  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker,.product-grid,.project-card-grid) > * { grid-column: 1 / -1; }
+  .synesis-app :where(.analytics-kpis,.research-analytics-kpis) > * { grid-column: 1 / -1; }
 }
 @media (prefers-reduced-motion: reduce) {
   .synesis-app *, .synesis-app *::before, .synesis-app *::after {

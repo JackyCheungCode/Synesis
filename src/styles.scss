@@ -1,7 +1,7 @@
 @use '@carbon/react';
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
-:root { font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif; font-synthesis: none; text-rendering: optimizeLegibility; }
+:root { font-family: 'IBM Plex Sans', sans-serif; font-synthesis: none; text-rendering: optimizeLegibility; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: var(--cds-background); }
 .synesis-app { min-height: 100vh; color: var(--cds-text-primary); background: var(--cds-background); }
@@ -24,7 +24,7 @@ body { margin: 0; min-width: 320px; background: var(--cds-background); }
 .workspace-bar { width:100%; position: sticky; top: 3rem; z-index: 5; display:flex; align-items:center; gap: 20px; justify-content:space-between; padding: 12px clamp(24px,3vw,48px); background:var(--cds-layer-01); border-bottom:1px solid var(--cds-border-subtle); }
 .workspace-bar .cds--search { width:min(560px,65%); }
 .workspace-user { display:flex; align-items:center; gap: 12px; color:var(--cds-text-secondary); font-size:12px; }
-.page-wrap { width:100%; max-width:none; margin: 0; padding: 20px clamp(16px,1.5vw,28px) 48px; display:flex; flex-direction:column; gap: 20px; }
+.page-wrap { display:flex; flex-direction:column; min-width:0; }
 .page-title-row,.module-heading { display:flex; align-items:flex-end; justify-content:space-between; gap: 20px; }
 .eyebrow { color:var(--cds-text-secondary); letter-spacing:1.5px; font-size:10px; margin: 0 0 8px; }
 h1 { color:var(--cds-text-primary); font-size:28px; font-weight:500; margin: 0; }
@@ -65,7 +65,7 @@ h3 { color:var(--cds-text-primary); font-size:15px; margin: 0 0 8px; font-weight
   .synesis-content { padding-top: 3rem; }
   .workspace-bar { top:3rem; padding: 12px 16px; }
   .workspace-user > span { display:none; }
-  .page-wrap { padding: 24px 4px 44px; gap: 20px; }
+  
   h1 { font-size:23px; }
   .page-title-row,.module-heading { align-items:flex-start; }
   .carbon-grid,.vault-grid { grid-template-columns:1fr; }
@@ -130,7 +130,7 @@ h3 { color:var(--cds-text-primary); font-size:15px; margin: 0 0 8px; font-weight
   .synesis-content { padding-top: 3rem; }
   .workspace-bar { top:3rem; padding: 12px 16px; }
   .workspace-user > span { display:none; }
-  .page-wrap { padding: 24px 4px 44px; }
+  
   h1 { font-size:23px; }
   .page-title-row,.module-heading { align-items:flex-start; }
   .carbon-grid,.vault-grid { grid-template-columns:1fr; }
@@ -157,7 +157,7 @@ h3 { color:var(--cds-text-primary); font-size:15px; margin: 0 0 8px; font-weight
 .synesis-app .cds--data-table th { color:var(--cds-text-secondary); background: var(--cds-layer-02); }
 .synesis-app .cds--data-table td { color:var(--cds-text-primary); background:var(--cds-layer-01); }
 .synesis-app .cds--tag { color:var(--cds-text-secondary); }
-@media (min-width: 1600px) { .page-wrap { max-width:1600px; } }
+@media (min-width: 1600px) {  }
 
 /* Compact workspace canvas and top-level header actions. */
 .synesis-content { padding-top: 3rem; }
@@ -165,10 +165,10 @@ h3 { color:var(--cds-text-primary); font-size:15px; margin: 0 0 8px; font-weight
 .synesis-app .cds--header__global .cds--btn { min-height:2rem; padding-inline: 16px; }
 .synesis-app .cds--header__global .cds--header__action { color:var(--cds-text-secondary); }
 .synesis-app .cds--header__global .cds--header__action:hover { background:var(--cds-layer-hover-01); color:var(--cds-text-primary); }
-.page-wrap { max-width:none; padding-left: clamp(16px,1.5vw,28px); padding-right: clamp(16px,1.5vw,28px); padding-top: 20px; gap: 16px; }
+
 .page-title-row { margin-bottom: 4px; }
 @media (max-width:672px) {
-  .page-wrap { padding: 16px 4px 36px; gap: 16px; }
+  
   .synesis-app .cds--header__global { padding-right: 8px; gap: 4px; }
   .synesis-app .cds--header__global .cds--btn { padding-inline: 12px; }
 }
@@ -176,7 +176,7 @@ h3 { color:var(--cds-text-primary); font-size:15px; margin: 0 0 8px; font-weight
 
 /* Mobile layout refinements: compact gutters and two-column cards. */
 @media (max-width:672px) {
-  .page-wrap { padding: 16px 12px 32px; gap: 16px; }
+  
   .carbon-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap: 12px; }
   .carbon-grid > .cds--tile { min-height:116px; padding: 16px; }
   .carbon-grid .wide-tile { grid-column:1/-1; }
@@ -191,7 +191,7 @@ h3 { color:var(--cds-text-primary); font-size:15px; margin: 0 0 8px; font-weight
   .page-title-row,.module-heading { gap: 12px; }
 }
 @media (max-width:360px) {
-  .page-wrap { padding-left: 12px; padding-right: 12px; }
+  
   .vault-card { padding: 12px; }
   .card-actions { flex-direction:column; align-items:stretch; }
 }
@@ -199,7 +199,7 @@ h3 { color:var(--cds-text-primary); font-size:15px; margin: 0 0 8px; font-weight
 
 /* Final mobile ergonomics: balanced page gutters and consistent two-column cards. */
 @media (max-width:672px) {
-  .page-wrap { padding: 16px 12px 32px; }
+  
   .carbon-grid,
   .vault-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .carbon-grid { gap: 12px; }
@@ -210,13 +210,7 @@ h3 { color:var(--cds-text-primary); font-size:15px; margin: 0 0 8px; font-weight
 /* Use the full available workspace width on large displays. */
 @media (min-width:1056px) {
   .synesis-content { width:auto; min-width:0; }
-  .page-wrap {
-    width:100%;
-    max-width:none;
-    margin: 0;
-    padding-left: clamp(20px,2vw,36px);
-    padding-right: clamp(20px,2vw,36px);
-  }
+  
 }
 
 /* Multidimensional product analytics */
@@ -290,7 +284,7 @@ html, body { overflow-x:clip; }
 .synesis-app { width:100%; max-width:100%; min-width:0; overflow-x:clip; }
 .synesis-app .cds--content,
 .synesis-content { width:auto; max-width:100%; min-width:0; }
-.page-wrap { width:100%; max-width:100%; min-width:0; }
+
 .page-wrap > *, .page-wrap .cds--tile, .page-wrap .module-stack,
 .page-wrap .analytics-card, .page-wrap .vault-card { min-width:0; max-width:100%; }
 .page-title-row > div { min-width:0; }
@@ -312,7 +306,7 @@ html, body { overflow-x:clip; }
 
 @media (max-width:672px) {
   .synesis-content { padding-top: 3rem; }
-  .page-wrap { padding: 16px 12px 28px; gap: 16px; }
+  
   .page-title-row { align-items:flex-start; flex-direction:column; gap: 8px; }
   .page-title-row h1 { font-size:clamp(21px,6vw,25px); line-height:1.25; }
   .page-title-row .cds--tag { align-self:flex-start; }
@@ -349,7 +343,7 @@ html, body { overflow-x:clip; }
 }
 
 @media (max-width:380px) {
-  .page-wrap { padding-left: 12px; padding-right: 12px; }
+  
   .analytics-kpis { grid-template-columns:minmax(0,1fr); }
   .platform-picker { grid-template-columns:minmax(0,1fr); }
   .flow-steps { gap: 8px; }
@@ -357,15 +351,15 @@ html, body { overflow-x:clip; }
 }
 
 
-/* 2026-10 mobile density pass: 1/3 gutters, two-column cards, Carbon controls. */
+/* Mobile density refinements: component spacing only; grid columns and page gutters live in Carbon Foundation. */
 @media (max-width:672px) {
-  .page-wrap { padding-left: 4px !important; padding-right: 4px !important; gap: 12px; }
+  
   .carbon-grid,
   .vault-grid,
   .analytics-grid,
   .analytics-kpis,
   .product-grid,
-  .project-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap: 8px; }
+  .project-card-grid { gap: 8px; }
   .carbon-grid > .cds--tile,
   .vault-card,
   .analytics-card,
@@ -390,8 +384,8 @@ html, body { overflow-x:clip; }
   .raw-json-details { margin-top: 0; }
 }
 @media (max-width:380px) {
-  .page-wrap { padding-inline: var(--cds-spacing-03) !important; }
-  .carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.product-grid,.project-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+  
+  /* Grid tracks and mobile page gutters are owned by carbon-foundation.scss. */
   .vault-card,.analytics-card,.product-tile,.list-tile { padding: 8px; }
   .card-actions { flex-wrap:wrap; }
 }
@@ -399,12 +393,9 @@ html, body { overflow-x:clip; }
 
 .synesis-app .cds--content,
 .synesis-app .synesis-content { margin-left: 0 !important; width:100%; min-width:0; }
-.synesis-app .page-wrap {
-  width:100%; max-width:none; margin: 0; padding-left: clamp(16px, 1.15vw, 24px);
-  padding-right: clamp(16px, 1.15vw, 24px);
-}
+.synesis-app 
 @media (max-width:672px) {
-  .synesis-app .page-wrap { padding: 16px 12px 28px; }
+  .synesis-app 
 }
 
 
@@ -535,12 +526,7 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
   width:100% !important; max-width:none !important; min-width:0;
   margin: 0 !important; padding-left: 0 !important; padding-right: 0 !important;
 }
-.synesis-app .page-wrap {
-  display:flex; flex-direction:column; gap: 1rem;
-  width:100% !important; max-width:none !important; min-width:0;
-  margin: 0 !important; padding: 1rem 12px 2.5rem !important;
-  box-sizing:border-box;
-}
+.synesis-app 
 .synesis-app .research-workspace,
 .synesis-app .research-fullwidth { display:flex; flex-direction:column; gap: 1rem; width:100% !important; max-width:none !important; min-width:0; }
 .synesis-app .research-workspace > *,
@@ -605,7 +591,7 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
  .synesis-app .research-analytics-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 @media(max-width:672px) {
- .synesis-app .page-wrap { padding: 0.75rem 8px 2rem !important; }
+ .synesis-app 
  .synesis-app .research-stepper { grid-template-columns:repeat(5,minmax(0,1fr)); }
  .synesis-app .research-step { flex-direction:column; justify-content:center; gap: 0.25rem; min-height:4.25rem; padding: 0.5rem 0.25rem; text-align:center; font-size:.68rem; }
  .synesis-app .research-step > span { width:1.5rem; height:1.5rem; flex-basis:1.5rem; }
@@ -758,7 +744,7 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
 }
 .synesis-app .page-title-row .cds--breadcrumb,
 .synesis-app .research-page-breadcrumb .cds--breadcrumb {
-  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 .synesis-app .synesis-workspace-tag {
   border-radius: 0;
@@ -771,14 +757,14 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
 }
 .synesis-app .research-start-tile h2,
 .synesis-app .research-progress-tile h3 {
-  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 .synesis-app .research-carbon-progress {
   width: 100%;
   margin: 24px 0 8px;
 }
 .synesis-app .research-carbon-progress .cds--progress-step__label {
-  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: var(--cds-label-01-font-size);
   line-height: var(--cds-label-01-line-height);
 }
@@ -864,7 +850,7 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
   align-items: baseline;
   flex-wrap: wrap;
   gap: 12px;
-  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 1rem;
   font-weight: 600;
 }
@@ -926,7 +912,7 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
 }
 .synesis-app .research-start-tile .cds--label,
 .synesis-app .research-start-tile .cds--form__helper-text {
-  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 /* Deprecated sticky intake footer styles removed: actions remain in document flow. */
 .synesis-app .research-intake-sticky-footer .cds--btn {

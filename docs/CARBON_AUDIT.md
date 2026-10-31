@@ -365,5 +365,16 @@ Carbon 官方依据：
   - `b8f95916abe32d6ec678fbc54835006f1d6a1141` — Dashboard 专属间距收敛到 8px 网格。
   - `6df68b465aaf9c2b1b5a8f4ac3023faa2b583860` — Dashboard 静态回归断言。
 - 修复：移除彩色 Tag 流程节点；KPI 使用 definition list 语义与数字等宽；流程使用有序列表；新增零项目空状态；保留“开始新研究”主操作；布局限定在 dashboard-* 命名空间，避免影响其他页面；断点为 1055px / 672px；Dashboard 专属间距使用 Carbon spacing-03/05/06 等 8px 倍数 token。
-- 静态结论：源码整改完成；自动化 CI 正在触发/待结果；没有可用真实浏览器控制环境，未做 320/375/768/1024/1440px 截图、内容溢出或键盘实测。
+- 静态结论：源码整改完成；GitHub Actions run `41212938186` 的 build 与 deploy 均成功（2026-10-31）；没有可用真实浏览器控制环境，未做 320/375/768/1024/1440px 截图、内容溢出或键盘实测。
 - 待验证：四个 KPI 的 0/常规/大数值；项目列表空/有数据；320/375/768/1024/1440px；200%/400% 缩放；键盘与 NVDA/VoiceOver。
+
+
+### LAY-01 共享布局风险整改记录（2026-10-31）
+
+- 范围：src/styles.scss、src/styles/carbon-foundation.scss、scripts/carbon-foundation.test.mjs。
+- 修复：页面 gutter 统一为桌面 32px、平板 24px、移动端 16px；页面画布最大宽度 1376px（扣除内侧 gutter 后内容区约 1312px），1440px 视口两侧安全边距 32px。
+- 栅格：统一 16/8/4 列断点；全站网格 gap 使用 Carbon spacing-05（16px）；商品卡片与项目卡片纳入统一栅格；移动端普通内容卡片单列，分析 KPI 在 381–672px 双列、380px 及以下单列。
+- 级联清理：移除 styles.scss 中重复 page-wrap gutter、Research 全局 page-wrap 强制 padding、移动端 4px 强制 gutter 与两列强制覆盖；page-wrap 由 Carbon Foundation 统一管理。
+- 字体：全局 UI 字体栈统一为 IBM Plex Sans；移除 Noto Sans TC 后备字体声明。代码字体继续使用 IBM Plex Mono。
+- 自动化：新增 LAY-01 静态断言，覆盖字体栈、gutter token、画布宽度、网格 token、移动端 KPI 列数及禁止旧式 important 网格覆盖。
+- 证据边界：本次为源码与静态测试整改；未取得真实浏览器控制与 320/375/768/1024/1440px 截图，故 LAY-01 运行时视觉验收仍未关闭。需回归 Dashboard、Research、Products、Settings、Vault。

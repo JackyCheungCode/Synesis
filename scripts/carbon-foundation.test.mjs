@@ -44,6 +44,7 @@ test('responsive foundation defines the 16/8/4 grid and reduced motion', () => {
 
 test('Carbon typography and code font families are loaded', () => {
   assert.match(styles, /IBM\+Plex\+Mono/);
+  assert.doesNotMatch(styles + foundation, /Noto Sans TC/);
   assert.match(foundation, /@include type\.type-style\('heading-03'\)/);
   assert.match(foundation, /@include type\.type-style\('heading-02'\)/);
 });
@@ -113,4 +114,18 @@ test('Dashboard uses semantic metric descriptions and a responsive ordered workf
   assert.match(foundation, /\.dashboard-metrics\s*\{[\s\S]*?grid-template-columns: repeat\(4,/);
   assert.match(foundation, /\.dashboard-workflow-steps\s*\{[\s\S]*?grid-template-columns: repeat\(5,/);
   assert.match(foundation, /dashboard-workflow-heading \.cds--btn/);
+});
+
+
+test('LAY-01 centralizes page gutters, grid tracks, and responsive card columns', () => {
+  assert.match(foundation, /--synesis-page-gutter:\s*32px/);
+  assert.match(foundation, /--synesis-page-gutter:\s*24px/);
+  assert.match(foundation, /--synesis-page-gutter:\s*1rem/);
+  assert.match(foundation, /max-width:\s*1376px/);
+  assert.match(foundation, /--synesis-grid-gap:\s*var\(--cds-spacing-05\)/);
+  assert.match(foundation, /\.product-grid/);
+  assert.match(foundation, /\.project-card-grid/);
+  assert.match(foundation, /\.analytics-kpis,.research-analytics-kpis\) > \* \{ grid-column: span 2; \}/);
+  assert.doesNotMatch(styles, /\.page-wrap\s*\{[^}]*!important/);
+  assert.doesNotMatch(styles, /grid-template-columns:\s*repeat\(2,[^;]*!important/);
 });
