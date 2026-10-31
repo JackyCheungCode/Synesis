@@ -7,6 +7,7 @@ import {
 import { Button, InlineNotification, Tag, TextInput, Tile } from '@carbon/react';
 import { BrandIcon } from './components/BrandIcon';
 import { platforms, providers, services, apiIntegrations } from './data/catalog';
+import { useAuth } from './auth/AuthProvider';
 
 type Page = 'dashboard' | 'platforms' | 'ai-models' | 'projects' | 'market-watch' | 'reports';
 
@@ -14,6 +15,7 @@ const navPlatformItems = platforms;
 const initialKeys: Record<string, string> = {};
 
 function App() {
+  const { session, signOut } = useAuth();
   const [theme, setTheme] = useState<'white' | 'g100'>(() => {
     const saved = localStorage.getItem('synesis-theme');
     return saved === 'g100' ? 'g100' : 'white';
@@ -93,7 +95,7 @@ function App() {
           <div className="top-actions">
             <button className="icon-button" onClick={switchTheme} aria-label="Toggle theme">{dark ? <Sun size={20}/> : <Moon size={20}/>}</button>
             <button className="icon-button notification-button" onClick={() => setNotice('目前没有新的系统通知。')} aria-label="Notifications"><Notification size={20}/><i /></button>
-            <div className="user-chip"><span className="user-avatar">S</span><span>Workspace</span><ChevronDown size={14}/></div>
+            <div className="user-chip"><span className="user-avatar">S</span><span>{session?.user.email ?? 'Workspace'}</span><Button kind="ghost" size="sm" onClick={() => void signOut()}>登出</Button></div>
           </div>
         </header>
 
