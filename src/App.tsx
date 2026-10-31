@@ -20,7 +20,8 @@ type Project = { id: string; name: string; objective: string; status: string; ta
 type Plan = { id: string; project_id: string; status: string; plan: Record<string, unknown>; estimated_cost: number | null; created_at: string };
 type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string };
 
-const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/synesis-api`;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vuyyaqsmlzixhdjvaidj.supabase.co';
+const fnUrl = `${supabaseUrl}/functions/v1/synesis-api`;
 const providerModels: Record<string, string> = {
   openai: 'gpt-4.1-mini', googlegemini: 'gemini-2.5-flash', deepseek: 'deepseek-chat',
   anthropic: 'claude-3-7-sonnet-latest', cloudflare: '@cf/meta/llama-3.3-70b-instruct',
@@ -30,7 +31,7 @@ const providerModels: Record<string, string> = {
 function App() {
   const { session, signOut } = useAuth();
   const [page, setPage] = useState<Page>('dashboard');
-  const [navExpanded, setNavExpanded] = useState(true);
+  const [navExpanded, setNavExpanded] = useState(() => window.matchMedia('(min-width: 66rem)').matches);
   const [dark, setDark] = useState(false);
   const [notice, setNotice] = useState<{kind:'info'|'success'|'error'|'warning'; text:string}|null>(null);
   const [busy, setBusy] = useState(false);
@@ -138,7 +139,7 @@ function App() {
   const pageRows = tasks.filter(t => !search || t.platform_slug.includes(search.toLowerCase()));
 
   return (
-    <div className={dark ? 'synesis-app theme-dark' : 'synesis-app'}>
+    <div className={dark ? 'synesis-app theme-dark cds--g100' : 'synesis-app cds--white'}>
       <Header aria-label="Synesis">
         <HeaderMenuButton aria-label="切换导航" isActive={navExpanded} onClick={() => setNavExpanded(v=>!v)} />
         <HeaderName prefix="" href="#" onClick={e=>e.preventDefault()}>SYNESIS</HeaderName>
