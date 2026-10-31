@@ -71,7 +71,7 @@ function AuthScreen() {
           <TextInput id="auth-password" type="password" labelText="密码" placeholder="至少 8 位字符" value={password} onChange={e => setPassword(e.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} required minLength={8} />
           <Button type="submit" kind="primary" size="lg" className="auth-submit" disabled={busy || !email.trim() || password.length < 8}>{busy ? '请稍候…' : mode === 'signin' ? '登录 Synesis' : '创建账户'}</Button>
         </form>
-        <div className="auth-switch">{mode === 'signin' ? '还没有账户？' : '已经有账户？'} <button type="button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setMessage(null); }}>{mode === 'signin' ? '注册账户' : '返回登录'}</button></div>
+        <div className="auth-switch">{mode === 'signin' ? '还没有账户？' : '已经有账户？'} <Button type="button" kind="ghost" size="sm" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setMessage(null); }}>{mode === 'signin' ? '注册账户' : '返回登录'}</Button></div>
         <div className="auth-security">由 Supabase Auth 提供身份验证。API Provider 密钥不会用于登录，也不会存储在浏览器本地。</div>
       </section>
       <div className="auth-side-copy"><span>RESEARCH THE WORLD.</span><strong>Turn global signals<br/>into business insight.</strong><p>跨平台数据 · 统一情报层 · AI 驱动研究</p></div>
