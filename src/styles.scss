@@ -1346,3 +1346,6 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
  .synesis-app .research-intake-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px 12px max(10px,env(safe-area-inset-bottom))}
  .synesis-app .research-intake-actions .cds--btn{width:100%;min-width:0;margin:0}
 }
+
+.synesis-app .research-country-option{display:inline-flex;align-items:center;gap:10px;min-width:0}
+.synesis-app .research-country-option img{width:20px;height:20px;flex:0 0 20px;border-radius:50%;object-fit:cover;border:1px solid var(--cds-border-subtle)}
