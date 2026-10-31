@@ -223,7 +223,7 @@ Deno.serve(async (req: Request) => {
           response = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':clear,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:model||'claude-3-7-sonnet-latest',max_tokens:16,messages:[{role:'user',content:prompt}]})});
         } else if (slug === 'cloudflare') {
           if (!config.base_url) return json({error:'请先填写 Cloudflare Account ID'},400);
-          response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${cloudflareModelPath(model || '@cf/meta/llama-3.3-70b-instruct')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}]})});
+          response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${cloudflareModelPath(model || config.default_model || '@cf/meta/llama-3.3-70b-instruct-fp8-fast')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}]})});
         } else return json({error:'该 Provider 尚未实现连接测试'},400);
       } else return json({error:'该集成尚未实现连接测试'},400);
       if (!response.ok) {
@@ -237,7 +237,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'ai.invoke') {
       const { provider, model, messages } = body;
-      const { clear } = await getCredential(provider,'provider');
+      const { config, clear } = await getCredential(provider,'provider');
       let response: Response;
       if (provider === 'openai' || provider === 'deepseek' || provider === 'mistral' || provider === 'x') {
         const base = provider==='openai'?'https://api.openai.com/v1':provider==='deepseek'?'https://api.deepseek.com':provider==='mistral'?'https://api.mistral.ai/v1':'https://api.x.ai/v1';
@@ -286,7 +286,7 @@ Deno.serve(async (req: Request) => {
       } else if(provider==='cloudflare') {
         const {config}=await getCredential(provider,'provider');
         if(!config.base_url) return json({error:'请先配置 Cloudflare Account ID'},400);
-        response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/@cf/meta/llama-3.3-70b-instruct`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:system},{role:'user',content:prompt}],max_tokens:5000})});
+        response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${cloudflareModelPath(config.default_model || '@cf/meta/llama-3.3-70b-instruct-fp8-fast')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:system},{role:'user',content:prompt}],max_tokens:5000})});
       } else return json({error:'该 AI Provider 暂不支持研究需求解析'},400);
       const result=await response.json().catch(()=>({}));
       if(!response.ok) return json({error:result?.error?.message??'AI 研究需求解析失败'},502);
