@@ -337,7 +337,7 @@ function ResearchWizardContent(props:Props) {
   const combined=[formBrief,brief.trim()].filter(Boolean).join('\n\n补充说明：\n');
   onCreate(combined,profile??createProfileFromForm(),project?.id);
  }
- const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
+ const savedProfile=project?.scope?.research_profile as ResearchProfile|undefined;
  const selectedPlanSources=Array.from(new Set(selectedSources.filter(source=>sourceGroups.some(group=>group.items.includes(source)))));
  const completedCount=projectTasks.filter(t=>t.status==='succeeded'&&Number(t.result_synced_count??0)>=Number(t.result_count??0)).length;
  const taskEvents=projectTasks.flatMap(task=>[
