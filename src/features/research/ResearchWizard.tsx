@@ -18,6 +18,7 @@ const stages = ['输入需求','Apify 采集','数据汇总','AI 分析','研究
 function stageIndex(project:ResearchProject, plan:ResearchPlan|undefined, tasks:ResearchTask[], reports:ResearchReport[]) {
   if (reports.length) return 4;
   if (tasks.length && tasks.every(t=>t.status==='succeeded' && Number(t.result_synced_count??0)>=Number(t.result_count??0))) return 3;
+  if (tasks.length && tasks.every(t=>t.status==='succeeded')) return 2;
   if (tasks.some(t=>['queued','running'].includes(t.status))) return 1;
   if (plan?.status==='pending_approval' || plan?.status==='approved') return 1;
   if (project.status==='completed') return 4;
