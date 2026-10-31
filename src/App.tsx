@@ -68,6 +68,7 @@ function App() {
   const [productHistory,setProductHistory]=useState<ProductHistory[]>([]);
   const [productHistoryTotal,setProductHistoryTotal]=useState(0);
   const [productHistoryOffset,setProductHistoryOffset]=useState(0);
+  const [cancelTaskTarget,setCancelTaskTarget]=useState<Task|null>(null);
 
   const token = session?.access_token ?? '';
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_3zXUJ5hz_1cl9sFQqPVqCQ_Tu5KfaCu', 'Content-Type': 'application/json' }), [token]);
@@ -163,11 +164,16 @@ function App() {
     finally { setBusy(false); }
   }
 
-  async function cancelTask(task:Task) {
-    if(!window.confirm('确定取消这个采集任务？正在运行的 Apify Run 也会尝试终止。')) return;
+  function cancelTask(task:Task) {
+    setCancelTaskTarget(task);
+  }
+
+  async function confirmCancelTask() {
+    if (!cancelTaskTarget) return;
     setBusy(true);
     try {
-      await api('tasks.cancel',{taskId:task.id});
+      await api('tasks.cancel',{taskId:cancelTaskTarget.id});
+      setCancelTaskTarget(null);
       setNotice({kind:'success',text:'取消请求已处理。'});
       await loadAll();
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
@@ -389,6 +395,9 @@ function App() {
       </Content>
       {searchOpen && <Modal open modalHeading="全局搜索" primaryButtonText="完成" secondaryButtonText="清除" onRequestClose={()=>setSearchOpen(false)} onRequestSubmit={()=>setSearchOpen(false)} onSecondarySubmit={()=>setSearch('')}>
         <TextInput id="global-search" labelText="搜索平台、商品、项目与情报" placeholder="输入关键词" value={search} onChange={e=>setSearch(e.target.value)}/>
+      </Modal>}
+      {cancelTaskTarget && <Modal open modalHeading="确认取消采集任务" primaryButtonText="确认取消任务" secondaryButtonText="保留任务" onRequestClose={()=>setCancelTaskTarget(null)} onRequestSubmit={()=>void confirmCancelTask()} primaryButtonDisabled={busy}>
+        <p>确定取消这个采集任务？正在运行的 Apify Run 也会尝试终止。已接收的结果会保留。</p>
       </Modal>}
       {resultTask && <Modal open modalHeading={`采集结果 · ${resultTask.platform_slug}`} passiveModal primaryButtonText="关闭" onRequestClose={()=>setResultTask(null)}>
         <p>任务 ID：{resultTask.id} · 当前页显示 {taskResults.length} 条；总计 {resultTotal.toLocaleString()} 条，已同步 {resultSynced.toLocaleString()} 条。</p>
