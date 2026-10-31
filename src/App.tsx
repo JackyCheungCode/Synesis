@@ -216,7 +216,8 @@ function App() {
         return labels[id] ?? id;
       });
       const selectedScope = { ...(project.scope ?? {}), selected_data_sources:selectedSources, selected_data_source_labels:sourceLabels, collection_settings:collectionSettings };
-      const enrichedObjective = project.objective + '\\n\\n用户选择的数据来源平台：' + sourceLabels.join('、') +
+      const baseObjective = String(project.scope?.original_brief ?? project.objective);
+      const enrichedObjective = baseObjective + '\\n\\n用户选择的数据来源平台：' + sourceLabels.join('、') +
         '。采集默认设置：每个平台目标返回 '+collectionSettings.itemsPerPlatform+' 条；采集深度为 '+({light:'快速采集（列表与核心字段）',standard:'标准采集（核心字段与关键互动/评分/基础详情）',deep:'深度采集（在 Actor 支持时扩展详情、评论及关联信息）'}[collectionSettings.depth])+'。请优先寻找这些平台对应的真实可用 Apify Actor，并依据各 Actor 的 Input Schema 将数量和深度映射到有效参数；无法支持的字段要明确说明，不得虚构。';
       const {error} = await supabase.from('research_projects').update({
         objective:enrichedObjective, platform_slugs:selectedSources, scope:selectedScope,
