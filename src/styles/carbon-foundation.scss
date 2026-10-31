@@ -160,7 +160,7 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   outline: 2px solid var(--cds-focus);
   outline-offset: 2px;
 }
-.synesis-app :where(.product-image,.research-approval,.research-dimension,.research-source-card,.research-step-button,.research-run-kpis > div,.research-report-topics span,.normalization-quality-good,.normalization-quality-warning,.synesis-nav-group > summary,.synesis-nav-leaf) { border-radius: 0; }
+.synesis-app :where(.product-image,.research-approval,.research-dimension,.research-source-card,.research-step-button,.research-run-kpis > div,.research-report-topics span,.normalization-quality-good,.normalization-quality-warning) { border-radius: 0; }
 .synesis-app :where(.cds--btn,.cds--text-input,.cds--text-area,.cds--select-input,.cds--dropdown,.cds--list-box,.cds--tile,.cds--tag,.cds--modal-container,.cds--popover,.cds--tooltip,.cds--inline-notification,.cds--toast-notification) {
   border-radius: 0;
 }
