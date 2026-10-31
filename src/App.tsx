@@ -10,11 +10,11 @@ import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content, Grid, Column,
   Breadcrumb, BreadcrumbItem, Button, InlineNotification, Tag, TextInput, Tile,
   Modal, Loading, Accordion, AccordionItem,
-} from '@carbon/react';
+} from './components/ui';
 import {
   Search as SearchIcon, UserAvatar,
-} from '@carbon/icons-react';
-import { LineChart, DonutChart } from '@carbon/charts-react';
+} from './components/icons';
+import { LineChart, DonutChart } from './components/ui';
 import { useAuth } from './auth/AuthProvider';
 import { supabase } from './lib/supabase';
 
@@ -544,7 +544,7 @@ function App() {
   const taskSearchResults = searchTerm ? tasks.filter(item => item.platform_slug.toLocaleLowerCase().includes(searchTerm)).slice(0,6) : [];
 
   return (
-    <div className={`synesis-app synesis-theme-${theme} cds--${theme === 'dark' ? 'g100' : 'white'}`}>
+    <div className={`synesis-app synesis-theme-${theme}`}>
       <Header aria-label="Synesis">
         <a
           className="synesis-skip-link"
@@ -567,7 +567,7 @@ function App() {
       <WorkspaceNavigation page={page} open={navExpanded} onNavigate={(target)=>navigate(target)} onClose={()=>setNavExpanded(false)}/>
       <Content id="main-content" tabIndex={-1} className="synesis-content">
         <Grid fullWidth className="synesis-page-grid"><Column sm={4} md={8} lg={16} xlg={16}><div className="page-wrap">
-          <div className="page-title-row">{page==='projects'&&projectId?<Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb>:<div className="page-heading-copy"><h1 className="cds--type-heading-04">{title[page]}</h1><p className="subheading">{pageDescription[page]}</p></div>}</div>
+          <div className="page-title-row">{page==='projects'&&projectId?<Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb>:<div className="page-heading-copy"><h1 className="page-title">{title[page]}</h1><p className="subheading">{pageDescription[page]}</p></div>}</div>
           {notice && <InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
           {busy && <Loading small withOverlay={false} description="处理中"/>}
           {page==='dashboard' && <WorkspaceDashboard projectCount={projects.length} pendingPlanCount={pendingPlans.length} taskCount={tasks.length} credentialCount={credentials.length} onCreateResearch={()=>navigate('projects')}/>}

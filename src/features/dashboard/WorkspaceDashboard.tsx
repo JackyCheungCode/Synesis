@@ -1,5 +1,5 @@
-import { Button, Column, Grid, Tile } from '@carbon/react';
-import { Add } from '@carbon/icons-react';
+import { Button, Column, Grid, Tile } from '../../components/ui';
+import { Add } from '../../components/icons';
 
 type Props = {
   projectCount: number;
@@ -22,7 +22,7 @@ export function WorkspaceDashboard({ projectCount, pendingPlanCount, taskCount, 
   return (
     <div className="dashboard-layout module-stack">
       <section className="dashboard-welcome" aria-label="工作空间概览"><div><span className="dashboard-eyebrow">TRADE INTELLIGENCE WORKSPACE</span><h2>把市场信号转化为行动</h2><p>从研究需求出发，连接数据采集、分析与决策。</p></div><Button kind="primary" size="lg" renderIcon={Add} onClick={onCreateResearch}>创建研究项目</Button></section>
-      <Grid condensed className="dashboard-carbon-grid" aria-label="工作空间关键指标">
+      <Grid condensed className="dashboard-metric-grid" aria-label="工作空间关键指标">
         {metrics.map(metric => (
           <Column key={metric.key} sm={2} md={4} lg={4} xlg={4}><Tile className="dashboard-metric">
             <dl>

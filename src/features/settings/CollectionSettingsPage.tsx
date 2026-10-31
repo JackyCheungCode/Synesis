@@ -1,5 +1,5 @@
-import { Button, Column, Grid, NumberInput, RadioButton, RadioButtonGroup, Tag, Tile } from '@carbon/react';
-import { Save } from '@carbon/icons-react';
+import { Button, Column, Grid, NumberInput, RadioButton, RadioButtonGroup, Tag, Tile } from '../../components/ui';
+import { Save } from '../../components/icons';
 
 export type CollectionSettings = {
   itemsPerPlatform: number;
@@ -22,7 +22,7 @@ const depthOptions = [
 export function CollectionSettingsPage({ settings, onChange, onSave, saving = false }: Props) {
   return <section className="module-stack collection-settings-page" aria-label="调研采集设置">
     <header className="settings-intro"><span className="dashboard-eyebrow">WORKSPACE PREFERENCES</span><h2>定义新研究的默认采集行为</h2><p>这些设置仅应用于之后创建的研究项目，不会更改现有任务。</p></header>
-    <Grid condensed className="collection-settings-carbon-grid"><Column sm={4} md={8} lg={8} xlg={8}><Tile className="collection-setting-card">
+    <Grid condensed className="collection-settings-grid"><Column sm={4} md={8} lg={8} xlg={8}><Tile className="collection-setting-card">
       <div className="collection-setting-heading"><div><h3>每个平台返回数量</h3><p>每个平台分别应用此数量。</p></div><Tag type="cool-gray">数量上限</Tag></div>
       <NumberInput
         id="collection-items-per-platform"

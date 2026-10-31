@@ -9,8 +9,8 @@ import {
  unstable__FluidMultiSelect as FluidMultiSelect,
  unstable__FluidComboBox as FluidComboBox,
  unstable__FluidNumberInput as FluidNumberInput,
-} from '@carbon/react';
-import { Add, ArrowLeft, ArrowRight, Renew, ChartLine, Close } from '@carbon/icons-react';
+} from '../../components/ui';
+import { Add, ArrowLeft, ArrowRight, Renew, ChartLine, Close } from '../../components/icons';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -157,7 +157,7 @@ function ResearchProgress({activeStep,maxUnlockedStep,stepReady}:{activeStep:num
  return <Tile className="research-progress-tile">
   <div className="module-heading"><div><h3 className="cds--type-heading-03">五步研究工作流</h3><p>按顺序完成研究流程；后续步骤将在前置数据准备完成后解锁。</p></div><Tag type="blue" className="synesis-workspace-tag">第 {activeStep+1} / 5 步</Tag></div>
   <div className="research-progress-scroll" role="region" aria-label="研究流程步骤，可横向滚动查看" tabIndex={0}>
-   <ProgressIndicator currentIndex={activeStep} spaceEqually className="research-carbon-progress">
+   <ProgressIndicator currentIndex={activeStep} spaceEqually className="research-progress">
     {stages.map((label,index)=><ProgressStep key={label} label={label} description={index===activeStep?'当前步骤':stepReady[index]?'已满足前置条件':'等待前序步骤完成'} complete={stepReady[index]&&index<activeStep} current={index===activeStep} disabled={index>maxUnlockedStep}/>)}
    </ProgressIndicator>
   </div>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode, type FormEvent } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { Button, TextInput } from '@carbon/react';
+import { Button, TextInput } from '../components/ui';
 import { supabase } from '../lib/supabase';
 
 type AuthContextValue = { session: Session | null; signOut: () => Promise<void> };
