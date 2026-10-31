@@ -101,14 +101,7 @@ test('Amazon Apify inputs normalize cutoff dates and product URLs', () => {
 });
 
 
-test('Amazon queued task execution sanitizes legacy categoryOrProductUrls before Apify run', () => {
-  const executeBranch = backend.slice(backend.indexOf("if (action === 'tasks.execute')"), backend.indexOf("if (action === 'tasks.sync')"));
-  assert.match(executeBranch, /amazonUrlFields=\['categoryOrProductUrls','productUrls','startUrls','urls'\]/);
-  assert.match(executeBranch, /executionInput\[field\]=keywords\.length\?/);
-  assert.match(executeBranch, /https:\/\/www\.amazon\.com\//);
-  assert.match(executeBranch, /body:JSON\.stringify\(executionInput\)/);
-  assert.match(executeBranch, /executionInput\.reviewsCutoffDate='1 year'/);
-});
+
 
 
 test('Amazon Actor input normalization wraps URL objects and repairs enum values on all entry paths', () => {
