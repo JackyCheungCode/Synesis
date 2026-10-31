@@ -714,6 +714,9 @@ Deno.serve(async (req: Request) => {
       const brands = new Map<string, number>();
       const categories = new Map<string, number>();
       const words = new Map<string, number>();
+      const countries = new Map<string, number>();
+      const reviewWords = new Map<string, number>();
+      const ratingBuckets = new Map<string, number>();
       const MAX_DISTINCT = 5000;
       const incrementBounded = (map:Map<string,number>, key:string) => {
         if (map.has(key)) { map.set(key,(map.get(key)??0)+1); return; }
@@ -725,7 +728,7 @@ Deno.serve(async (req: Request) => {
       const SAMPLE_LIMIT = 10000;
       const currencyStats = new Map<string,{count:number;sum:number;min:number;max:number;sample:number[];bands:number[]}>();
       let priceCount = 0;
-      const fieldCounts = { title:0, price:0, currency:0, rating:0, reviews:0, brand:0, category:0, image:0, link:0, sku:0, description:0, sales:0, sales_rank:0, stock:0 };
+      const fieldCounts = { title:0, price:0, currency:0, rating:0, reviews:0, brand:0, category:0, image:0, link:0, sku:0, description:0, sales:0, sales_rank:0, stock:0, country:0, review_text:0 };
       const trendMap = new Map<string, {count:number;priceCount:number;priceSum:number}>();
       const funnel = { total: 0, titled: 0, priced: 0, rated: 0, imaged: 0, linked: 0 };
       const stop = new Set(['the','and','for','with','from','this','that','you','your','new','pack','set','inch','inches','of','to','a','an','on','by','is','are','（','）']);
@@ -753,6 +756,8 @@ Deno.serve(async (req: Request) => {
         const sales = numeric(pick(row, [/^(sales.?volume|units.?sold|sold.?count|monthly.?sales|estimated.?sales|sales.?count)$/i]));
         const salesRank = numeric(pick(row, [/^(sales.?rank|best.?seller.?rank|bsr|rank)$/i]));
         const stock = numeric(pick(row, [/^(stock|inventory|quantity|available.?quantity|in.?stock)$/i]));
+        const country = pick(row, [/^(country|country.?name|country.?code|region|seller.?location|ship.?from|ships.?from)$/i]);
+        const reviewText = pick(row, [/^(review.?text|review.?content|review.?body|comment.?text|feedback.?text|customer.?review|review)$/i]);
         const dateValue = pick(row, [/^(date|created.?at|published.?at|scraped.?at|timestamp|date.?created)$/i]);
         if (dateValue !== null) {
           const rawTime = typeof dateValue === 'number' ? dateValue : Date.parse(String(dateValue));
@@ -779,7 +784,7 @@ Deno.serve(async (req: Request) => {
           }
         }
         if (currencyValue) fieldCounts.currency++;
-        if (rating !== null && rating >= 0) { ratingStats.sum+=rating; ratingStats.count++; funnel.rated++; fieldCounts.rating++; }
+        if (rating !== null && rating >= 0) { ratingStats.sum+=rating; ratingStats.count++; funnel.rated++; fieldCounts.rating++; const bucket=String(Math.round(rating*2)/2); ratingBuckets.set(bucket,(ratingBuckets.get(bucket)??0)+1); }
         if (reviews !== null && reviews >= 0) { reviewStats.sum+=reviews; reviewStats.count++; fieldCounts.reviews++; }
         if (image) { funnel.imaged++; fieldCounts.image++; }
         if (link) { funnel.linked++; fieldCounts.link++; }
@@ -790,6 +795,12 @@ Deno.serve(async (req: Request) => {
         if (sales !== null && sales >= 0) fieldCounts.sales++;
         if (salesRank !== null && salesRank >= 0) fieldCounts.sales_rank++;
         if (stock !== null && stock >= 0) fieldCounts.stock++;
+        if (country) { fieldCounts.country++; incrementBounded(countries,String(country).trim()); }
+        if (reviewText) {
+          fieldCounts.review_text++;
+          const reviewValue=String(reviewText).toLowerCase();
+          for(const word of reviewValue.match(/[a-z0-9\u4e00-\u9fff]{2,}/g)??[]) if(!stop.has(word)&&!/^\d+$/.test(word)) incrementBounded(reviewWords,word);
+        }
         if (brand) incrementBounded(brands,String(brand).trim());
         if (category) incrementBounded(categories,String(category).trim());
         const textValue = [title, category, brand].filter(Boolean).join(' ').toLowerCase();
@@ -817,10 +828,10 @@ Deno.serve(async (req: Request) => {
       return json({
         task, coverage:{analyzed,available:total,complete:analyzed>=total},
         metrics:{average_price:comparableStats?average(comparableStats.sum,comparableStats.count):null,min_price:comparableStats?.min??null,max_price:comparableStats?.max??null,median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),price_currency:comparableCurrency,price_comparable:Boolean(comparableCurrency),percentiles_approximate:true,average_rating:average(ratingStats.sum,ratingStats.count),average_reviews:average(reviewStats.sum,reviewStats.count),price_count:priceCount,comparable_price_count:comparableStats?.count??0,rating_count:ratingStats.count,review_count:reviewStats.count},
-        distributions:{price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),price_by_currency:[...currencyStats.entries()].map(([currency,stats])=>({currency,count:stats.count,average:average(stats.sum,stats.count),min:stats.min,max:stats.max})).sort((a,b)=>b.count-a.count)},
+        distributions:{price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),countries:top(countries),review_words:top(reviewWords),rating_distribution:[...ratingBuckets.entries()].sort((a,b)=>Number(a[0])-Number(b[0])).map(([rating,count])=>({rating:Number(rating),count})),price_by_currency:[...currencyStats.entries()].map(([currency,stats])=>({currency,count:stats.count,average:average(stats.sum,stats.count),min:stats.min,max:stats.max})).sort((a,b)=>b.count-a.count)},
         trends,
         funnel, field_counts:fieldCounts,
-        quality:{title_rate:analyzed?fieldCounts.title/analyzed:0,price_rate:analyzed?fieldCounts.price/analyzed:0,currency_rate:analyzed?fieldCounts.currency/analyzed:0,rating_rate:analyzed?fieldCounts.rating/analyzed:0,reviews_rate:analyzed?fieldCounts.reviews/analyzed:0,brand_rate:analyzed?fieldCounts.brand/analyzed:0,category_rate:analyzed?fieldCounts.category/analyzed:0,image_rate:analyzed?fieldCounts.image/analyzed:0,link_rate:analyzed?fieldCounts.link/analyzed:0,sku_rate:analyzed?fieldCounts.sku/analyzed:0,description_rate:analyzed?fieldCounts.description/analyzed:0,sales_rate:analyzed?fieldCounts.sales/analyzed:0,sales_rank_rate:analyzed?fieldCounts.sales_rank/analyzed:0,stock_rate:analyzed?fieldCounts.stock/analyzed:0}
+        quality:{title_rate:analyzed?fieldCounts.title/analyzed:0,price_rate:analyzed?fieldCounts.price/analyzed:0,currency_rate:analyzed?fieldCounts.currency/analyzed:0,rating_rate:analyzed?fieldCounts.rating/analyzed:0,reviews_rate:analyzed?fieldCounts.reviews/analyzed:0,brand_rate:analyzed?fieldCounts.brand/analyzed:0,category_rate:analyzed?fieldCounts.category/analyzed:0,image_rate:analyzed?fieldCounts.image/analyzed:0,link_rate:analyzed?fieldCounts.link/analyzed:0,sku_rate:analyzed?fieldCounts.sku/analyzed:0,description_rate:analyzed?fieldCounts.description/analyzed:0,sales_rate:analyzed?fieldCounts.sales/analyzed:0,sales_rank_rate:analyzed?fieldCounts.sales_rank/analyzed:0,stock_rate:analyzed?fieldCounts.stock/analyzed:0,country_rate:analyzed?fieldCounts.country/analyzed:0,review_text_rate:analyzed?fieldCounts.review_text/analyzed:0}
       });
     }
 
