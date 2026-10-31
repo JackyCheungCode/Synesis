@@ -301,7 +301,7 @@ function App() {
       </Modal>}
       {resultTask && <Modal open modalHeading={`采集结果 · ${resultTask.platform_slug}`} passiveModal primaryButtonText="关闭" onRequestClose={()=>setResultTask(null)}>
         <p>任务 ID：{resultTask.id} · 当前页显示 {taskResults.length} 条；总计 {resultTotal.toLocaleString()} 条，已同步 {resultSynced.toLocaleString()} 条。</p>
-        <div className="card-actions"><Button kind="secondary" size="sm" disabled={resultPage===0} onClick={()=>void viewTaskResults(resultTask,resultPage-1)}>上一页</Button><Tag type="blue">第 {resultPage+1} / {Math.max(1,Math.ceil(resultTotal/100))} 页</Tag><Button kind="secondary" size="sm" disabled={(resultPage+1)*100>=resultSynced} onClick={()=>void viewTaskResults(resultTask,resultPage+1)}>下一页</Button><Button kind="tertiary" size="sm" onClick={()=>void exportTaskResults(resultTask)}>导出全部 CSV</Button></div><pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre>
+        <div className="card-actions"><Button kind="secondary" size="sm" disabled={resultPage===0} onClick={()=>void viewTaskResults(resultTask,resultPage-1)}>上一页</Button><Tag type="blue">第 {resultPage+1} / {Math.max(1,Math.ceil(resultTotal/100))} 页</Tag><Button kind="secondary" size="sm" disabled={(resultPage+1)*100>=resultSynced} onClick={()=>void viewTaskResults(resultTask,resultPage+1)}>下一页</Button><Button kind="tertiary" size="sm" onClick={()=>void exportTaskResults(resultTask)}>导出全部 CSV</Button></div><RawResultsTable rows={taskResults}/><details className="raw-json-details"><summary>查看完整原始 JSON</summary><pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre></details>
       </Modal>}
       {approvalPlan && <Modal open modalHeading="审批 AI 研究计划" primaryButtonText="批准并创建采集任务" secondaryButtonText="返回审阅" onRequestClose={()=>setApprovalPlan(null)} onRequestSubmit={()=>void approvePlan(approvalPlan)} primaryButtonDisabled={busy}>
         <p>请审阅研究范围与采集任务。AI 不会猜测 Apify Actor ID；请在下方 JSON 的 platform_tasks[].actor_id 填入你确认的 Actor ID。批准后只创建待执行任务，不会自动启动 Apify。</p><TextArea id="approval-plan-json" labelText="研究计划（可编辑 JSON）" rows={14} value={approvalPlanText} onChange={e=>setApprovalPlanText(e.target.value)} />
@@ -310,6 +310,15 @@ function App() {
   );
 }
 
+
+
+function RawResultsTable({rows}:{rows:unknown[]}) {
+  const records=rows.filter((row):row is Record<string,unknown>=>typeof row==='object'&&row!==null&&!Array.isArray(row));
+  const columns=Array.from(new Set(records.flatMap(row=>Object.keys(row))));
+  const format=(value:unknown)=>value!==null&&typeof value==='object'?JSON.stringify(value):String(value??'—');
+  if(!records.length) return <p>当前页暂无结果记录。</p>;
+  return <div className="raw-results-wrap"><table className="raw-results-table"><thead><tr>{columns.map(key=><th key={key}>{key}</th>)}</tr></thead><tbody>{records.map((row,index)=><tr key={index}>{columns.map(key=><td key={key} title={format(row[key])}>{format(row[key])}</td>)}</tr>)}</tbody></table></div>;
+}
 
 function AnalyticsDashboard({data}:{data:any}) {
   const metrics=data.metrics??{}, coverage=data.coverage??{}, bands=data.distributions?.price_bands??[];
