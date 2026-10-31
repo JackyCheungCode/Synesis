@@ -780,3 +780,17 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
   .synesis-app .research-workflow-actions .cds--btn { width:100%; min-width:0; }
   .synesis-app .research-workflow-actions .cds--btn:nth-child(2) { margin-right:0; }
 }
+
+/* Research workflow actions stay in document flow; use Carbon React Button styling. */
+.synesis-app .research-step-footer,
+.synesis-app .research-workflow-actions {
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+  transform: none !important;
+  box-shadow: none;
+}
+.synesis-app .research-workflow-actions .cds--btn {
+  position: static !important;
+  flex: 0 0 auto;
+}
