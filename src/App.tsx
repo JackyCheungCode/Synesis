@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, SideNav, SideNavItems, SideNavLink, Content,
+  Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, SideNav, SideNavItems, SideNavMenu, SideNavMenuItem, Content,
   Button, InlineNotification, Tag, TextInput, PasswordInput, Tile,
   Toggle, Select, SelectItem, TextArea, Modal, Loading, Accordion, AccordionItem, Link,
 } from '@carbon/react';
@@ -304,13 +304,15 @@ function App() {
       </Header>
       <SideNav aria-label="Synesis 主导航" expanded={navExpanded} isPersistent={true} isFixedNav>
         <SideNavItems>
-          <SideNavLink renderIcon={Dashboard} isActive={page==='dashboard'} onClick={()=>navigate('dashboard')}>情报总览</SideNavLink>
-          <SideNavLink renderIcon={Globe} onClick={()=>navigate('dashboard')}>全球外贸情报</SideNavLink>
-          <SideNavLink renderIcon={Ai} isActive={page==='vault'} onClick={()=>navigate('vault')}>AI 模型与 Key Vault</SideNavLink>
-          <SideNavLink renderIcon={Folder} isActive={page==='projects'} onClick={()=>navigate('projects')}>研究项目中心</SideNavLink>
-          <SideNavLink renderIcon={Play} isActive={page==='tasks'} onClick={()=>navigate('tasks')}>采集任务中心</SideNavLink>
-          <SideNavLink renderIcon={ChartLine} isActive={page==='reports'} onClick={()=>navigate('reports')}>市场监控与报告</SideNavLink>
-          <SideNavLink renderIcon={Folder} isActive={page==='products'} onClick={()=>{navigate('products');void loadProducts(0);}}>标准化商品库</SideNavLink>
+          <SideNavMenu title="跨境市场分析" renderIcon={Globe} defaultExpanded>
+            <SideNavMenuItem isActive={page==='dashboard'} onClick={()=>navigate('dashboard')}>情报总览</SideNavMenuItem>
+            <SideNavMenuItem onClick={()=>navigate('dashboard')}>全球外贸情报</SideNavMenuItem>
+            <SideNavMenuItem isActive={page==='vault'} onClick={()=>navigate('vault')}>AI 模型与 Key Vault</SideNavMenuItem>
+            <SideNavMenuItem isActive={page==='projects'} onClick={()=>navigate('projects')}>研究项目中心</SideNavMenuItem>
+            <SideNavMenuItem isActive={page==='tasks'} onClick={()=>navigate('tasks')}>采集任务中心</SideNavMenuItem>
+            <SideNavMenuItem isActive={page==='reports'} onClick={()=>navigate('reports')}>市场监控与报告</SideNavMenuItem>
+            <SideNavMenuItem isActive={page==='products'} onClick={()=>{navigate('products');void loadProducts(0);}}>标准化商品库</SideNavMenuItem>
+          </SideNavMenu>
         </SideNavItems>
       </SideNav>
       {navExpanded && <Button className="nav-dismiss-overlay" kind="ghost" hasIconOnly renderIcon={Close} iconDescription="关闭导航菜单" onClick={()=>setNavExpanded(false)} /> }
