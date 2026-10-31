@@ -9,6 +9,12 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
     onClose();
     window.requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('.cds--header__menu-trigger')?.focus());
   };
+  const handleSideNavToggle = (event: unknown, value?: boolean) => {
+    if (value === false) {
+      if (typeof event === 'object' && event !== null && 'type' in event && event.type === 'keydown') closeAndFocusTrigger();
+      else onClose();
+    }
+  };
   const navigateAndFocusContent = (target: WorkspacePage) => {
     onNavigate(target);
     window.requestAnimationFrame(() => document.getElementById('main-content')?.focus());
@@ -29,12 +35,7 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
       expanded={open}
       isPersistent={false}
       onOverlayClick={closeAndFocusTrigger}
-      onToggle={(event, value) => {
-        if (!value) {
-          if (typeof event !== 'boolean' && event.type === 'keydown') closeAndFocusTrigger();
-          else onClose();
-        }
-      }}
+      onToggle={handleSideNavToggle}
     >
       <SideNavItems>
         <SideNavMenu
