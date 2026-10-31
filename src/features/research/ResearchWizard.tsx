@@ -373,8 +373,8 @@ export function ResearchWizard(props:Props) {
       {sourceGroups.map(group=><TabPanel key={group.id}>
        <div className="research-platform-category-heading"><div><h4>{group.title}</h4><p>{group.desc}</p></div><Tag type="cool-gray">{group.items.length} 个来源</Tag></div>
        <div className="research-platform-options">
-        {group.items.map(platform=><div className="research-platform-option" key={platform}>
-         <Checkbox id={'source-'+group.id+'-'+platform.replace(/[^a-zA-Z0-9]/g,'-')} labelText={platform} checked={selectedPlanSources.includes(platform)} onChange={(_,data)=>setSelectedSources(values=>data.checked?[...values,platform]:values.filter(value=>value!==platform))}/>
+        {group.items.map((platform,platformIndex)=><div className="research-platform-option" key={platform}>
+         <Checkbox id={'source-'+group.id+'-'+platformIndex} labelText={platform} checked={selectedPlanSources.includes(platform)} onChange={(_,data)=>setSelectedSources(values=>data.checked?(values.includes(platform)?values:[...values,platform]):values.filter(value=>value!==platform))}/>
          {asiaPlatformNames.has(platform)&&<Tag type="purple">中国 / 亚洲</Tag>}
         </div>)}
        </div>
