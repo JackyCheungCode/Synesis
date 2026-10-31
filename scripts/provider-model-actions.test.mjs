@@ -39,3 +39,11 @@ test('Cloudflare Workers AI model namespaces remain path segments', () => {
   assert.equal((backend.match(/cloudflareModelPath\(model \|\| '@cf\/meta\/llama-3\.3-70b-instruct'\)/g) ?? []).length, 2);
   assert.doesNotMatch(backend, /encodeURIComponent\(model \|\| '@cf\/meta\/llama-3\.3-70b-instruct'\)/);
 });
+
+
+test('research plan prompt passes discovered Apify candidates using the declared variable', () => {
+  const planBranch = backend.slice(backend.indexOf("if (action === 'plans.generate')"), backend.indexOf("if (action === 'plans.approve')"));
+  assert.match(planBranch, /const actorCandidates\s*=\[\.\.\.actorMap\.values\(\)\]/);
+  assert.match(planBranch, /JSON\.stringify\(\{project,\s*actor_candidates:\s*actorCandidates\}\)/);
+  assert.doesNotMatch(planBranch, /JSON\.stringify\(\{project,\s*actor_candidates\s*\}\)/);
+});
