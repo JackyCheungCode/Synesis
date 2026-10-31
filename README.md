@@ -38,12 +38,13 @@ Global Trade Intelligence Platform.
 - Private credential tables are inaccessible to anon/authenticated roles.
 - Service-only RPCs access the private schema and Vault encryption key.
 
-## Cloudflare preview
+## Cloudflare deployment
 - Existing Worker script name: `synesis`.
 - Existing workers.dev host: `https://synesis.xg-y.workers.dev`.
-- No custom domain or DNS zone was created.
-- The Worker source now serves the Vite build through the existing `ASSETS` binding; the deployment workflow targets the same `synesis` Worker and keeps `workers_dev` enabled without creating a custom domain.
-- GitHub Actions deploys after a successful build only when repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are configured. Without those secrets, deployment is explicitly skipped and the current live preview remains unchanged.
+- No custom domain or DNS zone is created.
+- Cloudflare Workers Builds is connected to this repository and watches the `develop` branch.
+- Cloudflare Builds runs `npm install --no-audit --no-fund && npm run build`, then `npx wrangler deploy` using the existing Cloudflare build token. This avoids storing a Cloudflare API token in GitHub Actions repository secrets.
+- GitHub Actions remains responsible for CI validation and artifact creation; Cloudflare Builds handles deployment to the existing Worker.
 
 ## Local development
 1. Copy `.env.example` to `.env.local` (the existing public Supabase project values are also used as build fallbacks).
