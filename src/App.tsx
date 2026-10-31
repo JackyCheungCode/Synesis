@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspaceRoute, type WorkspacePage } from './lib/router';
 import { WorkspaceNavigation } from './components/WorkspaceNavigation';
-import { ResearchWizard } from './features/research/ResearchWizard';
+import { ResearchWizard, type ResearchProfile } from './features/research/ResearchWizard';
 import { WorkspaceDashboard } from './features/dashboard/WorkspaceDashboard';
 import { CredentialVault } from './features/settings/CredentialVault';
 import { ProductLibrary } from './features/products/ProductLibrary';
@@ -120,20 +120,32 @@ function App() {
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
-  async function createProject(brief: string) {
-    const researchBrief = brief.trim();
-    if (!researchBrief) return;
-    if (!credentials.some(item=>item.kind==='provider'&&item.status==='validated')) { setNotice({kind:'warning',text:'请先在 AI 模型与 Key Vault 配置并验证一个 AI Provider。'}); return; }
+  async function parseResearchBrief(brief: string): Promise<ResearchProfile> {
+    if (!credentials.some(item=>item.kind==='provider'&&item.status==='validated')) throw new Error('请先在 AI 模型与 Key Vault 配置并验证一个 AI Provider。');
     setBusy(true);
     try {
+      const result = await api('research.parse',{brief:brief.trim(),provider:selectedProvider});
+      if (!result.profile || !Array.isArray(result.profile.dimensions)) throw new Error('AI 返回的研究条件格式无效，请重新解析。');
+      return result.profile as ResearchProfile;
+    } finally { setBusy(false); }
+  }
+  async function createProject(brief: string, profile: ResearchProfile) {
+    const researchBrief = brief.trim();
+    if (!researchBrief || !profile?.dimensions?.length) return;
+    setBusy(true);
+    try {
+      const countries = profile.dimensions.find(item=>item.key==='countries')?.values ?? [];
+      const regions = profile.dimensions.find(item=>item.key==='regions')?.values ?? [];
+      const targetRegions = [...countries,...regions].filter(Boolean);
       const {data,error} = await supabase.from('research_projects').insert({
-        name:researchBrief.length > 56 ? researchBrief.slice(0,56) + '…' : researchBrief,
-        objective:researchBrief, target_regions:[], platform_slugs:[], scope:{input_mode:'natural_language'}, status:'planning',
+        name:(profile.summary || researchBrief).slice(0,56),
+        objective:researchBrief, target_regions:targetRegions, platform_slugs:[],
+        scope:{input_mode:'structured_research',research_profile:profile,original_brief:researchBrief,profile_version:1},
+        status:'planning',
       }).select().single();
       if(error) throw error;
       navigate('projects', data.id);
-      await api('plans.generate',{projectId:data.id,provider:selectedProvider});
-      setNotice({kind:'success',text:'研究需求已提交，AI 正在生成采集计划。'});
+      setNotice({kind:'success',text:'第一步已完成：结构化研究条件已保存。尚未创建采集计划或启动 Apify 任务。'});
       await loadAll();
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
@@ -368,7 +380,8 @@ function App() {
           />}
           {page==='projects' && <ResearchWizard
             projects={projects} plans={plans} tasks={tasks} reports={reports} projectId={projectId} busy={busy}
-            onCreate={(brief)=>void createProject(brief)}
+            onParse={(brief)=>parseResearchBrief(brief)}
+            onCreate={(brief,profile)=>void createProject(brief,profile)}
             onOpen={(id)=>navigate('projects',id)}
             onBack={()=>navigate('projects')}
             onApprove={(plan)=>setApprovalPlan(plan)}
