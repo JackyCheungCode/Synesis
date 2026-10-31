@@ -16,7 +16,7 @@ Global Trade Intelligence Platform.
 - IBM Carbon React components and Carbon icons
 - Brand marks use Simple Icons CDN with local monogram fallback.
 
-## Backend and database
+## Cloudflare Worker\n- Worker script name remains `synesis`.\n- `wrangler.jsonc` targets the existing Worker and its existing workers.dev route; no custom domain or DNS zone is created.\n- `/api/v1/health` is the initial health endpoint. Other API routes intentionally return 404 until implemented.\n- Static frontend assets are served from Vite `dist` when deployed with Wrangler.\n\n## Backend and database
 - Cloudflare Worker: existing `synesis` script; do not rename it.
 - Supabase project: existing `Synesis` project in `eu-central-1`.
 - Core schema: user-owned provider configs, integration metadata, research projects, AI plans, collection tasks, and market reports.

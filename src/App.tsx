@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   Add, Analytics, ArrowRight, ChartLine, ChevronDown, ChevronRight, Cloud,
   Dashboard, DataBase, Document, Folder, Globe, Menu, Moon, Notification,
@@ -163,7 +163,7 @@ function DashboardPage() {
   </>;
 }
 
-function Kpi({ icon, label, value, note, tone }: { icon: React.ReactNode; label: string; value: string; note: string; tone: string }) {
+function Kpi({ icon, label, value, note, tone }: { icon: ReactNode; label: string; value: string; note: string; tone: string }) {
   return <Tile className="kpi-card"><div className={`kpi-icon ${tone}`}>{icon}</div><div><span>{label}</span><strong>{value}</strong><small>{note}</small></div></Tile>;
 }
 
