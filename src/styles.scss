@@ -812,3 +812,91 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
   align-self: auto;
   transform: none !important;
 }
+
+
+/* Carbon-first research workspace refinement */
+.synesis-app .research-page-breadcrumb {
+  margin: 0 0 16px;
+}
+.synesis-app .page-title-row .cds--breadcrumb,
+.synesis-app .research-page-breadcrumb .cds--breadcrumb {
+  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+}
+.synesis-app .synesis-workspace-tag {
+  border-radius: 0;
+}
+.synesis-app .research-workspace .cds--tile {
+  border: 1px solid var(--cds-border-subtle);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--cds-layer-01);
+}
+.synesis-app .research-start-tile h2,
+.synesis-app .research-progress-tile h3 {
+  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+}
+.synesis-app .research-carbon-progress {
+  width: 100%;
+  margin: 24px 0 8px;
+}
+.synesis-app .research-carbon-progress .cds--progress-step__label {
+  font-family: 'IBM Plex Sans', 'Noto Sans TC', sans-serif;
+  font-size: var(--cds-label-01-font-size);
+  line-height: var(--cds-label-01-line-height);
+}
+.synesis-app .research-step-footer,
+.synesis-app .research-workflow-actions {
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--cds-border-subtle);
+  background: transparent;
+  box-shadow: none;
+}
+.synesis-app .research-workflow-spacer {
+  flex: 1 1 auto;
+  min-width: 16px;
+}
+.synesis-app .research-workflow-actions .research-workflow-button,
+.synesis-app .research-workflow-actions .cds--btn {
+  position: static !important;
+  inset: auto !important;
+  min-width: 112px;
+  border-radius: 0;
+  transform: none !important;
+}
+.synesis-app .research-workflow-actions .cds--btn:focus,
+.synesis-app .research-workflow-actions .cds--btn:focus-visible {
+  outline-offset: 1px;
+}
+.synesis-app .research-intake-field .cds--text-input,
+.synesis-app .research-intake-field .cds--text-area,
+.synesis-app .research-intake-field .cds--select-input {
+  border-radius: 0;
+}
+@media (max-width: 672px) {
+  .synesis-app .research-carbon-progress {
+    margin-top: 16px;
+  }
+  .synesis-app .research-step-footer,
+  .synesis-app .research-workflow-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .synesis-app .research-workflow-spacer {
+    display: none;
+  }
+  .synesis-app .research-workflow-actions .cds--btn {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+}
