@@ -293,3 +293,77 @@ h3 { color:#161616; font-size:15px; margin:0 0 6px; font-weight:600; }
 .history-table-wrap{width:100%;overflow:auto}
 .history-table-wrap .task-table{min-width:680px}
 @media(max-width:672px){.product-search-row{align-items:stretch}.product-search-row>*{width:100%}.product-image{height:150px}}
+
+
+/* Responsive workspace layout: keep the viewport fixed and let only data tables scroll. */
+html, body, #root { width:100%; max-width:100%; min-height:100%; }
+html, body { overflow-x:clip; }
+.synesis-app { width:100%; max-width:100%; min-width:0; overflow-x:clip; }
+.synesis-app .cds--content,
+.synesis-content { width:auto; max-width:100%; min-width:0; }
+.page-wrap { width:100%; max-width:100%; min-width:0; }
+.page-wrap > *, .page-wrap .cds--tile, .page-wrap .module-stack,
+.page-wrap .analytics-card, .page-wrap .vault-card { min-width:0; max-width:100%; }
+.page-title-row > div { min-width:0; }
+.page-title-row h1 { overflow-wrap:anywhere; }
+.carbon-grid, .vault-grid, .analytics-grid, .analytics-kpis, .product-grid { min-width:0; }
+.carbon-grid > *, .vault-grid > *, .analytics-grid > *, .analytics-kpis > *, .product-grid > * { min-width:0; }
+.project-form, .project-form > *, .product-search-row, .product-search-row > * { min-width:0; max-width:100%; }
+.cds--inline-notification { width:100%; }
+.cds--modal-container { max-width:calc(100vw - 2rem); }
+.task-table-wrap, .raw-results-wrap, .history-table-wrap { max-width:100%; overscroll-behavior-x:contain; }
+.task-table-wrap, .history-table-wrap { -webkit-overflow-scrolling:touch; }
+.page-wrap pre, .page-wrap code, .page-wrap p, .page-wrap h2, .page-wrap h3 { overflow-wrap:anywhere; }
+
+@media (max-width:1055px) {
+  .synesis-app .cds--content,
+  .synesis-content { margin-left:0; }
+  .synesis-app .cds--side-nav--fixed { position:fixed; }
+}
+
+@media (max-width:672px) {
+  .synesis-content { padding-top:3rem; }
+  .page-wrap { padding:14px 12px 28px; gap:14px; }
+  .page-title-row { align-items:flex-start; flex-direction:column; gap:8px; }
+  .page-title-row h1 { font-size:clamp(21px,6vw,25px); line-height:1.25; }
+  .page-title-row .cds--tag { align-self:flex-start; }
+  .subheading { font-size:12px; line-height:1.5; }
+  .module-heading { align-items:flex-start; flex-direction:column; gap:8px; }
+  .carbon-grid, .vault-grid, .analytics-grid, .product-grid { grid-template-columns:minmax(0,1fr); gap:12px; }
+  .carbon-grid > .cds--tile { min-height:0; padding:16px; }
+  .carbon-grid .wide-tile { grid-column:auto; }
+  .vault-grid { padding:8px 0; }
+  .vault-card { padding:16px; gap:12px; }
+  .analytics-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .analytics-kpis .cds--tile { padding:12px; }
+  .analytics-kpis .metric-value { font-size:1.45rem; }
+  .analytics-card { min-height:0; padding:14px; }
+  .list-tile { width:100%; padding:14px; gap:12px; }
+  .card-actions { width:100%; justify-content:flex-start; }
+  .card-actions .cds--btn { max-width:100%; }
+  .project-form { width:100%; }
+  .platform-picker { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .product-search-row { margin-top:12px; gap:8px; }
+  .product-search-row .cds--text-input-wrapper { flex-basis:100%; width:100%; }
+  .product-grid { grid-template-columns:minmax(0,1fr); }
+  .product-image { height:190px; }
+  .report-row { align-items:flex-start; flex-direction:column; }
+  .pie-layout { gap:12px; }
+  .pie-svg { width:112px; }
+  .bar-row { grid-template-columns:minmax(0,84px) minmax(0,1fr) 36px; }
+  .funnel-row { grid-template-columns:minmax(0,72px) minmax(0,1fr) 42px; }
+  .quality-row { grid-template-columns:58px 34px minmax(0,1fr); }
+  .task-table-wrap, .history-table-wrap { width:calc(100vw - 24px); }
+  .raw-results-wrap { width:100%; }
+  .synesis-app .cds--header__global { padding-right:4px; }
+  .synesis-app .cds--header__global .cds--header__action { width:2.75rem; }
+  .nav-dismiss-overlay { inset:3rem 0 0; }
+}
+
+@media (max-width:380px) {
+  .page-wrap { padding-left:10px; padding-right:10px; }
+  .analytics-kpis { grid-template-columns:minmax(0,1fr); }
+  .platform-picker { grid-template-columns:minmax(0,1fr); }
+  .flow-steps { gap:6px; }
+  .synesis-app .cds--side-nav { max-width:calc(100vw - 40px); }
+}
