@@ -553,21 +553,22 @@ Deno.serve(async (req: Request) => {
         const settingsWarnings:string[]=[];
         if(String(task.platform_slug??'').toLowerCase()==='amazon') {
           const cutoffDefinition=properties.reviewsCutoffDate;
-          if(cutoffDefinition && typeof input.reviewsCutoffDate==='string') {
+          if(cutoffDefinition) {
             const cutoffPattern=typeof cutoffDefinition.pattern==='string'?new RegExp(cutoffDefinition.pattern):/^(\\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])(T[0-2]\\d:[0-5]\\d(:[0-5]\\d)?(\\.\\d+)?Z?)?$|^(\\d+)\\s*(minute|hour|day|week|month|year)s?$/;
-            if(!cutoffPattern.test(input.reviewsCutoffDate)) {
+            if(typeof input.reviewsCutoffDate!=='string' || !cutoffPattern.test(input.reviewsCutoffDate)) {
               input.reviewsCutoffDate=cutoffPattern.test('1 year')?'1 year':new Date().toISOString().slice(0,10);
               settingsWarnings.push('reviewsCutoffDate 格式已自动规范为 Apify 支持的相对时间/日期格式。');
             }
           }
           const productUrlsDefinition=properties.productUrls;
-          if(productUrlsDefinition && Array.isArray(input.productUrls)) {
+          if(productUrlsDefinition) {
+            const originalProductUrls=Array.isArray(input.productUrls)?input.productUrls:[];
             const urlPattern=typeof productUrlsDefinition.items?.pattern==='string'?new RegExp(productUrlsDefinition.items.pattern):null;
             const validProductUrls=(input.productUrls as unknown[]).filter((value):value is string=>{
               if(typeof value!=='string') return false;
               try { const parsed=new URL(value); return (parsed.protocol==='https:'||parsed.protocol==='http:')&&(!urlPattern||urlPattern.test(value)); } catch { return false; }
             });
-            if(validProductUrls.length!==(input.productUrls as unknown[]).length) settingsWarnings.push('已移除不符合 Actor URL 规范的 productUrls 条目。');
+            if(validProductUrls.length!==originalProductUrls.length) settingsWarnings.push('已移除不符合 Actor URL 规范的 productUrls 条目。');
             input.productUrls=validProductUrls;
             if(validProductUrls.length===0 && researchKeywords.length) {
               const generated=researchKeywords.map(keyword=>`https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`);
