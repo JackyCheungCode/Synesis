@@ -700,11 +700,30 @@ Deno.serve(async (req: Request) => {
       const {data:claimed,error:claimError}=await admin.from('collection_tasks').update({status:'running',started_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId).eq('status','queued').select('id').maybeSingle();
       if(claimError||!claimed) return json({error:'任务已被执行或状态已变化'},409);
       const actor=encodeURIComponent(task.actor_id).replace(/%2F/g,'~');
+      const executionInput:Record<string,unknown>=task.input&&typeof task.input==='object'&&!Array.isArray(task.input)?{...(task.input as Record<string,unknown>)}:{};
+      if(String(task.platform_slug??'').toLowerCase()==='amazon') {
+        const amazonUrlFields=['categoryOrProductUrls','productUrls','startUrls','urls'];
+        const isValidHttpUrl=(value:unknown):value is string=>{
+          if(typeof value!=='string'||!value.trim()||/[<>\u0000-\u001f]/.test(value)) return false;
+          try { const parsed=new URL(value.trim()); return (parsed.protocol==='https:'||parsed.protocol==='http:')&&Boolean(parsed.hostname.includes('.')); } catch { return false; }
+        };
+        for(const field of amazonUrlFields) {
+          if(!(field in executionInput)) continue;
+          const original=Array.isArray(executionInput[field])?executionInput[field] as unknown[]:[];
+          const valid=original.filter(isValidHttpUrl).map(value=>value.trim());
+          if(valid.length===0) {
+            const keywords=Array.isArray(executionInput.searchTerms)?executionInput.searchTerms.filter((value):value is string=>typeof value==='string'&&value.trim()):[];
+            executionInput[field]=keywords.length?keywords.map(keyword=>`https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`):['https://www.amazon.com/'];
+          } else executionInput[field]=valid;
+        }
+        if(typeof executionInput.reviewsCutoffDate!=='string'||!/^(\\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])(T[0-2]\\d:[0-5]\\d(:[0-5]\\d)?(\\.\\d+)?Z?)?$|^(\\d+)\\s*(minute|hour|day|week|month|year)s?$/.test(executionInput.reviewsCutoffDate)) executionInput.reviewsCutoffDate='1 year';
+        await admin.from('collection_tasks').update({input:executionInput,updated_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId);
+      }
       let response: Response;
       try {
         response=await fetch(`https://api.apify.com/v2/acts/${actor}/runs`,{
           method:'POST',headers:{Authorization:`Bearer ${apifyToken}`,'Content-Type':'application/json'},
-          body:JSON.stringify(task.input??{}),
+          body:JSON.stringify(executionInput),
         });
       } catch (networkError) {
         const message = networkError instanceof Error ? networkError.message.slice(0,300) : 'Network error';
