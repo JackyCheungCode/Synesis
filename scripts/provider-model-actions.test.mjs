@@ -47,3 +47,18 @@ test('research plan prompt passes discovered Apify candidates using the declared
   assert.match(planBranch, /JSON\.stringify\(\{project,\s*actor_candidates:\s*actorCandidates\}\)/);
   assert.doesNotMatch(planBranch, /JSON\.stringify\(\{project,\s*actor_candidates\s*\}\)/);
 });
+
+
+test('Amazon plans populate required product URL arrays from research keywords', () => {
+  const planBranch = backend.slice(backend.indexOf("if (action === 'plans.generate')"), backend.indexOf("if (action === 'plans.approve')"));
+  assert.match(planBranch, /researchKeywords/);
+  assert.match(planBranch, /https:\/\/www\.amazon\.com\/s\?k=/);
+  assert.match(planBranch, /必填数组字段/);
+  assert.match(planBranch, /categoryOrProductUrls/);
+});
+
+test('queued collection tasks start Apify before result synchronization', () => {
+  assert.match(frontend, /task\.status==='queued'&&!task\.external_run_id/);
+  assert.match(frontend, /api\('tasks\.execute',\{taskId:task\.id\}\)/);
+  assert.match(frontend, /task\.status==='running'&&Boolean\(task\.external_run_id\)/);
+});
