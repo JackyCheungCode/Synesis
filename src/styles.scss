@@ -821,144 +821,6 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
 }
 
 
-/* Carbon fluid research intake */
-.synesis-app .research-fluid-form {
-  width: 100%;
-  background: var(--cds-layer-01);
-}
-.synesis-app .research-intake-accordion {
-  width: 100%;
-  border-top: 1px solid var(--cds-border-subtle);
-}
-.synesis-app .research-intake-accordion .cds--accordion__item {
-  border-bottom: 1px solid var(--cds-border-subtle);
-  border-radius: 0 !important;
-  background: var(--cds-layer-01);
-  box-shadow: none !important;
-}
-.synesis-app .research-intake-accordion .cds--accordion__heading,
-.synesis-app .research-intake-accordion .cds--accordion__content {
-  border-radius: 0 !important;
-}
-.synesis-app .research-accordion-title {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
-}
-.synesis-app .research-accordion-title > b {
-  color: var(--cds-link-primary);
-  font-size: 0.875rem;
-}
-.synesis-app .research-accordion-title > small {
-  color: var(--cds-text-secondary);
-  font-size: 0.75rem;
-  font-weight: 400;
-}
-.synesis-app .research-fluid-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px 16px;
-  width: 100%;
-  padding: 16px 0 24px;
-}
-.synesis-app .research-fluid-field {
-  min-width: 0;
-  width: 100%;
-}
-.synesis-app .research-fluid-span {
-  grid-column: 1 / -1;
-}
-.synesis-app .research-price-range {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(120px, .8fr);
-  gap: 8px;
-  width: 100%;
-}
-.synesis-app .research-checkbox-grid,
-.synesis-app .research-radio-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 16px;
-  width: 100%;
-  padding-top: 8px;
-}
-.synesis-app .research-fluid-form .cds--tile,
-.synesis-app .research-start-tile,
-.synesis-app .research-fluid-form .cds--accordion__item,
-.synesis-app .research-fluid-form .cds--text-input,
-.synesis-app .research-fluid-form .cds--text-area,
-.synesis-app .research-fluid-form .cds--number input,
-.synesis-app .research-fluid-form .cds--list-box,
-.synesis-app .research-fluid-form .cds--list-box__field,
-.synesis-app .research-fluid-form .cds--btn,
-.synesis-app .research-fluid-form .cds--checkbox,
-.synesis-app .research-fluid-form .cds--radio-button-wrapper {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-.synesis-app .research-start-tile {
-  background: var(--cds-layer-01);
-  border: 1px solid var(--cds-border-subtle);
-  box-shadow: none;
-}
-.synesis-app .research-start-tile .cds--label,
-.synesis-app .research-start-tile .cds--form__helper-text {
-  font-family: 'IBM Plex Sans', sans-serif;
-}
-/* Deprecated sticky intake footer styles removed: actions remain in document flow. */
-.synesis-app .research-intake-sticky-footer .cds--btn {
-  min-width: 112px;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-.synesis-app .research-intake-sticky-footer .research-workflow-spacer {
-  flex: 1 1 auto;
-}
-.synesis-app .research-intake-sticky-footer .cds--btn:focus,
-.synesis-app .research-intake-sticky-footer .cds--btn:focus-visible,
-.synesis-app .research-fluid-form :is(input, textarea, button, a):focus-visible {
-  outline: 2px solid var(--cds-focus);
-  outline-offset: 1px;
-}
-@media (max-width: 672px) {
-  .synesis-app .research-fluid-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-  }
-  .synesis-app .research-fluid-span {
-    grid-column: 1;
-  }
-  .synesis-app .research-price-range {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .synesis-app .research-price-range > :last-child {
-    grid-column: 1 / -1;
-  }
-  .synesis-app .research-checkbox-grid,
-  .synesis-app .research-radio-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .synesis-app .research-intake-sticky-footer {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 8px;
-    gap: 8px;
-  }
-  .synesis-app .research-intake-sticky-footer .research-workflow-spacer {
-    display: none;
-  }
-  .synesis-app .research-intake-sticky-footer .cds--btn {
-    width: 100%;
-    min-width: 0;
-    margin: 0;
-  }
-}
-
-
 /* Strict square geometry and token surfaces throughout research screens */
 .synesis-app .research-workspace :is(.cds--tile, .cds--btn, .cds--text-input, .cds--text-area, .cds--number, .cds--list-box, .cds--checkbox, .cds--radio-button-wrapper, .cds--accordion__item) {
   border-radius: 0 !important;
@@ -977,7 +839,7 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
 }
 
 
-/* IBM Cloud-inspired research intake redesign */
+/* Research intake — single source of truth for the requirements page */
 .synesis-app .research-progress-tile {
   padding: 20px 24px;
   border: 1px solid var(--cds-border-subtle);
@@ -1237,7 +1099,6 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
 .synesis-app .research-ai-parse-action{display:flex;align-items:center;justify-content:space-between;gap: 16px;margin: 0 0 24px;padding: 16px;border:1px solid var(--cds-border-subtle);border-left:3px solid var(--cds-support-info);background:var(--cds-layer-02)}
 .synesis-app .research-ai-parse-action b{font-size:.875rem}
 .synesis-app .research-ai-parse-action p{margin: 4px 0 0;color:var(--cds-text-secondary);font-size:.75rem;line-height:1.45}
-.synesis-app .research-intake-actions{position:static!important;inset:auto!important;display:flex;justify-content:space-between;gap: 12px;padding: 16px 32px 20px;border-top:1px solid var(--cds-border-subtle);background:var(--cds-layer-01);box-shadow:none!important}
 .synesis-app .research-intake-actions .cds--btn{min-width:160px;border-radius:0!important}
 .synesis-app .research-intake-actions .cds--btn:disabled{opacity:.45}
 .synesis-app .research-fluid-form .cds--multi-select__wrapper,.synesis-app .research-fluid-form .cds--dropdown{border-radius:0!important}
@@ -1247,7 +1108,6 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
  .synesis-app .research-country-map-heading{flex-direction:column;gap: 4px}
  .synesis-app .research-ai-parse-action{align-items:stretch;flex-direction:column;margin-bottom: 16px;padding: 12px}
  .synesis-app .research-ai-parse-action .cds--btn{width:100%}
- .synesis-app .research-intake-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap: 8px;padding: 12px 12px max(12px,env(safe-area-inset-bottom))}
  .synesis-app .research-intake-actions .cds--btn{width:100%;min-width:0;margin: 0}
 }
 
@@ -1280,7 +1140,6 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
 .synesis-app .research-country-option{display:flex;align-items:center;gap: 8px;min-width:0;color:var(--cds-text-primary)}
 .synesis-app .research-country-flag{display:inline-grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border-radius:50%;overflow:hidden;font-size:18px;line-height:1}
 .synesis-app .research-country-map .leaflet-overlay-pane path{fill:var(--cds-interactive)!important;fill-opacity:.34!important;stroke:var(--cds-interactive)!important;stroke-width:2!important;stroke-opacity:1!important}
-.synesis-app .research-intake-actions{position:static!important;inset:auto!important;top:auto!important;bottom:auto!important}
 
 /* Step 01 corrections: country values are rendered as explicit removable chips,
    while Carbon's internal selection tags are visually suppressed to avoid
@@ -1340,42 +1199,9 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
   padding: 4px;
   border-radius: 0 !important;
 }
-.synesis-app .research-intake-actions {
-  position: static !important;
-  inset: auto !important;
-  bottom: auto !important;
-  top: auto !important;
-  z-index: auto !important;
-  margin: 20px 0 28px !important;
-  padding: 16px 32px !important;
-  border: 1px solid var(--cds-border-subtle);
-  background: var(--cds-layer-01);
-  box-shadow: none !important;
-}
 @media (max-width: 672px) {
-  .synesis-app .research-intake-actions {
-    position: static !important;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin: 16px 0 24px !important;
-    padding: 12px 16px !important;
-  }
   .synesis-app .research-selected-countries { gap: 8px; }
   .synesis-app .research-selected-country { max-width: 100%; }
-}
-
-/* Final regression fixes: selected country tokens remain readable and actions scroll with the document. */
-.synesis-app .research-intake-actions,
-.synesis-app .research-step-footer.research-intake-actions {
-  position: static !important;
-  inset: auto !important;
-  top: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  left: auto !important;
-  z-index: auto !important;
-  box-shadow: none !important;
 }
 .synesis-app .research-fluid-form .cds--multi-select .cds--list-box__field {
   display: flex !important;
@@ -1438,15 +1264,6 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
   border: 1px solid var(--cds-border-subtle);
 }
 @media (max-width: 672px) {
-  .synesis-app .research-intake-actions {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-    padding: 16px 0 20px !important;
-    margin: 0 !important;
-    background: transparent !important;
-    border-top: 1px solid var(--cds-border-subtle);
-  }
   .synesis-app .research-intake-actions .cds--btn {
     width: 100%;
     min-width: 0;
@@ -1522,14 +1339,6 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
   border-radius: 0 !important;
 }
 @media (max-width: 672px) {
-  .synesis-app .research-intake-actions {
-    position: static !important;
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin: 16px 0 24px !important;
-    padding: 12px 16px !important;
-  }
   .synesis-app .research-selected-countries { gap: 8px; }
   .synesis-app .research-selected-country { max-width: 100%; }
 }
@@ -1560,17 +1369,6 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
   background:var(--cds-field-01)!important;
   color:var(--cds-text-primary)!important;
 }
-.synesis-app .research-intake-actions,
-.synesis-app .research-step-footer.research-intake-actions {
-  position:static!important;
-  inset:auto!important;
-  top:auto!important;
-  right:auto!important;
-  bottom:auto!important;
-  left:auto!important;
-  z-index:auto!important;
-  box-shadow:none!important;
-}
 
 /* Flag CDN assets are images, not emoji text: preserve their circular crop in both list and chips. */
 .synesis-app .research-country-option img.research-country-flag,
@@ -1598,18 +1396,6 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:va
   border:1px solid var(--cds-border-subtle)!important;
   border-radius:50%!important;
   background:var(--cds-layer-01)!important;
-}
-/* Last rule wins at every breakpoint: workflow buttons scroll with the page. */
-.synesis-app .research-intake-actions,
-.synesis-app .research-step-footer.research-intake-actions {
-  position:static!important;
-  inset:auto!important;
-  top:auto!important;
-  right:auto!important;
-  bottom:auto!important;
-  left:auto!important;
-  z-index:auto!important;
-  box-shadow:none!important;
 }
 
 

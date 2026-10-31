@@ -129,3 +129,19 @@ test('LAY-01 centralizes page gutters, grid tracks, and responsive card columns'
   assert.doesNotMatch(styles, /\.page-wrap\s*\{[^}]*!important/);
   assert.doesNotMatch(styles, /grid-template-columns:\s*repeat\(2,[^;]*!important/);
 });
+
+test('LAY-02 consolidates Research intake layout rules into one responsive section', () => {
+  const intakeStart = styles.indexOf('/* Research intake — single source of truth for the requirements page */');
+  const platformStart = styles.indexOf('/* Research platform picker');
+  assert.ok(intakeStart >= 0 && platformStart > intakeStart);
+  const intake = styles.slice(intakeStart, platformStart);
+  assert.equal((intake.match(/\.synesis-app \.research-intake-actions\s*\{/g) ?? []).length, 4);
+  assert.equal((intake.match(/\.synesis-app \.research-fluid-grid\s*\{/g) ?? []).length, 2);
+  assert.equal((intake.match(/\.synesis-app \.research-price-range\s*\{/g) ?? []).length, 2);
+  assert.match(intake, /@media \(max-width: 672px\)[\s\S]*?\.research-fluid-grid \{/);
+  assert.match(intake, /position:\s*static/);
+  assert.doesNotMatch(intake, /position:\s*(?:sticky|fixed)/);
+  assert.match(intake, /\.research-country-field[\s\S]*?display: none !important/);
+  assert.match(intake, /\.research-country-map/);
+  assert.doesNotMatch(styles, /research-intake-sticky-footer/);
+});

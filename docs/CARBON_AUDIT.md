@@ -317,7 +317,7 @@ Carbon 官方依据：
 | LAY-01a | `src/main.tsx` 按 `styles.scss` → Carbon Charts CSS → `carbon-foundation.scss` 加载。Foundation 的普通声明可覆盖前置同优先级规则，但不能覆盖前置 `!important`。 | 全站最终布局不仅由 Foundation 决定；必须同时审查 styles.scss 中的强制覆盖。 | 静态确认；继续禁止新增零散 `!important` |
 | LAY-01b | `styles.scss` 的移动端密度段在 672px 以下将 `.carbon-grid`、`.vault-grid`、`.analytics-grid`、`.analytics-kpis`、`.product-grid` 设为两列并带 `!important`；这会压过 Foundation 的移动端单列规则。380px 以下仍再次强制两列。 | Dashboard KPI、Vault Provider 卡片、商品卡片和分析卡片在 320/375px 实际宽度可能偏窄；这是已确认的级联结果，但是否造成内容挤压必须看真实视口。 | 待整改/待运行时确认；先在截图中对比 320、375、400、672px，再决定哪些模块应单列、哪些可双列 |
 | LAY-01c | 同一移动端密度段把 `.page-wrap` 左右 padding 设为 4px `!important`；Foundation 的 672px 以下 16px gutter 无法覆盖。380px 以下另有更晚的 12px `!important` gutter。 | 381–672px 有效水平 gutter 为 4px；320–380px 有效 gutter 为 12px。两段行为不连续，且与 Foundation 的统一 gutter token 脱节。 | 待整改；需结合用户已提出的“缩小左右边距”要求，以截图确认舒适值后统一 token，不直接恢复过宽边距 |
-| LAY-02a | `.research-fluid-grid`、`.research-price-range`、`.research-checkbox-grid` 等在 styles.scss 中有多轮同名声明；后出现的 intake 规则再次定义桌面/移动端列数。 | 需求表单主要布局目前可从源码追踪，但重复规则提高后续局部修改回归风险。 | 待整理；合并为一个 intake 组件规则区，并保留 672px 以下单列及价格币种整行 |
+| LAY-02a | intake 样式原先分散在基础段、重设计段和后续回归补丁中；价格网格、表单栅格和动作区有多轮覆盖。 | 已于 2026-10-31 收敛到一个连续的需求页作用域区块；等待 CI 回归确认静态通过。 | 源码已提交，CI 待验证；运行时视口仍待测 |
 | LAY-03a | `.research-stepper`、`.research-step`、`.research-workflow-actions` 至少在基础段、移动端段、后续 Carbon refinement 段重复声明；最终移动端 step label 采用纵向排列、5 等分列宽。 | 320px 下每步可用宽度有限，标题会换行；是否过度换行/高度异常不能从源码确定。 | 待运行时验收；必须检查五步全部文案、当前/完成态和底部动作区，不以“无横向滚动”单项代替可读性 |
 
 #### 页面布局的当前静态基线
@@ -385,3 +385,12 @@ Carbon 官方依据：
 - 首轮 CI run 41214545083：Product identity 与 Carbon Foundation 11 项静态测试全部通过；TypeScript 检查通过；Vite 在 Sass 解析阶段失败。
 - 失败原因：批量移除重复 page-wrap 规则时，残留了独立的 .synesis-app 选择器，导致 Sass 报错 expected "{", 定位 src/styles.scss:398。
 - 本次修复：清理残留空选择器及空 media block；未改变既定 gutter 与 16/8/4 栅格策略。修复后的 CI 需再次通过后，LAY-01 才能标记为静态构建通过。
+
+
+### LAY-02 Research 需求页重复样式治理（2026-10-31）
+
+- 范围：`src/styles.scss` 的 Research intake 需求页（header、完整度、guidance、FluidForm、Accordion、字段网格、价格范围、国家选择/地图、AI 整理提示与底部动作区），以及 `scripts/carbon-foundation.test.mjs`。
+- 整理方式：删除旧版重复 Fluid intake 布局段；将需求页布局与断点收敛到一个连续区块；清理后续重复动作区定位覆盖；平台选择器及五步工作流样式保留在各自独立区块。
+- 响应式基线：桌面两列字段/三列价格范围；672px 以下字段单列、价格范围两列且币种整行、Checkbox/Radio 单列；平板使用 24px 内距，移动端使用 16px；底部动作保持 `position: static`，随文档自然滚动。
+- 自动化：新增 LAY-02 静态回归，检查 intake 区块、字段/价格布局声明数量、动作区不使用 sticky/fixed、国家选择与地图规则保留，并确认废弃 sticky footer 选择器已清除。
+- 证据边界：本次为源码整理与静态断言；CI 尚待执行。未取得真实浏览器截图，320/375/768/1024/1440px 的布局、长国家名称、多选 token、地图加载失败、键盘与读屏行为仍待实测。
