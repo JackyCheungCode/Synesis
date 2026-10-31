@@ -84,7 +84,7 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 .synesis-app.cds--white { color-scheme: light; }
 .synesis-app .cds--header {
   color: var(--cds-text-primary);
-  background: var(--cds-layer);
+  background: var(--cds-background);
   border-bottom: 1px solid var(--cds-border-subtle);
   box-shadow: none;
 }
@@ -173,7 +173,7 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   align-items: center;
   padding: var(--cds-spacing-03) var(--cds-spacing-05);
   color: var(--cds-link-primary);
-  background: var(--cds-layer);
+  background: var(--cds-background);
   border: 2px solid var(--cds-focus);
   font-size: 0.875rem;
   font-weight: 600;
