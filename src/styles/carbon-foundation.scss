@@ -28,6 +28,11 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 .synesis-app :where(h1,h2,h3,h4) { color: var(--cds-text-primary); }
 .synesis-app h2 { @include type.type-style('heading-03'); }
 .synesis-app h3 { @include type.type-style('heading-02'); }
+.synesis-app h4 { @include type.type-style('heading-01'); }
+.synesis-app p { @include type.type-style('body-compact-01'); }
+.synesis-app small { @include type.type-style('helper-text-01'); }
+.synesis-app .metric-label { @include type.type-style('label-01'); }
+.synesis-app code { @include type.type-style('code-01'); }
 .synesis-app .eyebrow { @include type.type-style('label-01'); }
 .synesis-app .auth-side-copy strong { font-weight: 300; }
 .synesis-app :where(p,small,.subheading,.eyebrow,.metric-label,.collection-setting-heading p,.collection-depth-descriptions p) {
