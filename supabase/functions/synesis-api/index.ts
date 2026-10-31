@@ -218,6 +218,32 @@ Deno.serve(async (req: Request) => {
       return json({ok:true,created_tasks:rows.length});
     }
 
+    if (action === 'tasks.cancel') {
+      const taskId=String(body.taskId??'').trim();
+      if(!taskId) return json({error:'缺少任务 ID'},400);
+      const {data:task,error}=await admin.from('collection_tasks')
+        .select('id,status,external_run_id').eq('id',taskId).eq('user_id',userId).maybeSingle();
+      if(error||!task) return json({error:'采集任务不存在'},404);
+      if(!['queued','running'].includes(task.status)) return json({error:'只有排队中或运行中的任务可以取消'},409);
+      if(task.external_run_id) {
+        const {clear:apifyToken}=await getCredential('apify','integration');
+        const actorResponse=await fetch(`https://api.apify.com/v2/actor-runs/${encodeURIComponent(task.external_run_id)}/abort`,{
+          method:'POST',headers:{Authorization:`Bearer ${apifyToken}`},
+        });
+        const payload=await actorResponse.json().catch(()=>({}));
+        if(!actorResponse.ok && !['ABORTED','TIMED-OUT','FAILED','SUCCEEDED'].includes(String(payload?.data?.status??'').toUpperCase())) {
+          return json({error:String(payload?.error?.message??'Apify 取消请求失败').slice(0,300)},502);
+        }
+      }
+      const {data:updated,error:updateError}=await admin.from('collection_tasks')
+        .update({status:'cancelled',finished_at:new Date().toISOString(),error_message:null})
+        .eq('id',taskId).eq('user_id',userId).in('status',['queued','running'])
+        .select('id,status').maybeSingle();
+      if(updateError) throw updateError;
+      if(!updated) return json({error:'任务状态已变化，请刷新后重试'},409);
+      return json({ok:true,task:updated});
+    }
+
     if (action === 'tasks.retry') {
       const { taskId } = body;
       const { data: task, error } = await admin.from('collection_tasks')
