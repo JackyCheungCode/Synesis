@@ -212,6 +212,9 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
   .synesis-app .collection-settings-actions { align-items: stretch; flex-direction: column; }
 }
 @media (max-width: 380px) {
+  .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
   .synesis-app :where(.carbon-grid,.vault-grid,.analytics-grid,.analytics-kpis,.research-intake-grid,.research-analytics-kpis,.research-platform-options,.collection-depth-descriptions,.research-normalization-summary,.platform-picker) > * { grid-column: 1 / -1; }
   .synesis-app .page-wrap { padding-inline: var(--cds-spacing-03); }
 }
