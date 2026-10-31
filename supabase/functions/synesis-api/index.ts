@@ -462,6 +462,8 @@ Deno.serve(async (req: Request) => {
       const system = 'You are Synesis global trade research planner. Return valid JSON only with keys: executive_summary, research_questions (array), platform_tasks (array of objects {platform_slug, actor_id, input, purpose, estimated_items, estimated_cost_usd}), methodology, deliverables, estimated_cost_usd. Select Actors ONLY from the supplied actor_candidates and copy the exact candidate id. Never invent an Actor ID. Construct input using only fields and types in that candidate input_schema, and include all required fields. Read project.scope.collection_settings: target itemsPerPlatform is the requested record count PER PLATFORM (not a shared total); set estimated_items to that target and map it to the correct limit/count/maxResults/page-size input field only when that field exists in the selected Actor schema. Map depth light to list/core fields, standard to core fields plus available key engagement/rating/basic detail fields, and deep to detail pages, comments, and related records only when the Actor schema explicitly supports them. Never invent unsupported input fields or exceed the Actor schema. Create a separate platform_task for every selected platform in project.scope.selected_data_sources whenever a matching Actor candidate exists; do not collapse different selected platforms into one task unless the candidate explicitly supports all of them. If a platform has no suitable candidate or its schema cannot support a requested depth, still explain the limitation and collect the useful supported fields; do not silently omit a selected platform. If no candidate is genuinely suitable or required fields cannot be satisfied, omit that platform task and explain the gap in research_questions or methodology. Tasks are proposed only, not executed.';
       const prompt = JSON.stringify({project,actor_candidates:actorCandidates});
       let response: Response;
+      let cloudflareModel='';
+      let cloudflareAccountId='';
       if (provider==='openai'||provider==='deepseek'||provider==='mistral'||provider==='x') {
         const base=provider==='openai'?'https://api.openai.com/v1':provider==='deepseek'?'https://api.deepseek.com':provider==='mistral'?'https://api.mistral.ai/v1':'https://api.x.ai/v1';
         response=await fetch(`${base}/chat/completions`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({model:provider==='openai'?'gpt-4.1-mini':provider==='deepseek'?'deepseek-chat':provider==='mistral'?'mistral-small-latest':'grok-3-mini',messages:[{role:'system',content:system},{role:'user',content:prompt}],response_format:{type:'json_object'}})});
@@ -472,7 +474,9 @@ Deno.serve(async (req: Request) => {
       } else if(provider==='cloudflare') {
         const {config}=await getCredential(provider,'provider');
         if(!config.base_url) throw new Error('请先配置 Cloudflare Account ID');
-        response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${cloudflareModelPath(config.default_model || '@cf/meta/llama-3.3-70b-instruct-fp8-fast')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:system},{role:'user',content:prompt}]})});
+        cloudflareAccountId=config.base_url;
+        cloudflareModel=config.default_model || '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+        response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(cloudflareAccountId)}/ai/run/${cloudflareModelPath(cloudflareModel)}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:system},{role:'user',content:prompt}],max_tokens:8000})});
       } else throw new Error('该 Provider 暂不支持计划生成');
       const responseText=await response.text();
       let result:Record<string,any>={};
@@ -497,8 +501,32 @@ Deno.serve(async (req: Request) => {
         throw new Error(`AI Provider（${provider}）未返回计划文本：${String(reason).slice(0,200)}`);
       }
       let plan:Record<string,any>;
-      try { plan=JSON.parse(raw.replace(/^```json\s*/,'').replace(/```$/,'')); }
-      catch { throw new Error(`AI Provider（${provider}）返回的计划不是有效 JSON，请更换模型或重试`); }
+      try {
+        plan=parseJsonObject(raw);
+      } catch {
+        if(provider!=='cloudflare') throw new Error(`AI Provider（${provider}）返回的计划无法解析为 JSON，请稍后重试或更换模型。`);
+        const repairPrompt=JSON.stringify({
+          task:'Repair the model output into one complete valid JSON object. Return JSON only, without markdown fences or commentary. Do not add or invent facts, actor IDs, platform tasks, or schema fields. Preserve exact Actor IDs only from the supplied candidate list.',
+          required_shape:{executive_summary:'string',research_questions:['string'],platform_tasks:[{platform_slug:'string',actor_id:'string',input:'object',purpose:'string',estimated_items:'number',estimated_cost_usd:'number'}],methodology:'string',deliverables:['string'],estimated_cost_usd:'number'},
+          original_task:prompt,
+          invalid_output:raw.slice(0,24000),
+        });
+        const repairResponse=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(cloudflareAccountId)}/ai/run/${cloudflareModelPath(cloudflareModel)}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:'You are a strict JSON repair tool. Output one valid JSON object only.'},{role:'user',content:repairPrompt}],max_tokens:8000})});
+        const repairText=await repairResponse.text();
+        let repairResult:Record<string,any>={};
+        try { repairResult=JSON.parse(repairText); } catch { /* handled below */ }
+        if(!repairResponse.ok || repairResult?.success===false) {
+          const detail=repairResult?.errors?.map((item:Record<string,unknown>)=>item?.message??item?.code).filter(Boolean).join('；')??'模型修复请求失败';
+          throw new Error(`Cloudflare 计划 JSON 自动修复失败（HTTP ${repairResponse.status}）：${String(detail).slice(0,300)}`);
+        }
+        const repairedRaw=repairResult?.result?.response;
+        if(typeof repairedRaw!=='string'||!repairedRaw.trim()) throw new Error('Cloudflare 模型修复后仍未返回计划文本，请检查所选模型的文本生成能力。');
+        try { plan=parseJsonObject(repairedRaw); }
+        catch { throw new Error('Cloudflare 模型两次输出均无法解析为完整 JSON。请在 AI 模型管理中选择支持较长结构化输出的模型后重试。'); }
+      }
+      if(!Array.isArray(plan.research_questions)||!Array.isArray(plan.platform_tasks)||!Array.isArray(plan.deliverables)) {
+        throw new Error('AI 返回的研究计划结构不完整（缺少 research_questions、platform_tasks 或 deliverables 数组），请重试。');
+      }
       const candidateById=new Map(actorCandidates.map(actor=>[String(actor.id),actor]));
       const platformTasks=Array.isArray(plan.platform_tasks)?plan.platform_tasks:[];
       const projectScope=(project.scope as Record<string,any>|null)??{};
