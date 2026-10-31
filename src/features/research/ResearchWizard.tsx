@@ -116,7 +116,7 @@ function CountrySelectionMap({selectedCodes}:{selectedCodes:string[]}) {
   return ()=>{active=false;};
  },[]);
  const features=React.useMemo(()=>world?.features?.filter((feature:any)=>{
-  const code=feature.properties?.ISO_A2_EH??feature.properties?.ISO_A2;
+  const code=feature.properties?.['ISO3166-1-Alpha-2']??feature.properties?.ISO_A2_EH??feature.properties?.ISO_A2;
   return selectedCodes.includes(code);
  })??[],[world,selectedCodes.join(',')]);
  return <div className="research-country-map-wrap">
