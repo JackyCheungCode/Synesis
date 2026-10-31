@@ -491,9 +491,31 @@ Deno.serve(async (req: Request) => {
         update.finished_at = run.finishedAt ?? new Date().toISOString();
         update.error_message = run.statusMessage ?? `Apify run ${runStatus}`;
       }
-      const { error: updateError } = await admin.from('collection_tasks').update(update)
-        .eq('id', taskId).eq('user_id', userId).eq('sync_lock_token', syncLockToken);
+      const { data: committed, error: updateError } = await admin.from('collection_tasks').update(update)
+        .eq('id', taskId).eq('user_id', userId).eq('sync_lock_token', syncLockToken)
+        .neq('status', 'cancelled').select('id').maybeSingle();
       if (updateError) throw updateError;
+      if (!committed) {
+        // A cancellation may win while this batch is being persisted. Keep the
+        // cancelled state, but record the durable cursor for the rows already saved.
+        const { data: cancelled, error: cancelledUpdateError } = await admin.from('collection_tasks')
+          .update({
+            result_dataset_id: datasetId, result_count: totalCount,
+            result_synced_count: syncedCount, synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', taskId).eq('user_id', userId).eq('sync_lock_token', syncLockToken)
+          .eq('status', 'cancelled').select('id').maybeSingle();
+        if (cancelledUpdateError) throw cancelledUpdateError;
+        if (!cancelled) return json({ error: '同步租约已失效，或任务状态已变化；已保存数据可安全重试' }, 409);
+        return json({
+          ok: true,
+          task: { id: taskId, status: 'cancelled', run_status: runStatus,
+            result_dataset_id: datasetId, result_count: totalCount, result_synced_count: syncedCount,
+            batch_count: batchCount, result_sync_complete: syncComplete, error_message: null },
+          result_truncated: !syncComplete && runStatus === 'SUCCEEDED',
+        });
+      }
       return json({
         ok: true,
         task: { id: taskId, status, run_status: runStatus, progress: update.progress,
@@ -502,9 +524,12 @@ Deno.serve(async (req: Request) => {
         result_truncated: !syncComplete && runStatus === 'SUCCEEDED',
       });
       } finally {
-        await admin.from('collection_tasks')
+        const { error: releaseError } = await admin.from('collection_tasks')
           .update({ sync_lock_token: null, sync_lock_expires_at: null })
           .eq('id', taskId).eq('user_id', userId).eq('sync_lock_token', syncLockToken);
+        if (releaseError) {
+          console.error('Failed to release task sync lease', { taskId, code: releaseError.code });
+        }
       }
     }
 
