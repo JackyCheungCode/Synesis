@@ -121,7 +121,7 @@ test('LAY-01 centralizes page gutters, grid tracks, and responsive card columns'
   assert.match(foundation, /--synesis-page-gutter:\s*32px/);
   assert.match(foundation, /--synesis-page-gutter:\s*24px/);
   assert.match(foundation, /--synesis-page-gutter:\s*1rem/);
-  assert.match(foundation, /max-width:\s*1376px/);
+  assert.match(foundation, /max-width:\s*none/);
   assert.match(foundation, /--synesis-grid-gap:\s*var\(--cds-spacing-05\)/);
   assert.match(foundation, /\.product-grid/);
   assert.match(foundation, /\.project-card-grid/);

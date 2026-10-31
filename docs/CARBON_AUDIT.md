@@ -372,7 +372,7 @@ Carbon 官方依据：
 ### LAY-01 共享布局风险整改记录（2026-10-31）
 
 - 范围：src/styles.scss、src/styles/carbon-foundation.scss、scripts/carbon-foundation.test.mjs。
-- 修复：页面 gutter 统一为桌面 32px、平板 24px、移动端 16px；页面画布最大宽度 1376px（扣除内侧 gutter 后内容区约 1312px），1440px 视口两侧安全边距 32px。
+- 修复：页面 gutter 统一为桌面 32px、平板 24px、移动端 16px；页面画布采用全宽容器，桌面两侧仅保留 32px gutter；平板 24px、移动端 16px，避免 max-width 与内部 padding 叠加产生双倍留白。
 - 栅格：统一 16/8/4 列断点；全站网格 gap 使用 Carbon spacing-05（16px）；商品卡片与项目卡片纳入统一栅格；移动端普通内容卡片单列，分析 KPI 在 381–672px 双列、380px 及以下单列。
 - 级联清理：移除 styles.scss 中重复 page-wrap gutter、Research 全局 page-wrap 强制 padding、移动端 4px 强制 gutter 与两列强制覆盖；page-wrap 由 Carbon Foundation 统一管理。
 - 字体：全局 UI 字体栈统一为 IBM Plex Sans；移除 Noto Sans TC 后备字体声明。代码字体继续使用 IBM Plex Mono。
