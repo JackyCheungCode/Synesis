@@ -313,6 +313,41 @@ function App() {
     } catch(e) { setNotice({kind:'error',text:'跨平台数据加载失败：'+message(e)}); }
   }
 
+  async function exportProjectResults(targetProjectId:string) {
+    setBusy(true);
+    try {
+      const first=await api('tasks.project-results',{projectId:targetProjectId,limit:250,offset:0});
+      const total=Number(first.total??0);
+      const rows:Record<string,unknown>[]=[];
+      const append=(items:any[])=>items.forEach(item=>{
+        rows.push({
+          platform_slug:item.platform_slug,task_id:item.task_id,item_index:item.item_index,
+          entity_type:item.normalized?.entity_type??'',canonical_key:item.normalized?.canonical_key??'',
+          quality_score:item.normalized?.quality_score??'',normalization_warnings:item.normalized?.warnings??[],
+          ...(item.normalized?.normalized_data??{}),raw_data_json:item.raw_data,
+        });
+      });
+      append(first.results??[]);
+      for(let offset=250;offset<total;offset+=250) {
+        const page=await api('tasks.project-results',{projectId:targetProjectId,limit:250,offset});
+        append(page.results??[]);
+      }
+      const keys=Array.from(new Set(rows.flatMap(row=>Object.keys(row))));
+      const csvCell=(value:unknown)=>{
+        const raw=value!==null&&typeof value==='object'?JSON.stringify(value):String(value??'');
+        const firstChar=raw.charCodeAt(0);
+        const safe='=+-@'.includes(raw[0]??'')||firstChar===9||firstChar===13?"'"+raw:raw;
+        return '"'+safe.replace(/"/g,'""')+'"';
+      };
+      const csv=[keys.map(csvCell).join(','),...rows.map(row=>keys.map(key=>csvCell(row[key])).join(','))].join('\\r\\n');
+      const blob=new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);const link=document.createElement('a');
+      link.href=url;link.download='synesis-project-'+targetProjectId+'-unified-dataset.csv';link.click();URL.revokeObjectURL(url);
+      setNotice({kind:'success',text:'已导出 '+rows.length.toLocaleString()+' 条跨平台标准化数据及原始 JSON。'});
+    } catch(e) { setNotice({kind:'error',text:'统一数据集导出失败：'+message(e)}); }
+    finally { setBusy(false); }
+  }
+
   async function viewTaskResults(task: Task, page = 0) {
     setBusy(true);
     try {
@@ -545,6 +580,7 @@ function App() {
             onSaveProjectAnalytics={(id)=>void saveProjectAnalytics(id)}
             onGenerateReport={(id)=>{setBusy(true);void generateResearchReport(id).catch(error=>setNotice({kind:'error',text:'AI 报告生成失败：'+message(error)})).finally(()=>setBusy(false));}}
             onStepChange={(id,step)=>void updateResearchWorkflowStep(id,step)}
+            onExportProjectResults={(id)=>void exportProjectResults(id)}
           />}
           {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
           {page==='products' && <ProductLibrary
