@@ -1,5 +1,5 @@
 const GTIN_LENGTHS = new Set([8, 12, 13, 14]);
-function readField(record, aliases) {
+export function readField(record, aliases) {
   const wanted = new Set(aliases.map((name) => name.toLowerCase()));
   const visit = (value, depth = 0) => {
     if (!value || typeof value !== 'object' || depth > 5) return null;
