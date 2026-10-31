@@ -6,7 +6,7 @@ import {
 } from '@carbon/icons-react';
 import { Button, InlineNotification, Tag, TextInput, Tile } from '@carbon/react';
 import { BrandIcon } from './components/BrandIcon';
-import { platforms, providers, services } from './data/catalog';
+import { platforms, providers, services, apiIntegrations } from './data/catalog';
 
 type Page = 'dashboard' | 'platforms' | 'ai-models' | 'projects' | 'market-watch' | 'reports';
 
@@ -21,7 +21,7 @@ function App() {
   const [page, setPage] = useState<Page>('dashboard');
   const [expanded, setExpanded] = useState({ intelligence: true, ai: true });
   const [search, setSearch] = useState('');
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>(initialKeys);
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>(initialKeys);\n  const [integrationKeys, setIntegrationKeys] = useState<Record<string, string>>({});
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState('');
   const [mobileNav, setMobileNav] = useState(false);
@@ -110,6 +110,16 @@ function App() {
                   <div className="provider-form">
                     <TextInput id={`key-${provider.slug}`} type={showKey[provider.slug] ? 'text' : 'password'} labelText="API Key" placeholder="填写你的 API Key" value={apiKeys[provider.slug] ?? ''} onChange={e => setApiKeys(v => ({ ...v, [provider.slug]: e.target.value }))} autoComplete="off"/>
                     <div className="key-actions"><Button kind="ghost" size="sm" onClick={() => setShowKey(v => ({ ...v, [provider.slug]: !v[provider.slug] }))}>{showKey[provider.slug] ? '隐藏' : '显示'}</Button><Button kind="tertiary" size="sm" onClick={() => saveKey(provider.name)} disabled={!apiKeys[provider.slug]?.trim()}>保存并验证</Button></div>
+                  </div>
+                </Tile>)}
+              </div>
+              <div className="section-intro integration-heading"><div><h2>外部 API 与数据采集连接</h2><p>平台数据采集与外部服务的凭证也统一在这里管理。</p></div><Tag type="cool-gray">API Connections</Tag></div>
+              <div className="provider-grid">
+                {apiIntegrations.map(service => <Tile key={service.name} className="provider-tile">
+                  <div className="provider-top"><BrandIcon slug={service.slug} label={service.name} fallback={service.fallback} size={36}/><div><h3>{service.name}</h3><span>{service.credentialLabel}</span></div><Tag type="cool-gray">未连接</Tag></div>
+                  <div className="provider-form">
+                    <TextInput id={`integration-${service.slug}`} type="password" labelText={service.credentialLabel} placeholder={service.placeholder} value={integrationKeys[service.slug] ?? ''} onChange={e => setIntegrationKeys(v => ({ ...v, [service.slug]: e.target.value }))} autoComplete="off"/>
+                    <div className="key-actions"><Button kind="tertiary" size="sm" onClick={() => saveIntegration(service.name)} disabled={!integrationKeys[service.slug]?.trim()}>保存并验证</Button></div>
                   </div>
                 </Tile>)}
               </div>

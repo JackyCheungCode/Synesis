@@ -16,6 +16,13 @@ Global Trade Intelligence Platform.
 - IBM Carbon React components and Carbon icons
 - Brand marks use Simple Icons CDN with local monogram fallback.
 
+## Backend and database
+- Cloudflare Worker: existing `synesis` script; do not rename it.
+- Supabase project: existing `Synesis` project in `eu-central-1`.
+- Core schema: user-owned provider configs, integration metadata, research projects, AI plans, collection tasks, and market reports.
+- Encrypted credentials live in the non-exposed `private` schema; only the trusted backend service role can access them.
+- Collection execution must remain gated by an approved AI research plan.
+
 ## Local development
 1. Copy `.env.example` to `.env.local`.
 2. Fill only the Supabase project URL and publishable key when frontend auth is implemented.
@@ -25,4 +32,4 @@ Global Trade Intelligence Platform.
 Never place AI provider keys, Cloudflare API tokens, or Supabase secret keys in `VITE_*` variables or source control.
 
 ## Current implementation status
-Initial Carbon application shell and UI navigation are in place. Provider credential forms are presentation-only until authenticated backend encryption and credential persistence are implemented.
+Initial Carbon application shell, navigation, dual-theme token classes, platform/provider icon registry, and API credential-entry screens are in place. Credential forms are presentation-only until authenticated backend encryption and credential persistence are implemented.
