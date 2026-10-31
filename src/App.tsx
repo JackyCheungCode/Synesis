@@ -87,7 +87,7 @@ function App() {
       const [p, pl, t, c, r] = await Promise.all([
         supabase.from('research_projects').select('id,name,objective,status,target_regions,platform_slugs,scope').order('updated_at',{ascending:false}),
         supabase.from('ai_research_plans').select('id,project_id,status,plan,estimated_cost,created_at').order('created_at',{ascending:false}),
-        supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at,progress,result_count,result_synced_count,run_status,external_run_id,error_message,finished_at').order('created_at',{ascending:false}),
+        supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at,started_at,updated_at,progress,result_count,result_synced_count,run_status,external_run_id,error_message,finished_at').order('created_at',{ascending:false}),
         api('credentials.list'),
         supabase.from('market_reports').select('id,title,status,created_at,project_id,content').order('created_at',{ascending:false}),
       ]);
@@ -150,6 +150,31 @@ function App() {
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
+  async function generateResearchPlan(project: Project, selectedSources: string[]) {
+    setBusy(true);
+    try {
+      const sourceLabels = selectedSources.map(id => {
+        const labels: Record<string,string> = {
+          ecommerce:'全球电商平台',social:'社交媒体',search:'搜索引擎与购物搜索',
+          reviews:'商品评价与消费者反馈',suppliers:'企业与供应商',ads:'广告与市场趋势',
+          brands:'独立站与品牌官网',other:'其他行业数据',
+        };
+        return labels[id] ?? id;
+      });
+      const selectedScope = { ...(project.scope ?? {}), selected_data_sources:selectedSources, selected_data_source_labels:sourceLabels };
+      const enrichedObjective = project.objective + '\\n\\n用户选择的数据来源类别：' + sourceLabels.join('、') +
+        '。请优先寻找这些类别对应的真实可用 Apify Actor；没有合适 Actor 时明确说明，不得虚构。';
+      const {error} = await supabase.from('research_projects').update({
+        objective:enrichedObjective, platform_slugs:selectedSources, scope:selectedScope,
+      }).eq('id',project.id).eq('user_id',session?.user.id);
+      if(error) throw error;
+      await api('plans.generate',{projectId:project.id,provider:selectedProvider});
+      setNotice({kind:'success',text:'已完成 Apify Store 候选搜索和采集方案生成。请检查 Actor、用途和 Schema 校验结果，再决定是否批准。'});
+      await loadAll();
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+
   async function approvePlan(plan: Plan) {
     setBusy(true);
     try {
