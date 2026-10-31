@@ -88,7 +88,7 @@ type CountryOptionItem={id:string;text:string;flag:string};
 const countryOptions:CountryOptionItem[]=buildCountryOptions();
 function CountryOptionElement(value:unknown):React.ReactElement {
  const item=value as CountryOptionItem;
- return <span className="research-country-option"><img className="research-country-flag" src={item.flag} alt="" loading="lazy"/><span>{item.text}</span></span>;
+ return <span className="research-country-option"><span className="research-country-flag" aria-hidden="true">{item.flag}</span><span>{item.text}</span></span>;
 }
 const englishRegionNames=new Intl.DisplayNames(['en'],{type:'region'});
 const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson';
