@@ -1,5 +1,5 @@
 export interface Env {
-  ASSETS?: Fetcher;
+  ASSETS?: { fetch(request: Request): Promise<Response> };
 }
 
 const jsonHeaders = {
