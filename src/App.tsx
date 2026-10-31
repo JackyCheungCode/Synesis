@@ -178,6 +178,15 @@ function App() {
     finally { setBusy(false); }
   }
 
+  async function updateResearchWorkflowStep(targetProjectId:string,step:number) {
+    const project=projects.find(item=>item.id===targetProjectId);
+    if(!project||!session?.user.id)return;
+    const nextScope={...(project.scope??{}),active_step:Math.max(0,Math.min(4,step))};
+    const {error}=await supabase.from('research_projects').update({scope:nextScope}).eq('id',targetProjectId).eq('user_id',session.user.id);
+    if(error){setNotice({kind:'error',text:'保存研究步骤失败：'+message(error)});return;}
+    setProjects(current=>current.map(item=>item.id===targetProjectId?{...item,scope:nextScope}:item));
+  }
+
   async function saveResearchDraft(draft:{brief:string;formValues:Record<string,string>;profile:ResearchProfile|null;activeStep:number;selectedSources:string[]},projectId?:string) {
     setBusy(true);
     try {
@@ -534,6 +543,7 @@ function App() {
             onSaveAnalytics={()=>void saveAnalyticsReport()}
             onSaveProjectAnalytics={(id)=>void saveProjectAnalytics(id)}
             onGenerateReport={(id)=>{setBusy(true);void generateResearchReport(id).catch(error=>setNotice({kind:'error',text:'AI 报告生成失败：'+message(error)})).finally(()=>setBusy(false));}}
+            onStepChange={(id,step)=>void updateResearchWorkflowStep(id,step)}
           />}
           {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
           {page==='products' && <ProductLibrary
