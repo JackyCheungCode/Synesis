@@ -41,6 +41,7 @@ function App() {
   const projectId = route.projectId;
   const navigate = (next: Page, id?: string) => { route.navigate(next, id); setNavExpanded(false); };
   const [navExpanded, setNavExpanded] = useState(false);
+  const [theme, setTheme] = useState<'white'|'g100'>('white');
   const [notice, setNotice] = useState<{kind:'info'|'success'|'error'|'warning'; text:string}|null>(null);
   const [busy, setBusy] = useState(false);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -536,12 +537,13 @@ function App() {
   const pendingPlans = plans.filter(p => p.status === 'pending_approval');
 
   return (
-    <div className="synesis-app cds--white">
+    <div className={`synesis-app cds--${theme}`}>
       <Header aria-label="Synesis">
         <HeaderMenuButton aria-label="切换导航" isActive={navExpanded} onClick={() => setNavExpanded(v=>!v)} />
-        <HeaderName prefix="" href="#" onClick={e=>e.preventDefault()}>SYNESIS</HeaderName>
+        <HeaderName prefix="" href="#/dashboard">SYNESIS</HeaderName>
         <HeaderGlobalBar>
           <HeaderGlobalAction aria-label="搜索" tooltipAlignment="end" onClick={()=>setSearchOpen(true)}><SearchIcon/></HeaderGlobalAction>
+          <HeaderGlobalAction aria-label={theme === 'white' ? '切换到深色主题' : '切换到浅色主题'} tooltipAlignment="end" onClick={()=>setTheme(current=>current === 'white' ? 'g100' : 'white')}><span aria-hidden="true">◐</span></HeaderGlobalAction>
           <HeaderGlobalAction aria-label="账户（点击退出登录）" tooltipAlignment="end" onClick={()=>void signOut()}><UserAvatar/></HeaderGlobalAction>
         </HeaderGlobalBar>
       </Header>
@@ -554,7 +556,7 @@ function App() {
           {page==='dashboard' && <WorkspaceDashboard projectCount={projects.length} pendingPlanCount={pendingPlans.length} taskCount={tasks.length} credentialCount={credentials.length} onCreateResearch={()=>navigate('projects')}/>}
           {page==='settings' && <CollectionSettingsPage settings={collectionSettings} onChange={setCollectionSettings} onSave={()=>void saveCollectionSettings()} saving={busy}/>}
           {page==='vault' && <CredentialVault
-            credentials={credentials} keyValues={keyValues} setKeyValues={setKeyValues}
+            credentials={credentials} keyValues={keyValues} setKeyValues={setKeyValues} busy={busy}
             cloudflareAccountId={cloudflareAccountId} setCloudflareAccountId={setCloudflareAccountId}
             integrationMeta={integrationMeta} setIntegrationMeta={setIntegrationMeta}
             providerModels={providerModels} selectedProvider={selectedProvider} setSelectedProvider={setSelectedProvider}
