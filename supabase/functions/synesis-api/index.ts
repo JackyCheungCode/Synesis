@@ -392,16 +392,9 @@ Deno.serve(async (req: Request) => {
         .eq('id', taskId).eq('user_id', userId).maybeSingle();
       if (taskError || !task) return json({ error: '采集任务不存在' }, 404);
       const total = Number(task.result_synced_count ?? 0);
-      const analysisLimit = 25000;
-      const target = Math.min(total, analysisLimit);
-      const records: Record<string, unknown>[] = [];
-      for (let offset = 0; offset < target; offset += 1000) {
-        const { data, error } = await admin.from('collection_task_results')
-          .select('raw_data').eq('task_id', taskId).eq('user_id', userId)
-          .order('item_index', { ascending: true }).range(offset, Math.min(target - 1, offset + 999));
-        if (error) throw error;
-        records.push(...(data ?? []).map(row => row.raw_data as Record<string, unknown>));
-      }
+      // Stream result rows in bounded pages; never materialize the full dataset.
+      const pageSize = 500;
+      let analyzed = 0;
       const fieldCache = new WeakMap<object, Array<[string, unknown]>>();
       const pick = (row: Record<string, unknown>, patterns: RegExp[]) => {
         let fields = fieldCache.get(row);
@@ -447,9 +440,17 @@ Deno.serve(async (req: Request) => {
       const currencyPrices = new Map<string, number[]>();
       const fieldCounts = { title:0, price:0, currency:0, rating:0, reviews:0, brand:0, category:0, image:0, link:0, sku:0, description:0, sales:0, sales_rank:0, stock:0 };
       const trendMap = new Map<string, {count:number;prices:number[]}>();
-      const funnel = { total: records.length, titled: 0, priced: 0, rated: 0, imaged: 0, linked: 0 };
+      const funnel = { total: 0, titled: 0, priced: 0, rated: 0, imaged: 0, linked: 0 };
       const stop = new Set(['the','and','for','with','from','this','that','you','your','new','pack','set','inch','inches','of','to','a','an','on','by','is','are','（','）']);
-      for (const row of records) {
+      for (let offset = 0; offset < total; offset += pageSize) {
+        const { data: page, error: pageError } = await admin.from('collection_task_results')
+          .select('raw_data').eq('task_id', taskId).eq('user_id', userId)
+          .order('item_index', { ascending: true }).range(offset, Math.min(total - 1, offset + pageSize - 1));
+        if (pageError) throw pageError;
+        const rows = page ?? [];
+        analyzed += rows.length;
+        for (const entry of rows) {
+          const row = entry.raw_data as Record<string, unknown>;
         const title = pick(row, [/^(title|name|product.?name|item.?name)$/i]);
         const price = numeric(pick(row, [/^(price|sale.?price|current.?price|amount|cost|listing.?price|unit.?price)$/i]));
         const currencyValue = pick(row, [/^(currency|currency.?code|price.?currency|currency.?symbol)$/i]);
@@ -502,6 +503,9 @@ Deno.serve(async (req: Request) => {
           if (!stop.has(word) && !/^\d+$/.test(word)) words.set(word,(words.get(word)??0)+1);
         }
       }
+        }
+      }
+      funnel.total = analyzed;
       const comparableCurrency = currencyPrices.size === 1 && !currencyPrices.has('UNKNOWN')
         ? [...currencyPrices.keys()][0] : null;
       const comparablePrices = comparableCurrency ? (currencyPrices.get(comparableCurrency) ?? []) : [];
@@ -520,12 +524,12 @@ Deno.serve(async (req: Request) => {
       const bands = comparableCurrency ? makeBands(comparablePrices) : [];
       const bandsByCurrency = [...currencyPrices.entries()].map(([currency,values])=>({currency,bands:makeBands(values)}));
       return json({
-        task, coverage:{analyzed:records.length,available:total,complete:total<=analysisLimit},
+        task, coverage:{analyzed,available:total,complete:analyzed>=total},
         metrics:{average_price:average(comparablePrices),min_price:sorted.length?sorted[0]:null,max_price:sorted.length?sorted[sorted.length-1]:null,median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),price_currency:comparableCurrency,price_comparable:Boolean(comparableCurrency),average_rating:average(ratingValues),average_reviews:average(reviewValues),price_count:priceValues.length,comparable_price_count:comparablePrices.length,rating_count:ratingValues.length,review_count:reviewValues.length},
         distributions:{price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),price_by_currency:[...currencyPrices.entries()].map(([currency,values])=>({currency,count:values.length,average:average(values),min:Math.min(...values),max:Math.max(...values)})).sort((a,b)=>b.count-a.count)},
         trends,
         funnel, field_counts:fieldCounts,
-        quality:{title_rate:records.length?fieldCounts.title/records.length:0,price_rate:records.length?fieldCounts.price/records.length:0,currency_rate:records.length?fieldCounts.currency/records.length:0,rating_rate:records.length?fieldCounts.rating/records.length:0,reviews_rate:records.length?fieldCounts.reviews/records.length:0,brand_rate:records.length?fieldCounts.brand/records.length:0,category_rate:records.length?fieldCounts.category/records.length:0,image_rate:records.length?fieldCounts.image/records.length:0,link_rate:records.length?fieldCounts.link/records.length:0,sku_rate:records.length?fieldCounts.sku/records.length:0,description_rate:records.length?fieldCounts.description/records.length:0,sales_rate:records.length?fieldCounts.sales/records.length:0,sales_rank_rate:records.length?fieldCounts.sales_rank/records.length:0,stock_rate:records.length?fieldCounts.stock/records.length:0}
+        quality:{title_rate:analyzed?fieldCounts.title/records.length:0,price_rate:analyzed?fieldCounts.price/records.length:0,currency_rate:analyzed?fieldCounts.currency/records.length:0,rating_rate:analyzed?fieldCounts.rating/records.length:0,reviews_rate:analyzed?fieldCounts.reviews/records.length:0,brand_rate:analyzed?fieldCounts.brand/records.length:0,category_rate:analyzed?fieldCounts.category/records.length:0,image_rate:analyzed?fieldCounts.image/records.length:0,link_rate:analyzed?fieldCounts.link/records.length:0,sku_rate:analyzed?fieldCounts.sku/records.length:0,description_rate:analyzed?fieldCounts.description/records.length:0,sales_rate:analyzed?fieldCounts.sales/records.length:0,sales_rank_rate:analyzed?fieldCounts.sales_rank/records.length:0,stock_rate:analyzed?fieldCounts.stock/records.length:0}
       });
     }
 
