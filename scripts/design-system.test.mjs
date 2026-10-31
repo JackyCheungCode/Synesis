@@ -16,3 +16,17 @@ test('native navigation and primitives do not depend on a vendor component frame
  const files=['../src/components/ui.tsx','../src/components/icons.tsx','../src/components/WorkspaceNavigation.tsx'];
  for(const file of files) assert.doesNotMatch(read(file),/carbon|cds--|IBM Plex|@ibm/i);
 });
+
+test('tracked application, documentation and pipeline contain no legacy framework references',()=>{
+ const {existsSync}=require('node:fs');
+ const roots=['../src','../docs'];
+ const scan=(dir)=>readdirSync(new URL(dir,import.meta.url),{withFileTypes:true}).flatMap(entry=>{
+  const child=join(dir,entry.name);
+  return entry.isDirectory()?scan(child):[child];
+ });
+ const files=[...roots.flatMap(scan),'../README.md','../package.json','../.github/workflows/ci.yml'];
+ for(const file of files) if(existsSync(new URL(file,import.meta.url))){
+  const body=read(file);
+  assert.doesNotMatch(body,/@carbon|cds--|IBM Plex|IBM Carbon|carbon-foundation|carbon-grid/i,file);
+ }
+});

@@ -14,7 +14,7 @@ Synesis 是综合型跨境商业智能平台，包含情报总览、研究项目
 ## UI 与设计
 - 采用 Synesis 自有原生组件、样式 token 和图标。
 - 默认 Light，支持 Dark；标题左对齐；导航以叠加抽屉呈现。
-- 字体仅使用 DM Sans / Manrope，不加载 IBM 字体。
+- 字体仅使用 DM Sans / Manrope。
 - 不依赖第三方企业 UI 组件体系。
 - 设计说明：`docs/SYNESIS_DESIGN_SYSTEM.md`。
 
