@@ -16,8 +16,8 @@ const vault = read('../src/features/settings/CredentialVault.tsx');
 
 test('application styling uses Carbon semantic color tokens', () => {
   assert.doesNotMatch(styles, /#[0-9a-fA-F]{3,8}\b/);
-  assert.doesNotMatch(app, /#[0-9a-fA-F]{3,8}\\b/);
-  assert.doesNotMatch(research, /#[0-9a-fA-F]{3,8}\\b/);
+  assert.doesNotMatch(app, /#[0-9a-fA-F]{3,8}\b/);
+  assert.doesNotMatch(research, /#[0-9a-fA-F]{3,8}\b/);
   assert.match(foundation, /var\(--cds-background\)/);
   assert.match(foundation, /var\(--cds-text-primary\)/);
   assert.match(foundation, /var\(--cds-interactive\)/);
