@@ -1688,3 +1688,34 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
   z-index:auto!important;
   box-shadow:none!important;
 }
+
+
+/* Research platform picker — Carbon tabs and native selection controls */
+.research-platform-picker { display:flex; flex-direction:column; gap:20px; min-width:0; }
+.research-selected-platforms { padding:16px; background:#fff; border:1px solid #e0e0e0; }
+.research-selected-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.research-selected-heading h4,.research-platform-category-heading h4 { margin:0; color:#161616; font-size:15px; font-weight:600; }
+.research-selected-heading p,.research-platform-category-heading p { margin:5px 0 0; color:#6f6f6f; font-size:12px; }
+.research-selected-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.research-selected-tags { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.research-selected-tags .cds--tag { max-width:100%; }
+.research-selected-empty { margin:14px 0 0; padding:12px; color:#6f6f6f; background:#f4f4f4; font-size:13px; }
+.research-platform-tabs { min-width:0; }
+.research-platform-tabs .cds--tabs__nav { max-width:100%; overflow-x:auto; }
+.research-platform-tabs .cds--tab-content { padding:20px 0 4px; }
+.research-platform-category-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
+.research-platform-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 16px; border-top:1px solid #e0e0e0; }
+.research-platform-option { min-width:0; min-height:48px; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px 8px 0; border-bottom:1px solid #e0e0e0; }
+.research-platform-option .cds--checkbox-wrapper { min-width:0; flex:1; }
+.research-platform-option .cds--checkbox-label-text { overflow-wrap:anywhere; }
+.research-platform-option .cds--tag { flex-shrink:0; margin:0; }
+@media (max-width: 900px) {
+ .research-platform-options { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 600px) {
+ .research-selected-heading { flex-direction:column; }
+ .research-selected-actions { width:100%; justify-content:space-between; }
+ .research-platform-options { grid-template-columns:minmax(0,1fr); }
+ .research-platform-category-heading { align-items:flex-start; }
+ .research-platform-tabs .cds--tab-content { padding-top:16px; }
+}
