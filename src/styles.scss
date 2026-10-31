@@ -1333,7 +1333,7 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
 .synesis-app .research-ai-parse-action{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 22px;padding:16px;border:1px solid var(--cds-border-subtle);border-left:3px solid var(--cds-support-info);background:var(--cds-layer-02)}
 .synesis-app .research-ai-parse-action b{font-size:.875rem}
 .synesis-app .research-ai-parse-action p{margin:4px 0 0;color:var(--cds-text-secondary);font-size:.75rem;line-height:1.45}
-.synesis-app .research-intake-actions{position:sticky!important;bottom:0!important;z-index:30!important;display:flex;justify-content:space-between;gap:12px;padding:12px 32px max(12px,env(safe-area-inset-bottom));border-top:1px solid var(--cds-border-strong);background:var(--cds-layer-01);box-shadow:0 -4px 12px rgba(0,0,0,.06)!important}
+.synesis-app .research-intake-actions{position:static!important;inset:auto!important;display:flex;justify-content:space-between;gap:12px;padding:16px 32px 20px;border-top:1px solid var(--cds-border-subtle);background:var(--cds-layer-01);box-shadow:none!important}
 .synesis-app .research-intake-actions .cds--btn{min-width:160px;border-radius:0!important}
 .synesis-app .research-intake-actions .cds--btn:disabled{opacity:.45}
 .synesis-app .research-fluid-form .cds--multi-select__wrapper,.synesis-app .research-fluid-form .cds--dropdown{border-radius:0!important}
