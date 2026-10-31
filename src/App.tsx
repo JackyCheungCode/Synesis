@@ -43,6 +43,8 @@ function App() {
   const [resultPage, setResultPage] = useState(0);
   const [resultTotal, setResultTotal] = useState(0);
   const [resultSynced, setResultSynced] = useState(0);
+  const [analyticsTaskId, setAnalyticsTaskId] = useState('');
+  const [analytics, setAnalytics] = useState<any>(null);
   const [keyValues, setKeyValues] = useState<Record<string,string>>({});
   const [projectName, setProjectName] = useState('');
   const [objective, setObjective] = useState('');
@@ -174,6 +176,14 @@ function App() {
     finally { setBusy(false); }
   }
 
+  async function loadAnalytics(taskId: string) {
+    if (!taskId) return;
+    setBusy(true);
+    try { const data = await api('tasks.analytics',{taskId}); setAnalytics(data); setAnalyticsTaskId(taskId); }
+    catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+
   async function exportTaskResults(task: Task) {
     setBusy(true);
     try {
@@ -271,7 +281,14 @@ function App() {
               {({rows,headers,getHeaderProps,getRowProps,getTableProps})=><Table {...getTableProps()}><TableHead><TableRow>{headers.map(h=><TableHeader {...getHeaderProps({header:h})} key={h.key}>{h.header}</TableHeader>)}</TableRow></TableHead><TableBody>{rows.map(row=><TableRow {...getRowProps({row})} key={row.id}>{row.cells.map(cell=><TableCell key={cell.id}>{cell.info.header==='actions'?<div className="card-actions">{row.cells.find(c=>c.info.header==='status')?.value==='queued'&&<Button size="sm" kind="tertiary" renderIcon={Play} onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void runTask(t)}}>执行</Button>}{(['running','queued'].includes(String(row.cells.find(c=>c.info.header==='status')?.value)) || tasks.some(t=>t.id.startsWith(row.id) && t.status==='succeeded' && (t.result_synced_count??0)<(t.result_count??0)))&&<Button size="sm" kind="ghost" renderIcon={Renew} onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void syncTask(t)}}>同步 / 继续接收</Button>}{row.cells.find(c=>c.info.header==='status')?.value==='succeeded'&&<Button size="sm" kind="ghost" onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void viewTaskResults(t)}}>查看结果</Button>}</div>:String(cell.value??'—')}</TableCell>)}</TableRow>)}</TableBody></Table>}
             </DataTable>
           </section>}
-          {page==='reports' && <section className="module-stack"><Tile><h2>市场研究报告</h2><p>研究项目、采集证据与 AI 分析完成后，在此生成可追溯的市场报告。</p><Tag type="cool-gray">报告模块骨架</Tag></Tile></section>}
+          {page==='reports' && <section className="module-stack">
+            <Tile><div className="module-heading"><div><h2>产品数据分析工作台</h2><p>从完整采集明细中计算价格、评分、品牌、类目、关键词、商品信息完整度和转化漏斗。</p></div><Tag type="blue">多维分析</Tag></div>
+              <Select id="analytics-task" labelText="选择已完成采集的数据集" value={analyticsTaskId} onChange={e=>{setAnalyticsTaskId(e.target.value);setAnalytics(null);}}><SelectItem value="" text="请选择采集任务"/>{tasks.filter(t=>t.status==='succeeded').map(t=><SelectItem key={t.id} value={t.id} text={`${t.platform_slug} · ${t.id.slice(0,8)} · ${t.result_synced_count??0} 条`}/>)}</Select>
+              <Button kind="primary" renderIcon={ChartLine} disabled={!analyticsTaskId||busy} onClick={()=>void loadAnalytics(analyticsTaskId)}>生成多维分析</Button>
+            </Tile>
+            {analytics && <AnalyticsDashboard data={analytics}/>}
+            <Tile><h2>市场研究报告</h2><p>后续报告将引用这里的统计口径、原始采集记录和数据质量指标，保证结论可追溯。</p><Tag type="cool-gray">报告生成持续完善中</Tag></Tile>
+          </section>}
         </div>
       </Content>
       {searchOpen && <Modal open modalHeading="全局搜索" primaryButtonText="完成" secondaryButtonText="清除" onRequestClose={()=>setSearchOpen(false)} onRequestSubmit={()=>setSearchOpen(false)} onSecondarySubmit={()=>setSearch('')}>
@@ -286,6 +303,38 @@ function App() {
       </Modal>}
     </div>
   );
+}
+
+
+function AnalyticsDashboard({data}:{data:any}) {
+  const metrics=data.metrics??{}, coverage=data.coverage??{}, bands=data.distributions?.price_bands??[];
+  const maxBand=Math.max(1,...bands.map((x:any)=>x.count)), words=data.distributions?.words??[];
+  const brands=data.distributions?.brands??[], categories=data.distributions?.categories??[], funnel=data.funnel??{};
+  const stages=[['全部记录',funnel.total??0],['有商品标题',funnel.titled??0],['有价格',funnel.priced??0],['有评分',funnel.rated??0],['有图片',funnel.imaged??0],['有商品链接',funnel.linked??0]];
+  const money=(n:number|null)=>n===null||n===undefined?'—':n.toLocaleString(undefined,{maximumFractionDigits:2});
+  return <section className="module-stack analytics-stack">
+    {!coverage.complete && <InlineNotification kind="warning" lowContrast title="分析覆盖范围提示" subtitle={`当前分析 ${coverage.analyzed.toLocaleString()} / ${coverage.available.toLocaleString()} 条记录。明细仍完整保存，单次统计最多扫描 25,000 条。`}/>}
+    <div className="analytics-kpis">
+      <Tile><span className="metric-label">分析商品数</span><strong className="metric-value">{coverage.analyzed.toLocaleString()}</strong></Tile>
+      <Tile><span className="metric-label">平均价格</span><strong className="metric-value">{money(metrics.average_price)}</strong><p>有效价格 {metrics.price_count??0} 条</p></Tile>
+      <Tile><span className="metric-label">价格中位数</span><strong className="metric-value">{money(metrics.median_price)}</strong><p>P25 {money(metrics.p25_price)} · P75 {money(metrics.p75_price)}</p></Tile>
+      <Tile><span className="metric-label">平均评分</span><strong className="metric-value">{money(metrics.average_rating)}</strong><p>有效评分 {metrics.rating_count??0} 条</p></Tile>
+      <Tile><span className="metric-label">平均评论数</span><strong className="metric-value">{money(metrics.average_reviews)}</strong></Tile>
+    </div>
+    <div className="analytics-grid">
+      <Tile className="analytics-card"><h3>价格区间分布</h3><div className="bar-chart">{bands.map((b:any)=><div className="bar-row" key={b.label}><span>{b.label}</span><div className="bar-track"><div className="bar-fill" style={{width:`${b.count/maxBand*100}%`}}/></div><b>{b.count}</b></div>)}</div></Tile>
+      <Tile className="analytics-card"><h3>数据采集漏斗</h3><div className="funnel-chart">{stages.map(([label,value])=><div className="funnel-row" key={String(label)}><span>{label}</span><div className="funnel-track"><div style={{width:`${funnel.total?Number(value)/funnel.total*100:0}%`}}/></div><b>{Number(value).toLocaleString()}</b></div>)}</div></Tile>
+      <Tile className="analytics-card"><h3>品牌 Top 10</h3><RankList rows={brands}/></Tile>
+      <Tile className="analytics-card"><h3>类目 Top 10</h3><RankList rows={categories}/></Tile>
+      <Tile className="analytics-card word-cloud-card"><h3>关键词词云</h3><div className="word-cloud">{words.slice(0,32).map((w:any)=><span key={w.label} style={{fontSize:`${Math.max(12,Math.min(30,12+(w.count/(words[0]?.count||1))*18))}px`}}>{w.label}</span>)}</div></Tile>
+      <Tile className="analytics-card"><h3>字段完整度</h3><div className="quality-list">{[['标题',data.quality?.title_rate],['价格',data.quality?.price_rate],['评分',data.quality?.rating_rate],['图片',data.quality?.image_rate],['商品链接',data.quality?.link_rate]].map(([label,rate]:any)=><div className="quality-row" key={label}><span>{label}</span><b>{Math.round((rate??0)*100)}%</b><div className="bar-track"><div className="bar-fill" style={{width:`${(rate??0)*100}%`}}/></div></div>)}</div></Tile>
+    </div>
+    <Tile><h3>分析口径与覆盖范围</h3><p>价格、评分、评论数、品牌和类目通过常见字段别名识别；源数据保持原样，不会因字段映射而丢失。不同币种未换算时，价格均值和分布仅代表原始数值，不能直接视为同币种市场价格。</p><p>本次分析覆盖 {coverage.analyzed.toLocaleString()} 条，数据集已同步 {coverage.available.toLocaleString()} 条。词云由商品标题、品牌和类目文本生成。</p></Tile>
+  </section>;
+}
+function RankList({rows}:{rows:any[]}) {
+  const max=Math.max(1,...rows.map((r:any)=>r.count));
+  return <div className="rank-list">{rows.length?rows.map((r:any)=><div className="rank-row" key={r.label}><span title={r.label}>{r.label}</span><div className="bar-track"><div className="bar-fill" style={{width:`${r.count/max*100}%`}}/></div><b>{r.count}</b></div>):<p>暂无可识别字段</p>}</div>;
 }
 
 function message(e: unknown) { return e instanceof Error ? e.message : '发生未知错误，请稍后重试。'; }
