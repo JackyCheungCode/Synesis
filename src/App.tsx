@@ -18,7 +18,7 @@ type Page = 'dashboard' | 'vault' | 'projects' | 'tasks' | 'reports';
 type Credential = { slug: string; name: string; kind: 'provider' | 'integration'; status: string; key_last4?: string; last_validated_at?: string };
 type Project = { id: string; name: string; objective: string; status: string; target_regions: string[]; platform_slugs: string[] };
 type Plan = { id: string; project_id: string; status: string; plan: Record<string, unknown>; estimated_cost: number | null; created_at: string };
-type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string };
+type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string; progress?: number; result_count?: number; run_status?: string | null; external_run_id?: string | null; error_message?: string | null; finished_at?: string | null };
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vuyyaqsmlzixhdjvaidj.supabase.co';
 const fnUrl = `${supabaseUrl}/functions/v1/synesis-api`;
@@ -39,6 +39,8 @@ function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [resultTask, setResultTask] = useState<Task|null>(null);
+  const [taskResults, setTaskResults] = useState<unknown[]>([]);
   const [keyValues, setKeyValues] = useState<Record<string,string>>({});
   const [projectName, setProjectName] = useState('');
   const [objective, setObjective] = useState('');
@@ -67,7 +69,7 @@ function App() {
       const [p, pl, t, c] = await Promise.all([
         supabase.from('research_projects').select('id,name,objective,status,target_regions,platform_slugs').order('updated_at',{ascending:false}),
         supabase.from('ai_research_plans').select('id,project_id,status,plan,estimated_cost,created_at').order('created_at',{ascending:false}),
-        supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at').order('created_at',{ascending:false}),
+        supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at,progress,result_count,run_status,external_run_id,error_message,finished_at').order('created_at',{ascending:false}),
         api('credentials.list'),
       ]);
       if (p.error) throw p.error; if (pl.error) throw pl.error; if (t.error) throw t.error;
@@ -130,6 +132,27 @@ function App() {
     try {
       await api('tasks.execute',{taskId:task.id});
       setNotice({kind:'success',text:'Apify 采集任务已提交。'}); await loadAll();
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+
+  async function syncTask(task: Task) {
+    setBusy(true);
+    try {
+      const result = await api('tasks.sync',{taskId:task.id});
+      const state = result.task?.run_status ?? result.task?.status ?? '未知';
+      const count = result.task?.result_count;
+      setNotice({kind:'success',text:`任务状态已同步：${state}${typeof count === 'number' ? `，已接收 ${count} 条结果` : ''}${result.result_truncated ? '（当前已保存前 250 条，可继续扩展分页读取）' : ''}`});
+      await loadAll();
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+  async function viewTaskResults(task: Task) {
+    setBusy(true);
+    try {
+      const result = await api('tasks.results',{taskId:task.id,limit:100,offset:0});
+      setTaskResults(result.results ?? []);
+      setResultTask(task);
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
@@ -210,13 +233,17 @@ function App() {
             {pendingPlans.map(p=><Tile key={p.id} className="list-tile"><div><h3>研究计划 · {projects.find(x=>x.id===p.project_id)?.name ?? p.project_id}</h3><p>{JSON.stringify(p.plan).slice(0,500)}</p><Tag type="warm-gray">待人工审批</Tag></div><Button kind="primary" onClick={()=>{setApprovalPlan(p);setApprovalPlanText(JSON.stringify(p.plan,null,2));}}>审阅并审批</Button></Tile>)}
           </section>}
           {page==='tasks' && <section className="module-stack"><div className="module-heading"><div><h2>Apify 采集任务</h2><p>只有通过人工审批的研究计划才会产生可执行任务。</p></div><Button kind="tertiary" renderIcon={Renew} onClick={()=>void loadAll()}>刷新</Button></div>
-            <DataTable rows={pageRows.map(t=>({...t,id:t.id.slice(0,8)}))} headers={[{key:'platform_slug',header:'平台'},{key:'status',header:'状态'},{key:'actor_id',header:'Apify Actor'},{key:'created_at',header:'创建时间'},{key:'actions',header:'操作'}]}>
-              {({rows,headers,getHeaderProps,getRowProps,getTableProps})=><Table {...getTableProps()}><TableHead><TableRow>{headers.map(h=><TableHeader {...getHeaderProps({header:h})} key={h.key}>{h.header}</TableHeader>)}</TableRow></TableHead><TableBody>{rows.map(row=><TableRow {...getRowProps({row})} key={row.id}>{row.cells.map(cell=><TableCell key={cell.id}>{cell.info.header==='actions'?<Button size="sm" kind="tertiary" renderIcon={Play} disabled={row.cells.find(c=>c.info.header==='status')?.value!=='queued'} onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void runTask(t)}}>执行</Button>:String(cell.value??'—')}</TableCell>)}</TableRow>)}</TableBody></Table>}
+            <DataTable rows={pageRows.map(t=>({...t,id:t.id.slice(0,8),progress_label:`${t.progress ?? 0}%`,result_label:String(t.result_count ?? 0)}))} headers={[{key:'platform_slug',header:'平台'},{key:'status',header:'状态'},{key:'progress_label',header:'进度'},{key:'result_label',header:'结果数'},{key:'actor_id',header:'Apify Actor'},{key:'created_at',header:'创建时间'},{key:'actions',header:'操作'}]}>
+              {({rows,headers,getHeaderProps,getRowProps,getTableProps})=><Table {...getTableProps()}><TableHead><TableRow>{headers.map(h=><TableHeader {...getHeaderProps({header:h})} key={h.key}>{h.header}</TableHeader>)}</TableRow></TableHead><TableBody>{rows.map(row=><TableRow {...getRowProps({row})} key={row.id}>{row.cells.map(cell=><TableCell key={cell.id}>{cell.info.header==='actions'?<div className="card-actions">{row.cells.find(c=>c.info.header==='status')?.value==='queued'&&<Button size="sm" kind="tertiary" renderIcon={Play} onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void runTask(t)}}>执行</Button>}{['running','queued'].includes(String(row.cells.find(c=>c.info.header==='status')?.value))&&<Button size="sm" kind="ghost" renderIcon={Renew} onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void syncTask(t)}}>同步状态</Button>}{row.cells.find(c=>c.info.header==='status')?.value==='succeeded'&&<Button size="sm" kind="ghost" onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void viewTaskResults(t)}}>查看结果</Button>}</div>:String(cell.value??'—')}</TableCell>)}</TableRow>)}</TableBody></Table>}
             </DataTable>
           </section>}
           {page==='reports' && <section className="module-stack"><Tile><h2>市场研究报告</h2><p>研究项目、采集证据与 AI 分析完成后，在此生成可追溯的市场报告。</p><Tag type="cool-gray">报告模块骨架</Tag></Tile></section>}
         </div>
       </Content>
+      {resultTask && <Modal open modalHeading={`采集结果 · ${resultTask.platform_slug}`} passiveModal primaryButtonText="关闭" onRequestClose={()=>setResultTask(null)}>
+        <p>任务 ID：{resultTask.id} · 当前显示前 100 条结果。共接收 {resultTask.result_count ?? taskResults.length} 条。</p>
+        <pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre>
+      </Modal>}
       {approvalPlan && <Modal open modalHeading="审批 AI 研究计划" primaryButtonText="批准并创建采集任务" secondaryButtonText="返回审阅" onRequestClose={()=>setApprovalPlan(null)} onRequestSubmit={()=>void approvePlan(approvalPlan)} primaryButtonDisabled={busy}>
         <p>请审阅研究范围与采集任务。AI 不会猜测 Apify Actor ID；请在下方 JSON 的 platform_tasks[].actor_id 填入你确认的 Actor ID。批准后只创建待执行任务，不会自动启动 Apify。</p><TextArea id="approval-plan-json" labelText="研究计划（可编辑 JSON）" rows={14} value={approvalPlanText} onChange={e=>setApprovalPlanText(e.target.value)} />
       </Modal>}
