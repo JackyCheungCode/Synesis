@@ -6,7 +6,7 @@ import {
   TableRow, TableHeader, TableBody, TableCell, Loading,
 } from '@carbon/react';
 import {
-  Dashboard, Globe, Ai, Folder, ChartLine, Add, Renew, Play, Search as SearchIcon,
+  Dashboard, Globe, Ai, Folder, ChartLine, Add, Renew, Play, Search as SearchIcon, UserAvatar,
 } from '@carbon/icons-react';
 import { BrandIcon } from './components/BrandIcon';
 import { platforms, providers, apiIntegrations } from './data/catalog';
@@ -168,7 +168,7 @@ function App() {
         <HeaderName prefix="" href="#" onClick={e=>e.preventDefault()}>SYNESIS</HeaderName>
         <HeaderGlobalBar>
           <HeaderGlobalAction aria-label="搜索" tooltipAlignment="end" onClick={()=>setSearchOpen(true)}><SearchIcon/></HeaderGlobalAction>
-          <Button kind="primary" size="sm" onClick={()=>void signOut()}>退出登录</Button>
+          <HeaderGlobalAction aria-label="退出登录" tooltipAlignment="end" onClick={()=>void signOut()}><UserAvatar/></HeaderGlobalAction>
         </HeaderGlobalBar>
       </Header>
       <SideNav aria-label="Synesis 主导航" expanded={navExpanded} isPersistent={true} isFixedNav>
@@ -181,6 +181,7 @@ function App() {
           <SideNavLink renderIcon={ChartLine} isActive={page==='reports'} onClick={()=>navigate('reports')}>市场监控与报告</SideNavLink>
         </SideNavItems>
       </SideNav>
+      {navExpanded && <button className="nav-dismiss-overlay" aria-label="关闭导航菜单" onClick={()=>setNavExpanded(false)} />}
       <Content className="synesis-content">
         <div className="page-wrap">
           <div className="page-title-row"><div><p className="eyebrow">SYNESIS / WORKSPACE</p><h1>{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue">个人工作空间</Tag></div>
