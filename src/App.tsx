@@ -42,7 +42,7 @@ function App() {
   const projectId = route.projectId;
   const navigate = (next: Page, id?: string) => { route.navigate(next, id); setNavExpanded(false); };
   const [navExpanded, setNavExpanded] = useState(false);
-  const [theme, setTheme] = useState<'white'|'g100'>(() => window.localStorage.getItem('synesis-carbon-theme') === 'g100' ? 'g100' : 'white');
+  const [theme, setTheme] = useState<'light'|'dark'>(() => window.localStorage.getItem('synesis-theme') === 'dark' ? 'dark' : 'light');
   const [notice, setNotice] = useState<{kind:'info'|'success'|'error'|'warning'; text:string}|null>(null);
   const [busy, setBusy] = useState(false);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -105,7 +105,7 @@ function App() {
     finally { setBusy(false); }
   }
   useEffect(() => { void loadAll(); }, []);
-  useEffect(() => { window.localStorage.setItem('synesis-carbon-theme', theme); }, [theme]);
+  useEffect(() => { window.localStorage.setItem('synesis-theme', theme); }, [theme]);
   useEffect(() => {
     const saved = session?.user.user_metadata?.research_collection_settings;
     if (saved && typeof saved === 'object') {
@@ -544,7 +544,7 @@ function App() {
   const taskSearchResults = searchTerm ? tasks.filter(item => item.platform_slug.toLocaleLowerCase().includes(searchTerm)).slice(0,6) : [];
 
   return (
-    <div className={`synesis-app cds--${theme}`}>
+    <div className={`synesis-app synesis-theme-${theme} cds--${theme === 'dark' ? 'g100' : 'white'}`}>
       <Header aria-label="Synesis">
         <a
           className="synesis-skip-link"
@@ -560,7 +560,7 @@ function App() {
         <HeaderName prefix="" href="#/dashboard">SYNESIS</HeaderName>
         <HeaderGlobalBar>
           <HeaderGlobalAction aria-label="搜索" tooltipAlignment="end" onClick={()=>setSearchOpen(true)}><SearchIcon/></HeaderGlobalAction>
-          <HeaderGlobalAction aria-label={theme === 'white' ? '切换到深色主题' : '切换到浅色主题'} tooltipAlignment="end" onClick={()=>setTheme(current=>current === 'white' ? 'g100' : 'white')}><span aria-hidden="true">◐</span></HeaderGlobalAction>
+          <HeaderGlobalAction aria-label={theme === 'light' ? '切换到深色主题' : '切换到浅色主题'} tooltipAlignment="end" onClick={()=>setTheme(current=>current === 'light' ? 'dark' : 'light')}><span aria-hidden="true">◐</span></HeaderGlobalAction>
           <HeaderGlobalAction aria-label="账户（点击退出登录）" tooltipAlignment="end" onClick={()=>void signOut()}><UserAvatar/></HeaderGlobalAction>
         </HeaderGlobalBar>
       </Header>

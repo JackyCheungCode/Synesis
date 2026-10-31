@@ -30,7 +30,7 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
   return (
     <SideNav
       id="synesis-navigation"
-      className="synesis-carbon-side-nav"
+      className="synesis-carbon-side-nav synesis-nav-overlay"
       aria-label="Synesis 主导航"
       expanded={open}
       isPersistent={false}
