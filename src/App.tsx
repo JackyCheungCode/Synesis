@@ -536,6 +536,10 @@ function App() {
 
   const title: Record<Page,string> = {dashboard:'情报总览',vault:'AI 模型与 Key Vault',settings:'调研采集设置',projects:projectId?'研究项目详情':'研究项目中心',products:'标准化商品库'};
   const pendingPlans = plans.filter(p => p.status === 'pending_approval');
+  const searchTerm = search.trim().toLocaleLowerCase();
+  const projectSearchResults = searchTerm ? projects.filter(item => [item.name,item.objective].some(value => value.toLocaleLowerCase().includes(searchTerm))).slice(0,6) : [];
+  const productSearchResults = searchTerm ? products.filter(item => [item.title,item.brand,item.canonical_key].some(value => (value??'').toLocaleLowerCase().includes(searchTerm))).slice(0,6) : [];
+  const taskSearchResults = searchTerm ? tasks.filter(item => item.platform_slug.toLocaleLowerCase().includes(searchTerm)).slice(0,6) : [];
 
   return (
     <div className={`synesis-app cds--${theme}`}>
@@ -601,7 +605,16 @@ function App() {
           </div>
       </Content>
       {searchOpen && <Modal open modalHeading="全局搜索" primaryButtonText="完成" secondaryButtonText="清除" onRequestClose={()=>setSearchOpen(false)} onRequestSubmit={()=>setSearchOpen(false)} onSecondarySubmit={()=>setSearch('')}>
-        <TextInput id="global-search" labelText="搜索平台、商品、项目与情报" placeholder="输入关键词" value={search} onChange={e=>setSearch(e.target.value)}/>
+        <TextInput id="global-search" labelText="搜索项目、平台任务和已加载商品" placeholder="输入关键词" value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&search.trim()){setProductSearch(search.trim());setSearchOpen(false);navigate('products');void loadProducts(0,search.trim());}}}/>
+        {searchTerm && <section className="synesis-global-search-results" aria-label="搜索结果" aria-live="polite">
+          <h3>研究项目</h3>
+          {projectSearchResults.length ? projectSearchResults.map(item=><a key={item.id} href={'#/research/'+encodeURIComponent(item.id)} onClick={event=>{event.preventDefault();setSearchOpen(false);navigate('projects',item.id);}}><strong>{item.name}</strong><span>{item.objective}</span></a>) : <p>没有匹配的研究项目。</p>}
+          <h3>平台任务</h3>
+          {taskSearchResults.length ? taskSearchResults.map(item=><a key={item.id} href={'#/research/'+encodeURIComponent(item.project_id)} onClick={event=>{event.preventDefault();setSearchOpen(false);navigate('projects',item.project_id);}}><strong>{item.platform_slug}</strong><span>{item.status} · {item.id}</span></a>) : <p>没有匹配的平台任务。</p>}
+          <h3>当前已加载商品</h3>
+          {productSearchResults.length ? productSearchResults.map(item=><a key={item.id} href="#/products" onClick={event=>{event.preventDefault();setProductSearch(search);setSearchOpen(false);navigate('products');void loadProducts(0,search);}}><strong>{item.title||'未命名商品'}</strong><span>{item.brand||'品牌未知'} · {item.canonical_key}</span></a>) : <p>当前商品页没有匹配项；可以继续在商品库中执行完整搜索。</p>}
+          <Button kind="tertiary" onClick={()=>{setProductSearch(search);setSearchOpen(false);navigate('products');void loadProducts(0,search);}}>在商品库中搜索“{search}”</Button>
+        </section>}
       </Modal>}
       {cancelTaskTarget && <Modal open modalHeading="确认取消采集任务" primaryButtonText="确认取消任务" secondaryButtonText="保留任务" onRequestClose={()=>setCancelTaskTarget(null)} onRequestSubmit={()=>void confirmCancelTask()} primaryButtonDisabled={busy}>
         <p>确定取消这个采集任务？正在运行的 Apify Run 也会尝试终止。已接收的结果会保留。</p>
