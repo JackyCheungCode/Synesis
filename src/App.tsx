@@ -3,7 +3,7 @@ import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, SideNav, SideNavItems, SideNavLink, Content,
   Button, InlineNotification, Tag, TextInput, PasswordInput, Tile,
   Toggle, Select, SelectItem, TextArea, Modal, DataTable, Table, TableHead,
-  TableRow, TableHeader, TableBody, TableCell, Search, Loading,
+  TableRow, TableHeader, TableBody, TableCell, Loading,
 } from '@carbon/react';
 import {
   Dashboard, Globe, Ai, Folder, ChartLine, Add, Renew, Play, Search as SearchIcon,
