@@ -1,4 +1,4 @@
-import { Dashboard, ChartLine, Product, SettingsAdjust } from '@carbon/icons-react';
+import { Dashboard, ChartLine, Product, SettingsAdjust, Key } from '@carbon/icons-react';
 import type { WorkspacePage } from '../lib/router';
 
 type Props = { page: WorkspacePage; open: boolean; onNavigate: (page: WorkspacePage) => void; onClose: () => void };
@@ -8,7 +8,8 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
     { page: 'dashboard', label: '情报总览', icon: Dashboard },
     { page: 'projects', label: '研究项目中心', icon: ChartLine },
     { page: 'products', label: '标准化商品库', icon: Product },
-    { page: 'vault', label: 'AI 模型与 Key Vault', icon: SettingsAdjust },
+    { page: 'settings', label: '调研采集设置', icon: SettingsAdjust },
+    { page: 'vault', label: 'AI 模型与 Key Vault', icon: Key },
   ];
   return <>
     <button className={`synesis-nav-backdrop${open ? ' is-visible' : ''}`} type="button" aria-label="关闭导航菜单" tabIndex={open ? 0 : -1} onClick={onClose} />
