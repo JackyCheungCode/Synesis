@@ -389,11 +389,15 @@ Deno.serve(async (req: Request) => {
           }).filter(item=>item.identity);
           const uniqueNormalized = [...new Map(normalized.map(item=>[item.identity!,item])).values()];
           if (uniqueNormalized.length) {
+            const asText=(value:unknown)=>value===null||value===undefined||typeof value==='object'?'':String(value).trim();
             const productRows=uniqueNormalized.map(item=>({
               user_id:userId,canonical_key:`${task.platform_slug}:${item.identity}`,
-              title:item.title?String(item.title):null,brand:item.brand?String(item.brand):null,
-              category:item.category?String(item.category):null,description:item.description?String(item.description):null,
-              image_url:item.image?String(item.image):null,updated_at:new Date().toISOString(),
+              ...(asText(item.title)?{title:asText(item.title)}:{}),
+              ...(asText(item.brand)?{brand:asText(item.brand)}:{}),
+              ...(asText(item.category)?{category:asText(item.category)}:{}),
+              ...(asText(item.description)?{description:asText(item.description)}:{}),
+              ...(asText(item.image)?{image_url:asText(item.image)}:{}),
+              updated_at:new Date().toISOString(),
             }));
             const {data:products,error:productError}=await admin.from('products')
               .upsert(productRows,{onConflict:'user_id,canonical_key'})
