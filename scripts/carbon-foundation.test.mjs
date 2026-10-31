@@ -92,3 +92,10 @@ test('Carbon UI shell uses official background, selection, and icon tokens', () 
   assert.match(styles, /fill: var\(--cds-icon-primary\)/);
   assert.match(foundation, /var\(--cds-background-hover\)/);
 });
+
+
+test('Carbon SideNav keeps Carbon stacking defaults and has no dead overlay layer', () => {
+  assert.doesNotMatch(styles, /nav-dismiss-overlay/);
+  assert.doesNotMatch(styles, /\.synesis-app \.cds--side-nav\s*\{[^}]*z-index/);
+  assert.doesNotMatch(foundation, /\.synesis-carbon-side-nav\s*\{[^}]*z-index/);
+});
