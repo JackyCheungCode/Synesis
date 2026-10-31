@@ -22,15 +22,6 @@ export const providers: CatalogItem[] = [
   { name: 'xAI', slug: 'x', fallback: 'x', kind: 'provider' },
 ];
 
-export const apiIntegrations = [
-  { name: 'Apify', slug: 'apify', fallback: 'A', credentialLabel: 'Apify API Token', placeholder: '填写 Apify API Token' },
-  { name: 'Google Cloud APIs', slug: 'google', fallback: 'G', credentialLabel: 'Google API Key', placeholder: '填写 Google API Key' },
-  { name: 'YouTube Data API', slug: 'youtube', fallback: '▶', credentialLabel: 'YouTube Data API Key', placeholder: '填写 YouTube Data API Key' },
-  { name: 'Reddit API', slug: 'reddit', fallback: 'r', credentialLabel: 'Reddit Client Secret', placeholder: '填写 Reddit OAuth Client Secret' },
-  { name: 'TikTok API', slug: 'tiktok', fallback: '♪', credentialLabel: 'TikTok Client Secret', placeholder: '填写 TikTok Developer Client Secret' },
-  { name: 'Custom REST API', slug: 'api', fallback: 'API', credentialLabel: 'API Key / Token', placeholder: '填写自定义 API Key 或 Token' },
-];
-
 export const services: CatalogItem[] = [
   { name: 'Apify', slug: 'apify', fallback: 'A', kind: 'service' },
   { name: 'GitHub', slug: 'github', fallback: 'GH', kind: 'service' },
