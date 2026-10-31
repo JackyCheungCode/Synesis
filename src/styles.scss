@@ -1663,3 +1663,17 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
   z-index:auto!important;
   box-shadow:none!important;
 }
+
+/* Flag CDN assets are images, not emoji text: preserve their circular crop in both list and chips. */
+.synesis-app .research-country-option img.research-country-flag,
+.synesis-app .research-selected-country img.research-selected-country-flag {
+  display: block !important;
+  width: 23px !important;
+  height: 23px !important;
+  min-width: 23px !important;
+  flex: 0 0 23px !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+}
