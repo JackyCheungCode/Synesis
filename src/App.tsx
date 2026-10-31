@@ -161,7 +161,9 @@ function App() {
       const countries = profile.dimensions.find(item=>item.key==='countries')?.values ?? [];
       const regions = profile.dimensions.find(item=>item.key==='regions')?.values ?? [];
       const targetRegions = [...countries,...regions].filter(Boolean);
+      if (!session?.user.id) throw new Error('登录状态已失效，请重新登录后再保存研究需求。');
       const payload = {
+        user_id:session.user.id,
         name:(profile.summary || researchBrief).slice(0,56),
         objective:researchBrief, target_regions:targetRegions, platform_slugs:[],
         scope:{...(projectId?projects.find(item=>item.id===projectId)?.scope??{}:{}),input_mode:'structured_research',research_profile:profile,original_brief:researchBrief,profile_version:1,workflow_state:'in_progress',active_step:1},
@@ -205,7 +207,8 @@ function App() {
         profile_version:1,
       };
       const regions=[...(draft.profile?.dimensions.find(item=>item.key==='countries')?.values??[]),...(draft.profile?.dimensions.find(item=>item.key==='regions')?.values??[])];
-      const payload={name:(draft.profile?.summary||objective).slice(0,56),objective,target_regions:regions,scope,status:'planning'};
+      if (!session?.user.id) throw new Error('登录状态已失效，请重新登录后再保存研究草稿。');
+      const payload={user_id:session.user.id,name:(draft.profile?.summary||objective).slice(0,56),objective,target_regions:regions,scope,status:'planning'};
       const result=projectId
         ? await supabase.from('research_projects').update(payload).eq('id',projectId).select().single()
         : await supabase.from('research_projects').insert(payload).select().single();
@@ -836,5 +839,14 @@ function extractAIText(result:any,provider:string):string {
   return String(result?.choices?.[0]?.message?.content??'');
 }
 
-function message(e: unknown) { return e instanceof Error ? e.message : '发生未知错误，请稍后重试。'; }
+function message(e: unknown) {
+  if (e instanceof Error) return e.message;
+  if (e && typeof e === 'object') {
+    const error=e as Record<string,unknown>;
+    const parts=[error.message,error.details,error.hint,error.code].filter(value=>typeof value==='string'&&value.trim()).map(String);
+    if(parts.length)return parts.join(' · ');
+  }
+  if(typeof e==='string'&&e.trim())return e;
+  return '发生未知错误，请稍后重试。';
+}
 export default App;
