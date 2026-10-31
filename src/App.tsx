@@ -41,7 +41,7 @@ function App() {
   const projectId = route.projectId;
   const navigate = (next: Page, id?: string) => { route.navigate(next, id); setNavExpanded(false); };
   const [navExpanded, setNavExpanded] = useState(false);
-  const [theme, setTheme] = useState<'white'|'g100'>('white');
+  const [theme, setTheme] = useState<'white'|'g100'>(() => window.localStorage.getItem('synesis-carbon-theme') === 'g100' ? 'g100' : 'white');
   const [notice, setNotice] = useState<{kind:'info'|'success'|'error'|'warning'; text:string}|null>(null);
   const [busy, setBusy] = useState(false);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -104,6 +104,7 @@ function App() {
     finally { setBusy(false); }
   }
   useEffect(() => { void loadAll(); }, []);
+  useEffect(() => { window.localStorage.setItem('synesis-carbon-theme', theme); }, [theme]);
   useEffect(() => {
     const saved = session?.user.user_metadata?.research_collection_settings;
     if (saved && typeof saved === 'object') {
@@ -539,7 +540,7 @@ function App() {
   return (
     <div className={`synesis-app cds--${theme}`}>
       <Header aria-label="Synesis">
-        <HeaderMenuButton aria-label="切换导航" isActive={navExpanded} onClick={() => setNavExpanded(v=>!v)} />
+        <HeaderMenuButton aria-label="切换导航" aria-expanded={navExpanded} aria-controls="synesis-navigation" isActive={navExpanded} onClick={() => setNavExpanded(v=>!v)} />
         <HeaderName prefix="" href="#/dashboard">SYNESIS</HeaderName>
         <HeaderGlobalBar>
           <HeaderGlobalAction aria-label="搜索" tooltipAlignment="end" onClick={()=>setSearchOpen(true)}><SearchIcon/></HeaderGlobalAction>
