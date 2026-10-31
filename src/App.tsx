@@ -17,7 +17,7 @@ type Page = 'dashboard' | 'vault' | 'projects' | 'tasks' | 'reports';
 type Credential = { slug: string; name: string; kind: 'provider' | 'integration'; status: string; key_last4?: string; last_validated_at?: string };
 type Project = { id: string; name: string; objective: string; status: string; target_regions: string[]; platform_slugs: string[] };
 type Plan = { id: string; project_id: string; status: string; plan: Record<string, unknown>; estimated_cost: number | null; created_at: string };
-type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string; progress?: number; result_count?: number; run_status?: string | null; external_run_id?: string | null; error_message?: string | null; finished_at?: string | null };
+type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string; progress?: number; result_count?: number; run_status?: string | null; external_run_id?: string | null; error_message?: string | null; finished_at?: string | null; result_synced_count?: number };
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vuyyaqsmlzixhdjvaidj.supabase.co';
 const fnUrl = `${supabaseUrl}/functions/v1/synesis-api`;
@@ -40,6 +40,9 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [resultTask, setResultTask] = useState<Task|null>(null);
   const [taskResults, setTaskResults] = useState<unknown[]>([]);
+  const [resultPage, setResultPage] = useState(0);
+  const [resultTotal, setResultTotal] = useState(0);
+  const [resultSynced, setResultSynced] = useState(0);
   const [keyValues, setKeyValues] = useState<Record<string,string>>({});
   const [projectName, setProjectName] = useState('');
   const [objective, setObjective] = useState('');
@@ -139,20 +142,59 @@ function App() {
   async function syncTask(task: Task) {
     setBusy(true);
     try {
-      const result = await api('tasks.sync',{taskId:task.id});
+      let result: any;
+      let batches = 0;
+      do {
+        result = await api('tasks.sync',{taskId:task.id});
+        batches += 1;
+        const synced = Number(result.task?.result_synced_count ?? 0);
+        const total = Number(result.task?.result_count ?? 0);
+        setNotice({kind:'info',text:`正在完整接收采集结果：${synced.toLocaleString()} / ${total.toLocaleString()} 条（第 ${batches} 批）`});
+        if (result.task?.run_status !== 'SUCCEEDED' || result.task?.result_sync_complete || batches >= 50) break;
+      } while (true);
+      const complete = Boolean(result.task?.result_sync_complete);
       const state = result.task?.run_status ?? result.task?.status ?? '未知';
-      const count = result.task?.result_count;
-      setNotice({kind:'success',text:`任务状态已同步：${state}${typeof count === 'number' ? `，已接收 ${count} 条结果` : ''}${result.result_truncated ? '（当前已保存前 250 条，可继续扩展分页读取）' : ''}`});
+      const count = Number(result.task?.result_count ?? 0);
+      const synced = Number(result.task?.result_synced_count ?? 0);
+      setNotice({kind:complete?'success':'info',text:`任务状态：${state}；已同步 ${synced.toLocaleString()} / ${count.toLocaleString()} 条。${complete?'全部结果已保存。':'本轮达到安全批次上限，可再次点击继续同步。'}`});
       await loadAll();
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
-  async function viewTaskResults(task: Task) {
+  async function viewTaskResults(task: Task, page = 0) {
     setBusy(true);
     try {
-      const result = await api('tasks.results',{taskId:task.id,limit:100,offset:0});
+      const result = await api('tasks.results',{taskId:task.id,limit:100,offset:page*100});
       setTaskResults(result.results ?? []);
+      setResultPage(page);
+      setResultTotal(Number(result.total ?? 0));
+      setResultSynced(Number(result.synced ?? 0));
       setResultTask(task);
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+
+  async function exportTaskResults(task: Task) {
+    setBusy(true);
+    try {
+      const rows: Record<string, unknown>[] = [];
+      const total = Number(task.result_synced_count ?? task.result_count ?? 0);
+      for (let offset=0; offset<total; offset+=250) {
+        const page = await api('tasks.results',{taskId:task.id,limit:250,offset});
+        rows.push(...(page.results ?? []));
+      }
+      const keys = Array.from(new Set(rows.flatMap(row=>Object.keys(row))));
+      const csvCell = (value: unknown) => {
+        const text = value !== null && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '');
+        return `"${text.replace(/"/g,'""')}"`;
+      };
+      const csv = [keys.map(csvCell).join(','),...rows.map(row=>keys.map(key=>csvCell(row[key])).join(','))].join('\\r\\n');
+      const blob = new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href=url; link.download=`synesis-task-${task.id}-results.csv`; link.click();
+      URL.revokeObjectURL(url);
+      setNotice({kind:'success',text:`已导出 ${rows.length.toLocaleString()} 条完整原始记录。`});
     } catch(e) { setNotice({kind:'error',text:message(e)}); }
     finally { setBusy(false); }
   }
@@ -225,8 +267,8 @@ function App() {
             {pendingPlans.map(p=><Tile key={p.id} className="list-tile"><div><h3>研究计划 · {projects.find(x=>x.id===p.project_id)?.name ?? p.project_id}</h3><p>{JSON.stringify(p.plan).slice(0,500)}</p><Tag type="warm-gray">待人工审批</Tag></div><Button kind="primary" onClick={()=>{setApprovalPlan(p);setApprovalPlanText(JSON.stringify(p.plan,null,2));}}>审阅并审批</Button></Tile>)}
           </section>}
           {page==='tasks' && <section className="module-stack"><div className="module-heading"><div><h2>Apify 采集任务</h2><p>只有通过人工审批的研究计划才会产生可执行任务。</p></div><Button kind="tertiary" renderIcon={Renew} onClick={()=>void loadAll()}>刷新</Button></div>
-            <DataTable rows={pageRows.map(t=>({...t,id:t.id.slice(0,8),progress_label:`${t.progress ?? 0}%`,result_label:String(t.result_count ?? 0)}))} headers={[{key:'platform_slug',header:'平台'},{key:'status',header:'状态'},{key:'progress_label',header:'进度'},{key:'result_label',header:'结果数'},{key:'actor_id',header:'Apify Actor'},{key:'created_at',header:'创建时间'},{key:'actions',header:'操作'}]}>
-              {({rows,headers,getHeaderProps,getRowProps,getTableProps})=><Table {...getTableProps()}><TableHead><TableRow>{headers.map(h=><TableHeader {...getHeaderProps({header:h})} key={h.key}>{h.header}</TableHeader>)}</TableRow></TableHead><TableBody>{rows.map(row=><TableRow {...getRowProps({row})} key={row.id}>{row.cells.map(cell=><TableCell key={cell.id}>{cell.info.header==='actions'?<div className="card-actions">{row.cells.find(c=>c.info.header==='status')?.value==='queued'&&<Button size="sm" kind="tertiary" renderIcon={Play} onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void runTask(t)}}>执行</Button>}{['running','queued'].includes(String(row.cells.find(c=>c.info.header==='status')?.value))&&<Button size="sm" kind="ghost" renderIcon={Renew} onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void syncTask(t)}}>同步状态</Button>}{row.cells.find(c=>c.info.header==='status')?.value==='succeeded'&&<Button size="sm" kind="ghost" onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void viewTaskResults(t)}}>查看结果</Button>}</div>:String(cell.value??'—')}</TableCell>)}</TableRow>)}</TableBody></Table>}
+            <DataTable rows={pageRows.map(t=>({...t,id:t.id.slice(0,8),progress_label:`${t.progress ?? 0}%`,result_label:`${t.result_synced_count ?? 0}/${t.result_count ?? 0}`}))} headers={[{key:'platform_slug',header:'平台'},{key:'status',header:'状态'},{key:'progress_label',header:'进度'},{key:'result_label',header:'结果数'},{key:'actor_id',header:'Apify Actor'},{key:'created_at',header:'创建时间'},{key:'actions',header:'操作'}]}>
+              {({rows,headers,getHeaderProps,getRowProps,getTableProps})=><Table {...getTableProps()}><TableHead><TableRow>{headers.map(h=><TableHeader {...getHeaderProps({header:h})} key={h.key}>{h.header}</TableHeader>)}</TableRow></TableHead><TableBody>{rows.map(row=><TableRow {...getRowProps({row})} key={row.id}>{row.cells.map(cell=><TableCell key={cell.id}>{cell.info.header==='actions'?<div className="card-actions">{row.cells.find(c=>c.info.header==='status')?.value==='queued'&&<Button size="sm" kind="tertiary" renderIcon={Play} onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void runTask(t)}}>执行</Button>}{(['running','queued'].includes(String(row.cells.find(c=>c.info.header==='status')?.value)) || tasks.some(t=>t.id.startsWith(row.id) && t.status==='succeeded' && (t.result_synced_count??0)<(t.result_count??0)))&&<Button size="sm" kind="ghost" renderIcon={Renew} onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void syncTask(t)}}>同步 / 继续接收</Button>}{row.cells.find(c=>c.info.header==='status')?.value==='succeeded'&&<Button size="sm" kind="ghost" onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void viewTaskResults(t)}}>查看结果</Button>}</div>:String(cell.value??'—')}</TableCell>)}</TableRow>)}</TableBody></Table>}
             </DataTable>
           </section>}
           {page==='reports' && <section className="module-stack"><Tile><h2>市场研究报告</h2><p>研究项目、采集证据与 AI 分析完成后，在此生成可追溯的市场报告。</p><Tag type="cool-gray">报告模块骨架</Tag></Tile></section>}
@@ -236,8 +278,8 @@ function App() {
         <TextInput id="global-search" labelText="搜索平台、商品、项目与情报" placeholder="输入关键词" value={search} onChange={e=>setSearch(e.target.value)}/>
       </Modal>}
       {resultTask && <Modal open modalHeading={`采集结果 · ${resultTask.platform_slug}`} passiveModal primaryButtonText="关闭" onRequestClose={()=>setResultTask(null)}>
-        <p>任务 ID：{resultTask.id} · 当前显示前 100 条结果。共接收 {resultTask.result_count ?? taskResults.length} 条。</p>
-        <pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre>
+        <p>任务 ID：{resultTask.id} · 当前页显示 {taskResults.length} 条；总计 {resultTotal.toLocaleString()} 条，已同步 {resultSynced.toLocaleString()} 条。</p>
+        <div className="card-actions"><Button kind="secondary" size="sm" disabled={resultPage===0} onClick={()=>void viewTaskResults(resultTask,resultPage-1)}>上一页</Button><Tag type="blue">第 {resultPage+1} / {Math.max(1,Math.ceil(resultTotal/100)} 页</Tag><Button kind="secondary" size="sm" disabled={(resultPage+1)*100>=resultSynced} onClick={()=>void viewTaskResults(resultTask,resultPage+1)}>下一页</Button><Button kind="tertiary" size="sm" onClick={()=>void exportTaskResults(resultTask)}>导出全部 CSV</Button></div><pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre>
       </Modal>}
       {approvalPlan && <Modal open modalHeading="审批 AI 研究计划" primaryButtonText="批准并创建采集任务" secondaryButtonText="返回审阅" onRequestClose={()=>setApprovalPlan(null)} onRequestSubmit={()=>void approvePlan(approvalPlan)} primaryButtonDisabled={busy}>
         <p>请审阅研究范围与采集任务。AI 不会猜测 Apify Actor ID；请在下方 JSON 的 platform_tasks[].actor_id 填入你确认的 Actor ID。批准后只创建待执行任务，不会自动启动 Apify。</p><TextArea id="approval-plan-json" labelText="研究计划（可编辑 JSON）" rows={14} value={approvalPlanText} onChange={e=>setApprovalPlanText(e.target.value)} />
