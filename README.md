@@ -2,54 +2,35 @@
 
 Global Trade Intelligence Platform.
 
-## Product principles
-- IBM Carbon React native components and icons; light/dark Carbon themes.
-- Carbon UI Shell navigation with a responsive mobile side navigation.
-- Platform-specific data modules and a shared cross-platform intelligence layer.
-- AI providers: OpenAI, Gemini, DeepSeek, Anthropic Claude, Cloudflare Workers AI, plus Mistral and xAI adapters.
-- BYOK: credentials are submitted only to an authenticated backend and encrypted with AES-256-GCM before storage.
-- AI-generated research plans require explicit human approval before collection tasks can be created.
-- Apify runs require an approved plan, a user-confirmed Actor ID, and a queued task state.
-- Existing Cloudflare Worker, Supabase project, GitHub repository, and workers.dev host are reused. No new domain, DNS zone, or project is created.
+Synesis 将跨境市场研究、数据采集、跨平台分析、商品情报和 AI 报告组织在同一个工作台中。
 
-## Frontend
-- Unified Carbon Design Foundation: [grid, tokens, typography, themes, shell, controls, and accessibility](docs/carbon-design-foundation.md).
-- React + TypeScript + Vite.
-- IBM Carbon React and Carbon icons.
-- Responsive Carbon SideNav; mobile navigation opens from the Carbon Header menu button.
-- Key Vault, provider connection testing, research project creation, AI plan review/approval, and collection task UI.
-- Public Supabase URL and publishable key are safe client configuration; never place provider API keys or Supabase secret keys in `VITE_*` variables.
+## 产品模块
+- 情报总览与研究项目管理
+- 五步研究流程、数据源规划与人工审批
+- Apify 采集任务、运行日志、结果同步与导出
+- 跨平台标准化分析与 AI 研究报告
+- 标准化商品库与价格历史
+- AI Provider / 数据平台凭证管理（BYOK）
+- 账户级采集设置、全局搜索、明暗主题
 
-## Backend
-- Supabase project: existing `Synesis` project in `eu-central-1`.
-- Edge Function: `synesis-api` (JWT verification enabled).
-- Function URL: `https://vuyyaqsmlzixhdjvaidj.supabase.co/functions/v1/synesis-api`.
-- Credential metadata lives in owner-scoped public tables; encrypted credential bytes live in the non-exposed `private` schema.
-- AES-256-GCM uses a random 96-bit nonce per credential. The 256-bit encryption key is stored in Supabase Vault and can be read only through service-role-only RPC.
-- The Edge Function validates the caller's Supabase Auth JWT and scopes every credential lookup to that user.
-- Provider connection tests are implemented for OpenAI-compatible APIs, Gemini, Anthropic, Cloudflare Workers AI, Apify, Google/YouTube API key checks, Reddit OAuth client credentials, and TikTok client credentials.
-- AI plan generation supports OpenAI, Gemini, DeepSeek, Claude, Mistral, xAI, and Workers AI.
-- Plan approval is performed server-side. Task creation occurs only after approval.
-- Apify execution checks approved-plan status and queued task state; the actor ID must be explicitly supplied in the reviewed plan. A failed external start is recorded as failed.
+## 技术栈
+- React 19、TypeScript、Vite
+- Synesis 自有原生 UI primitives 与设计 token
+- Supabase Auth、Postgres、Edge Functions
+- Cloudflare Workers
+- Leaflet 地理可视化
 
-## Database
-- Core schema: provider configs, integration metadata, research projects, AI plans, collection tasks, and market reports.
-- All exposed user tables have RLS and owner policies.
-- Browser roles cannot write collection tasks or approve AI plans directly.
-- Private credential tables are inaccessible to anon/authenticated roles.
-- Service-only RPCs access the private schema and Vault encryption key.
+## 设计原则
+详见 [Synesis 独立设计系统](docs/SYNESIS_DESIGN_SYSTEM.md)。默认浅色主题、支持深色主题；标题左对齐；导航采用叠加式抽屉；界面字体为 DM Sans 与 Manrope。
 
-## Cloudflare deployment
-- Existing Worker script name: `synesis`.
-- Existing workers.dev host: `https://synesis.xg-y.workers.dev`.
-- No custom domain or DNS zone is created.
-- Cloudflare Workers Builds is connected to this repository and watches the `develop` branch.
-- Cloudflare Builds runs `npm install --no-audit --no-fund && npm run build`, then `npx wrangler deploy` using the existing Cloudflare build token. This avoids storing a Cloudflare API token in GitHub Actions repository secrets.
-- GitHub Actions remains responsible for CI validation and artifact creation; Cloudflare Builds handles deployment to the existing Worker.
+## 开发
+```bash
+npm install
+npm run test:product-identity
+npm run test:design-system
+npm run build
+npm run dev
+```
 
-## Local development
-1. Copy `.env.example` to `.env.local` (the existing public Supabase project values are also used as build fallbacks).
-2. Run `npm install`.
-3. Run `npm run dev`.
-
-Never commit `.env.local`, AI provider keys, Apify tokens, Cloudflare API tokens, Supabase secret keys, or encryption keys.
+## 部署
+CI 在 `develop` 分支执行测试、类型检查、构建，并在凭证可用时部署 Cloudflare Worker 与 Supabase Edge Function。

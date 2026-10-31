@@ -3,12 +3,12 @@ import {
  Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep, Checkbox,
  Tabs, TabList, Tab, TabPanels, TabPanel,
  Accordion, AccordionItem, FluidForm, FormGroup, RadioButtonGroup, RadioButton, ProgressBar,
- unstable__FluidTextInput as FluidTextInput,
- unstable__FluidTextArea as FluidTextArea,
- unstable__FluidDropdown as FluidDropdown,
- unstable__FluidMultiSelect as FluidMultiSelect,
- unstable__FluidComboBox as FluidComboBox,
- unstable__FluidNumberInput as FluidNumberInput,
+ FluidTextInput,
+ FluidTextArea,
+ FluidDropdown,
+ FluidMultiSelect,
+ FluidComboBox,
+ FluidNumberInput,
 } from '../../components/ui';
 import { Add, ArrowLeft, ArrowRight, Renew, ChartLine, Close } from '../../components/icons';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
