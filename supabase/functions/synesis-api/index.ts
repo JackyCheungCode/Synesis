@@ -20,6 +20,39 @@ function cloudflareModelPath(value: string): string {
   return segments.map(segment => encodeURIComponent(segment).replace(/%40/gi, '@')).join('/');
 }
 
+function parseJsonObject(raw: string): Record<string, unknown> {
+  const text = raw.trim().replace(/^\uFEFF/, '');
+  const candidates = [text, text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()];
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    } catch { /* Try extracting a JSON object from surrounding prose. */ }
+  }
+  // Find the first balanced JSON object while respecting quoted strings and escapes.
+  for (let start = text.indexOf('{'); start >= 0; start = text.indexOf('{', start + 1)) {
+    let depth = 0, quoted = false, escaped = false;
+    for (let i = start; i < text.length; i++) {
+      const char = text[i];
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (char === '\\') escaped = true;
+        else if (char === '"') quoted = false;
+        continue;
+      }
+      if (char === '"') quoted = true;
+      else if (char === '{') depth++;
+      else if (char === '}' && --depth === 0) {
+        try {
+          const parsed = JSON.parse(text.slice(start, i + 1));
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+        } catch { break; }
+      }
+    }
+  }
+  throw new Error('AI 返回内容中没有可解析的 JSON 对象');
+}
+
 type CompactInputSchema = { type?: string; properties?: Record<string,{type?:string|string[];minItems?:number;maxItems?:number;minLength?:number;maxLength?:number;minimum?:number;maximum?:number;enum?:unknown[]}>; required?: string[] };
 function validateActorInput(input: unknown, schema: CompactInputSchema): string[] {
   const errors:string[]=[];
@@ -288,26 +321,54 @@ Deno.serve(async (req: Request) => {
       ] as const;
       const system = 'You are the structured research-intake analyst for Synesis, a global cross-border business intelligence platform. Analyze the user brief and return valid JSON only. Shape: {summary:string, dimensions:[{key:string,label:string,values:string[],status:"provided"|"suggested"|"needs_confirmation",note?:string}], research_goals:string[], assumptions:string[], missing_information:string[]}. Return one dimension for EVERY supplied key, preserving its exact key and label. "provided" means explicitly present in the user text; "suggested" means a clearly useful AI proposal that is not a fact and must be visibly marked as a suggestion; "needs_confirmation" means absent or ambiguous and values must be empty. Never invent countries, brands, product specifications, prices, dates, URLs, customer attributes, market facts, or competitors. Expand keywords with translations/synonyms only as suggestions and label their language. Keep user-provided URLs exactly. Separate countries from subnational regions. Parse units and currency literally. Do not infer protected or sensitive personal traits. research_goals should reflect explicit goals and may include clearly labeled suggested goals. assumptions and missing_information must be concise. Values should be short strings, not paragraphs. Do not treat a generic example in the prompt as user data.';
       const prompt = JSON.stringify({user_brief:brief,required_dimensions:fields.map(([key,label])=>({key,label}))});
-      let response: Response;
-      if (provider==='openai'||provider==='deepseek'||provider==='mistral'||provider==='x') {
-        const base=provider==='openai'?'https://api.openai.com/v1':provider==='deepseek'?'https://api.deepseek.com':provider==='mistral'?'https://api.mistral.ai/v1':'https://api.x.ai/v1';
-        const model=provider==='openai'?'gpt-4.1-mini':provider==='deepseek'?'deepseek-chat':provider==='mistral'?'mistral-small-latest':'grok-3-mini';
-        response=await fetch(`${base}/chat/completions`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({model,messages:[{role:'system',content:system},{role:'user',content:prompt}],response_format:{type:'json_object'},max_tokens:5000})});
-      } else if(provider==='googlegemini') {
-        response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(clear)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:5000}})});
-      } else if(provider==='anthropic') {
-        response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':clear,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-3-7-sonnet-latest',max_tokens:5000,system,messages:[{role:'user',content:prompt}]})});
-      } else if(provider==='cloudflare') {
-        const {config}=await getCredential(provider,'provider');
-        if(!config.base_url) return json({error:'请先配置 Cloudflare Account ID'},400);
-        response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${cloudflareModelPath(config.default_model || '@cf/meta/llama-3.3-70b-instruct-fp8-fast')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:system},{role:'user',content:prompt}],max_tokens:5000})});
-      } else return json({error:'该 AI Provider 暂不支持研究需求解析'},400);
-      const result=await response.json().catch(()=>({}));
-      if(!response.ok) return json({error:result?.error?.message??'AI 研究需求解析失败'},502);
-      const raw=provider==='googlegemini'?result.candidates?.[0]?.content?.parts?.[0]?.text:provider==='anthropic'?result.content?.[0]?.text:provider==='cloudflare'?result.result?.response:result.choices?.[0]?.message?.content;
+      const model=String(config.default_model||'').trim();
+      async function requestResearchText(userPrompt:string):Promise<{raw:string;result:any}> {
+        let response:Response;
+        if (provider==='openai'||provider==='deepseek'||provider==='mistral'||provider==='x') {
+          const base=provider==='openai'?'https://api.openai.com/v1':provider==='deepseek'?'https://api.deepseek.com':provider==='mistral'?'https://api.mistral.ai/v1':'https://api.x.ai/v1';
+          const selectedModel=model||(provider==='openai'?'gpt-4.1-mini':provider==='deepseek'?'deepseek-chat':provider==='mistral'?'mistral-small-latest':'grok-3-mini');
+          response=await fetch(`${base}/chat/completions`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({model:selectedModel,messages:[{role:'system',content:system},{role:'user',content:userPrompt}],response_format:{type:'json_object'},max_tokens:8000})});
+        } else if(provider==='googlegemini') {
+          response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model||'gemini-2.5-flash'}:generateContent?key=${encodeURIComponent(clear)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{parts:[{text:userPrompt}]}],generationConfig:{responseMimeType:'application/json',maxOutputTokens:8000}})});
+        } else if(provider==='anthropic') {
+          response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':clear,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:model||'claude-3-7-sonnet-latest',max_tokens:8000,system,messages:[{role:'user',content:userPrompt}]})});
+        } else if(provider==='cloudflare') {
+          if(!config.base_url) throw new Error('请先配置 Cloudflare Account ID');
+          response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${cloudflareModelPath(model||'@cf/meta/llama-3.3-70b-instruct-fp8-fast')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:system},{role:'user',content:userPrompt}],max_tokens:8000})});
+        } else throw new Error('该 AI Provider 暂不支持研究需求解析');
+        const responseText=await response.text();
+        let result:any={};
+        try { result=JSON.parse(responseText); } catch { result={raw_response:responseText}; }
+        if(!response.ok) {
+          const detail=result?.error?.message??result?.message??result?.detail??responseText.slice(0,500);
+          throw new Error(`AI Provider（${provider}）请求失败，HTTP ${response.status}：${String(detail).slice(0,500)}`);
+        }
+        const raw=provider==='googlegemini'?result.candidates?.[0]?.content?.parts?.map((part:any)=>part.text??'').join(''):provider==='anthropic'?result.content?.filter((part:any)=>part.type==='text').map((part:any)=>part.text).join(''):provider==='cloudflare'?result.result?.response:result.choices?.[0]?.message?.content;
+        if(typeof raw!=='string'||!raw.trim()) {
+          const reason=result?.promptFeedback?.blockReason??result?.candidates?.[0]?.finishReason??result?.stop_reason??'响应中没有可用的文本内容';
+          throw new Error(`AI Provider（${provider}）未返回需求解析文本：${String(reason).slice(0,200)}`);
+        }
+        return {raw,result};
+      }
+      let first=await requestResearchText(prompt);
       let parsed:Record<string,unknown>;
-      try { parsed=JSON.parse(String(raw??'').replace(/^```json\s*/,'').replace(/```$/,'')); }
-      catch { return json({error:'AI 返回内容不是有效 JSON，请重新解析'},502); }
+      try {
+        parsed=parseJsonObject(first.raw);
+      } catch {
+        // A second, constrained repair pass handles markdown fences, preambles and malformed/truncated JSON.
+        const repairPrompt=JSON.stringify({
+          task:'Repair the following model output into one complete valid JSON object. Do not add facts. Preserve all supplied information. Return JSON only, without markdown fences or commentary.',
+          required_shape:{summary:'string',dimensions:fields.map(([key,label])=>({key,label,values:['string'],status:'provided|suggested|needs_confirmation',note:'optional string'})),research_goals:['string'],assumptions:['string'],missing_information:['string']},
+          invalid_output:first.raw.slice(0,24000)
+        });
+        const repaired=await requestResearchText(repairPrompt);
+        try { parsed=parseJsonObject(repaired.raw); }
+        catch {
+          const finish=first.result?.candidates?.[0]?.finishReason??first.result?.stop_reason??'unknown';
+          throw new Error(`AI（${provider}）两次输出均无法解析为 JSON；首次结束状态：${String(finish)}。请稍后重试或切换模型。`);
+        }
+      }
+      if(!Array.isArray(parsed.dimensions)) throw new Error(`AI（${provider}）返回的 JSON 缺少 dimensions 数组，请重新解析。`);
       const returned=Array.isArray(parsed.dimensions)?parsed.dimensions as Record<string,unknown>[]:[];
       const byKey=new Map(returned.filter(item=>typeof item.key==='string').map(item=>[String(item.key),item]));
       const dimensions=fields.map(([key,label])=>{
