@@ -5,6 +5,14 @@ import type { WorkspacePage } from '../lib/router';
 type Props = { page: WorkspacePage; open: boolean; onNavigate: (page: WorkspacePage) => void; onClose: () => void };
 
 export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) {
+  const closeAndFocusTrigger = () => {
+    onClose();
+    window.requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('.cds--header__menu-trigger')?.focus());
+  };
+  const navigateAndFocusContent = (target: WorkspacePage) => {
+    onNavigate(target);
+    window.requestAnimationFrame(() => document.getElementById('main-content')?.focus());
+  };
   const items: { page: WorkspacePage; label: string; icon: typeof Dashboard }[] = [
     { page: 'dashboard', label: '情报总览', icon: Dashboard },
     { page: 'projects', label: '研究项目中心', icon: ChartLine },
@@ -20,8 +28,8 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
       aria-label="Synesis 主导航"
       expanded={open}
       isPersistent={false}
-      onOverlayClick={onClose}
-      onToggle={(_event, value) => { if (!value) onClose(); }}
+      onOverlayClick={closeAndFocusTrigger}
+      onToggle={(_event, value) => { if (!value) closeAndFocusTrigger(); }}
     >
       <SideNavItems>
         <SideNavMenu
@@ -38,7 +46,7 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
               aria-current={page === target ? 'page' : undefined}
               onClick={event => {
                 event.preventDefault();
-                onNavigate(target);
+                navigateAndFocusContent(target);
               }}
             >
               <span className="synesis-carbon-nav-item"><Icon size={16} />{label}</span>
