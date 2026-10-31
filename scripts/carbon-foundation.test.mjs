@@ -52,7 +52,8 @@ test('Carbon typography and code font families are loaded', () => {
 });
 
 test('workspace theme and navigation expose accessible state', () => {
-  assert.match(app, /cds--\$\{theme\}/);
+  assert.match(app, /synesis-theme-\$\{theme\}/);
+  assert.match(app, /'light'\|'dark'/);
   assert.match(app, /aria-expanded=\{navExpanded\}/);
   assert.match(navigation, /aria-current=\{page === target \? 'page' : undefined\}/);
   assert.match(navigation, /<SideNav/);
