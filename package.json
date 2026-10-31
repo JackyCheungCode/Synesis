@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "test:product-identity": "node --test scripts/product-identity.test.mjs"
   },
   "dependencies": {
     "@carbon/icons-react": "11.91.0",
