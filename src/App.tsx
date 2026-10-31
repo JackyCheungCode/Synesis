@@ -7,7 +7,7 @@ import { CredentialVault } from './features/settings/CredentialVault';
 import { ProductLibrary } from './features/products/ProductLibrary';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content,
-  Button, InlineNotification, Tag, TextInput, Tile,
+  Breadcrumb, BreadcrumbItem, Button, InlineNotification, Tag, TextInput, Tile,
   Modal, Loading, Accordion, AccordionItem,
 } from '@carbon/react';
 import {
@@ -419,7 +419,7 @@ function App() {
       <WorkspaceNavigation page={page} open={navExpanded} onNavigate={(target)=>navigate(target)} onClose={()=>setNavExpanded(false)}/>
       <Content className="synesis-content">
         <div className="page-wrap">
-          <div className="page-title-row"><div><p className="eyebrow">SYNESIS / WORKSPACE</p><h1>{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue">个人工作空间</Tag></div>
+          <div className="page-title-row"><div>{page==='projects'?<Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb>:<p className="eyebrow">SYNESIS / WORKSPACE</p>}<h1 className="cds--type-heading-04">{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue" className="synesis-workspace-tag">个人工作空间</Tag></div>
           {notice && <InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
           {busy && <Loading small withOverlay={false} description="处理中"/>}
           {page==='dashboard' && <WorkspaceDashboard projectCount={projects.length} pendingPlanCount={pendingPlans.length} taskCount={tasks.length} credentialCount={credentials.length} onCreateResearch={()=>navigate('projects')}/>}
