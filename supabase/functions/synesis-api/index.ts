@@ -388,7 +388,7 @@ Deno.serve(async (req: Request) => {
             const identity=resolveProductIdentity(task.platform_slug,record);
             const priceRaw=readField(record,['price','sale_price','current_price','amount','cost','listing_price','unit_price']);
             const priceText=typeof priceRaw==='number'?String(priceRaw):typeof priceRaw==='string'?priceRaw.replace(/,/g,''):'';
-            const priceMatch=priceText.match(/-?\\d+(?:\\.\\d+)?/);
+            const priceMatch=priceText.match(/-?\d+(?:\.\d+)?/);
             const price=priceMatch?Number(priceMatch[0]):null;
             const currencyRaw=readField(record,['currency','currency_code','price_currency']);
             const currency=currencyRaw?String(currencyRaw).trim().toUpperCase():null;
