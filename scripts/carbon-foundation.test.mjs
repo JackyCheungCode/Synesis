@@ -145,3 +145,20 @@ test('LAY-02 consolidates Research intake layout rules into one responsive secti
   assert.match(intake, /\.research-country-map/);
   assert.doesNotMatch(styles, /research-intake-sticky-footer/);
 });
+
+test('LAY-03 uses one responsive Carbon five-step progress system and one action layout', () => {
+  assert.match(research, /className="research-progress-scroll" role="region" aria-label="研究流程步骤，可横向滚动查看" tabIndex=\{0\}/);
+  assert.match(research, /className="research-progress-status" role="status" aria-live="polite"/);
+  assert.match(research, /className="research-progress-scroll-hint"/);
+  assert.match(styles, /\/\* LAY-03: canonical five-step Carbon progress indicator and workflow actions \*\//);
+  assert.match(styles, /\.research-carbon-progress \.cds--progress-step\s*\{/);
+  assert.match(styles, /\.research-carbon-progress \.cds--progress-step__label\s*\{/);
+  assert.match(styles, /\.research-progress-scroll\s*\{[\s\S]*?overflow-x:auto/);
+  assert.match(styles, /\.research-carbon-progress\s*\{[\s\S]*?min-width:560px/);
+  assert.match(styles, /\.research-workflow-actions:not\(\.research-intake-actions\)\s*\{/);
+  assert.match(styles, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.doesNotMatch(styles, /\.research-stepper/);
+  assert.doesNotMatch(styles, /\.research-step\s*\{/);
+  assert.doesNotMatch(styles, /\.research-step-footer\s*\{/);
+  assert.doesNotMatch(styles, /research-workflow-actions[^}]*position:\s*(?:sticky|fixed)/);
+});

@@ -156,9 +156,13 @@ const toItems=(values:string[])=>values.map(value=>({id:value,text:value}));
 function ResearchProgress({activeStep,maxUnlockedStep,stepReady}:{activeStep:number;maxUnlockedStep:number;stepReady:boolean[]}) {
  return <Tile className="research-progress-tile">
   <div className="module-heading"><div><h3 className="cds--type-heading-03">五步研究工作流</h3><p>按顺序完成研究流程；后续步骤将在前置数据准备完成后解锁。</p></div><Tag type="blue" className="synesis-workspace-tag">第 {activeStep+1} / 5 步</Tag></div>
-  <ProgressIndicator currentIndex={activeStep} spaceEqually className="research-carbon-progress">
-   {stages.map((label,index)=><ProgressStep key={label} label={label} description={index===activeStep?'当前步骤':stepReady[index]?'已满足前置条件':'等待前序步骤完成'} complete={stepReady[index]&&index<activeStep} current={index===activeStep} disabled={index>maxUnlockedStep}/>)}
-  </ProgressIndicator>
+  <div className="research-progress-scroll" role="region" aria-label="研究流程步骤，可横向滚动查看" tabIndex={0}>
+   <ProgressIndicator currentIndex={activeStep} spaceEqually className="research-carbon-progress">
+    {stages.map((label,index)=><ProgressStep key={label} label={label} description={index===activeStep?'当前步骤':stepReady[index]?'已满足前置条件':'等待前序步骤完成'} complete={stepReady[index]&&index<activeStep} current={index===activeStep} disabled={index>maxUnlockedStep}/>)}
+   </ProgressIndicator>
+  </div>
+  <p className="research-progress-status" role="status" aria-live="polite">当前步骤：{stages[activeStep]}（第 {activeStep+1} 步，共 5 步）</p>
+  <p className="research-progress-scroll-hint">小屏可横向滚动查看全部五个步骤。</p>
  </Tile>;
 }
 type UnifiedResultRow={task_id:string;platform_slug:string;item_index:number;raw_data:unknown;normalized?:{entity_type:string;canonical_key:string|null;normalized_data:Record<string,unknown>;field_sources:Record<string,string>;quality_score:number;warnings:string[];normalization_version:number}|null};

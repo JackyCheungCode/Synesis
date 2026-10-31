@@ -317,8 +317,8 @@ Carbon 官方依据：
 | LAY-01a | `src/main.tsx` 按 `styles.scss` → Carbon Charts CSS → `carbon-foundation.scss` 加载。Foundation 的普通声明可覆盖前置同优先级规则，但不能覆盖前置 `!important`。 | 全站最终布局不仅由 Foundation 决定；必须同时审查 styles.scss 中的强制覆盖。 | 静态确认；继续禁止新增零散 `!important` |
 | LAY-01b | `styles.scss` 的移动端密度段在 672px 以下将 `.carbon-grid`、`.vault-grid`、`.analytics-grid`、`.analytics-kpis`、`.product-grid` 设为两列并带 `!important`；这会压过 Foundation 的移动端单列规则。380px 以下仍再次强制两列。 | Dashboard KPI、Vault Provider 卡片、商品卡片和分析卡片在 320/375px 实际宽度可能偏窄；这是已确认的级联结果，但是否造成内容挤压必须看真实视口。 | 待整改/待运行时确认；先在截图中对比 320、375、400、672px，再决定哪些模块应单列、哪些可双列 |
 | LAY-01c | 同一移动端密度段把 `.page-wrap` 左右 padding 设为 4px `!important`；Foundation 的 672px 以下 16px gutter 无法覆盖。380px 以下另有更晚的 12px `!important` gutter。 | 381–672px 有效水平 gutter 为 4px；320–380px 有效 gutter 为 12px。两段行为不连续，且与 Foundation 的统一 gutter token 脱节。 | 待整改；需结合用户已提出的“缩小左右边距”要求，以截图确认舒适值后统一 token，不直接恢复过宽边距 |
-| LAY-02a | intake 样式原先分散在基础段、重设计段和后续回归补丁中；价格网格、表单栅格和动作区有多轮覆盖。 | 已于 2026-10-31 收敛到一个连续的需求页作用域区块；等待 CI 回归确认静态通过。 | 源码已提交，CI 待验证；运行时视口仍待测 |
-| LAY-03a | `.research-stepper`、`.research-step`、`.research-workflow-actions` 至少在基础段、移动端段、后续 Carbon refinement 段重复声明；最终移动端 step label 采用纵向排列、5 等分列宽。 | 320px 下每步可用宽度有限，标题会换行；是否过度换行/高度异常不能从源码确定。 | 待运行时验收；必须检查五步全部文案、当前/完成态和底部动作区，不以“无横向滚动”单项代替可读性 |
+| LAY-02a | intake 样式原先分散在基础段、重设计段和后续回归补丁中；价格网格、表单栅格和动作区有多轮覆盖。 | 已于 2026-10-31 收敛到一个连续的需求页作用域区块；GitHub Actions run `41215930140` 的 build、静态测试和 deploy 均成功。 | CI 静态构建通过；运行时视口仍待测 |
+| LAY-03a | Stepper 旧样式针对 `.research-stepper/.research-step`，但实际组件渲染的是 Carbon `ProgressIndicator/ProgressStep`；同时进度区、动作区在多个区段重复定义。 | 已删除未被组件使用的旧 stepper 规则；改为直接作用于 Carbon `.cds--progress-step`。小屏五步保持可读宽度并在专用区域横向滚动；当前步骤另有 live status。 | 源码整理完成，CI 待验证；320/375/768/1024/1440px 实际滚动与可读性仍待浏览器验收 |
 
 #### 页面布局的当前静态基线
 
@@ -394,3 +394,14 @@ Carbon 官方依据：
 - 响应式基线：桌面两列字段/三列价格范围；672px 以下字段单列、价格范围两列且币种整行、Checkbox/Radio 单列；平板使用 24px 内距，移动端使用 16px；底部动作保持 `position: static`，随文档自然滚动。
 - 自动化：新增 LAY-02 静态回归，检查 intake 区块、字段/价格布局声明数量、动作区不使用 sticky/fixed、国家选择与地图规则保留，并确认废弃 sticky footer 选择器已清除。
 - 证据边界：本次为源码整理与静态断言；CI 尚待执行。未取得真实浏览器截图，320/375/768/1024/1440px 的布局、长国家名称、多选 token、地图加载失败、键盘与读屏行为仍待实测。
+
+
+### LAY-03 五步研究工作流布局统一（2026-10-31）
+
+- 范围：`src/features/research/ResearchWizard.tsx`、`src/styles.scss`、`scripts/carbon-foundation.test.mjs`。
+- 结构核查发现：页面实际使用 Carbon `ProgressIndicator` / `ProgressStep`，但早期 CSS 多次针对未在组件中使用的 `.research-stepper` / `.research-step` 编写；这些规则无法可靠控制真实进度组件，且移动端五等分导致每步标题可用宽度过窄。
+- 整理：统一为一个 LAY-03 canonical CSS 区块，直接控制 Carbon `.cds--progress-step`、label 和 description；桌面/平板五步均分，小屏每步保留 112px 最小可读宽度，进度条放入可键盘聚焦的横向滚动区域，并提供小屏滚动提示。
+- 无障碍：滚动区域具备 `role=region`、可访问名称和 `tabIndex=0`；当前步骤增加 `role=status` / `aria-live=polite` 状态文本，辅助技术不必依赖颜色或视觉位置判断当前进度。
+- 操作区：活动项目的上一步、取消、暂存、下一步统一为一个响应式动作区；桌面自然文档流换行，小屏两列；保留静态定位，不使用 sticky/fixed。需求录入页动作区继续由 LAY-02 的 intake 专属规则管理，避免跨层级覆盖。
+- 自动化：新增 LAY-03 静态回归，检查真实 Carbon selector、键盘可聚焦滚动容器、当前步骤 live status、小屏最小轨道宽度、两列动作区，以及废弃旧 stepper 选择器。
+- 证据边界：当前为源码与静态断言；CI 待运行。真实浏览器仍需在 320/375/768/1024/1440px 检查五步标题、横向滚动、焦点可见、当前/完成/禁用状态、四个动作按钮与长内容；未取得这些证据前不标记运行时通过。
