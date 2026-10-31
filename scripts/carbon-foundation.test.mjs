@@ -117,7 +117,7 @@ test('Dashboard uses semantic metric descriptions and a responsive ordered workf
   assert.doesNotMatch(dashboard, /<Tag/);
   assert.match(foundation, /\.dashboard-metrics\s*\{[\s\S]*?grid-template-columns: repeat\(4,/);
   assert.match(foundation, /\.dashboard-workflow-steps\s*\{[\s\S]*?grid-template-columns: repeat\(5,/);
-  assert.match(foundation, /dashboard-workflow-caption/);
+  assert.match(foundation, /\.dashboard-workflow-steps/);
 });
 
 
