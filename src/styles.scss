@@ -1349,3 +1349,9 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
 
 .synesis-app .research-country-option{display:inline-flex;align-items:center;gap:10px;min-width:0}
 .synesis-app .research-country-option img{width:20px;height:20px;flex:0 0 20px;border-radius:50%;object-fit:cover;border:1px solid var(--cds-border-subtle)}
+
+.synesis-app .research-selected-countries{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.synesis-app .research-selected-country{display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:4px 9px;border:1px solid var(--cds-border-subtle);background:var(--cds-layer-01);color:var(--cds-text-primary);font-size:12px;line-height:1.3}
+.synesis-app .research-selected-country img{display:block;width:20px;height:20px;flex:0 0 20px;object-fit:cover;border-radius:50%;border:1px solid var(--cds-border-subtle)}
+.synesis-app .research-country-map .leaflet-pane{z-index:1}
+.synesis-app .research-country-map .leaflet-overlay-pane path{fill:#0f62fe;fill-opacity:.32;stroke:#0f62fe;stroke-width:2;stroke-opacity:1}
