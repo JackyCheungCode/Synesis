@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeGtin, normalizeSourceUrl, resolveProductIdentity } from '../supabase/functions/synesis-api/product-identity.js';
+import { normalizeGtin, normalizeSourceUrl, normalizeResearchRecord, resolveProductIdentity } from '../supabase/functions/synesis-api/product-identity.js';
 
 test('valid GTINs normalize and invalid check digits are rejected', () => {
   assert.equal(normalizeGtin('4006381333931'), '4006381333931');
@@ -41,4 +41,50 @@ test('nested camelCase and punctuation variants are resolved case-insensitively'
   const nested = resolveProductIdentity('amazon', { product: { productId: 'ABC-1', productName: 'Example' }, meta: { GTIN13: '4006381333931' } });
   assert.equal(nested.externalProductId, 'ABC-1');
   assert.equal(nested.canonicalKey, 'gtin:4006381333931');
+});
+
+
+test('normalizes ecommerce records into typed canonical fields with source provenance', () => {
+  const result = normalizeResearchRecord('Amazon', {
+    product: { title: 'Smart Feeder', brand: 'PetCo', price: '$49.90', currencyCode: 'USD', rating: '4.6', reviewCount: '128' },
+    asin: 'B0ABC12345',
+    productUrl: 'https://www.amazon.com/dp/B0ABC12345?utm_source=test',
+  });
+  assert.equal(result.entityType, 'product');
+  assert.equal(result.normalizedData.title, 'Smart Feeder');
+  assert.equal(result.normalizedData.price, 49.9);
+  assert.equal(result.normalizedData.currency, 'USD');
+  assert.equal(result.normalizedData.rating, 4.6);
+  assert.equal(result.normalizedData.review_count, 128);
+  assert.equal(result.fieldSources.price, 'price');
+  assert.equal(result.canonicalKey, 'amazon:product:id:B0ABC12345');
+  assert.equal(result.normalizationVersion, 1);
+  assert.ok(result.qualityScore > 50);
+});
+
+test('normalizes social content metrics and ISO timestamps without losing original records', () => {
+  const raw = { video: { desc: 'A demo', playCount: '12,500', diggCount: '900', commentCount: '42' }, author: { nickname: 'Creator' }, createTime: '2026-01-02T03:04:05Z', webVideoUrl: 'https://www.tiktok.com/@creator/video/123' };
+  const result = normalizeResearchRecord('TikTok', raw);
+  assert.equal(result.entityType, 'social_content');
+  assert.equal(result.normalizedData.description, 'A demo');
+  assert.equal(result.normalizedData.views, 12500);
+  assert.equal(result.normalizedData.likes, 900);
+  assert.equal(result.normalizedData.comments, 42);
+  assert.equal(result.normalizedData.creator, 'Creator');
+  assert.equal(result.normalizedData.published_at, '2026-01-02T03:04:05.000Z');
+  assert.equal(raw.video.playCount, '12,500');
+});
+
+test('does not invent cross-platform identities from titles alone', () => {
+  const one = normalizeResearchRecord('YouTube', { title: 'Same title' });
+  const two = normalizeResearchRecord('TikTok', { title: 'Same title' });
+  assert.equal(one.canonicalKey, null);
+  assert.equal(two.canonicalKey, null);
+  assert.ok(one.warnings.includes('未识别稳定来源标识，暂不进行跨记录去重'));
+});
+
+test('classifies public company and job records without mixing entity types', () => {
+  assert.equal(normalizeResearchRecord('Crunchbase', { name: 'Example Inc' }).entityType, 'company');
+  assert.equal(normalizeResearchRecord('Indeed', { jobTitle: 'Engineer' }).entityType, 'job');
+  assert.equal(normalizeResearchRecord('Google Search', { title: 'Result' }).entityType, 'search_result');
 });
