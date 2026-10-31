@@ -341,7 +341,8 @@ function App() {
     const projectTasks=tasks.filter(item=>item.project_id===projectId);
     if(!project||!session?.user.id||!projectTasks.length) return;
     if(projectTasks.some(task=>task.status!=='succeeded'||Number(task.result_synced_count??0)<Number(task.result_count??0))) {
-      setNotice({kind:'warning',text:'仍有采集任务未完成或数据尚未全部同步，暂不能进行项目统计。'});\n      return;
+      setNotice({kind:'warning',text:'仍有采集任务未完成或数据尚未全部同步，暂不能进行项目统计。'});
+      return;
     }
     setBusy(true);
     try {
