@@ -315,6 +315,11 @@ function AnalyticsDashboard({data}:{data:any}) {
   const metrics=data.metrics??{}, coverage=data.coverage??{}, bands=data.distributions?.price_bands??[];
   const maxBand=Math.max(1,...bands.map((x:any)=>x.count)), words=data.distributions?.words??[];
   const brands=data.distributions?.brands??[], categories=data.distributions?.categories??[], funnel=data.funnel??{};
+  const pieRows=categories.slice(0,6);
+  const pieTotal=Math.max(1,pieRows.reduce((sum:number,row:any)=>sum+row.count,0));
+  const circumference=2*Math.PI*42;
+  let pieOffset=0;
+  const pieSlices=pieRows.map((row:any,index:number)=>{const length=row.count/pieTotal*circumference;const slice={...row,length,offset:pieOffset,index};pieOffset+=length;return slice;});
   const stages=[['全部记录',funnel.total??0],['有商品标题',funnel.titled??0],['有价格',funnel.priced??0],['有评分',funnel.rated??0],['有图片',funnel.imaged??0],['有商品链接',funnel.linked??0]];
   const money=(n:number|null)=>n===null||n===undefined?'—':n.toLocaleString(undefined,{maximumFractionDigits:2});
   return <section className="module-stack analytics-stack">
@@ -331,6 +336,7 @@ function AnalyticsDashboard({data}:{data:any}) {
       <Tile className="analytics-card"><h3>数据采集漏斗</h3><div className="funnel-chart">{stages.map(([label,value])=><div className="funnel-row" key={String(label)}><span>{label}</span><div className="funnel-track"><div style={{width:`${funnel.total?Number(value)/funnel.total*100:0}%`}}/></div><b>{Number(value).toLocaleString()}</b></div>)}</div></Tile>
       <Tile className="analytics-card"><h3>品牌 Top 10</h3><RankList rows={brands}/></Tile>
       <Tile className="analytics-card"><h3>类目 Top 10</h3><RankList rows={categories}/></Tile>
+      <Tile className="analytics-card"><h3>类目占比 · 扇形图</h3><div className="pie-layout"><svg className="pie-svg" viewBox="0 0 120 120" role="img" aria-label="类目占比扇形图"><circle cx="60" cy="60" r="42" fill="none" stroke="var(--cds-layer-02)" strokeWidth="18"/>{pieSlices.map((slice:any)=><circle key={slice.label} cx="60" cy="60" r="42" fill="none" stroke={['#0f62fe','#24a148','#ff832b','#da1e28','#8a3ffc','#009d9a'][slice.index]} strokeWidth="18" strokeDasharray={slice.length+' '+(circumference-slice.length)} strokeDashoffset={-slice.offset} transform="rotate(-90 60 60)"/>)}</svg><div className="pie-legend">{pieRows.map((row:any,index:number)=><div key={row.label}><span className={'pie-dot pie-dot-'+index}/><span title={row.label}>{row.label}</span><b>{Math.round(row.count/pieTotal*100)}%</b></div>)}</div></div></Tile>
       <Tile className="analytics-card word-cloud-card"><h3>关键词词云</h3><div className="word-cloud">{words.slice(0,32).map((w:any)=><span key={w.label} style={{fontSize:`${Math.max(12,Math.min(30,12+(w.count/(words[0]?.count||1))*18))}px`}}>{w.label}</span>)}</div></Tile>
       <Tile className="analytics-card"><h3>字段完整度</h3><div className="quality-list">{[['标题',data.quality?.title_rate],['价格',data.quality?.price_rate],['评分',data.quality?.rating_rate],['图片',data.quality?.image_rate],['商品链接',data.quality?.link_rate]].map(([label,rate]:any)=><div className="quality-row" key={label}><span>{label}</span><b>{Math.round((rate??0)*100)}%</b><div className="bar-track"><div className="bar-fill" style={{width:`${(rate??0)*100}%`}}/></div></div>)}</div></Tile>
     </div>
