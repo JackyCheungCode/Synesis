@@ -574,3 +574,12 @@ html, body { overflow-x:clip; }
  .research-step b { overflow-wrap:anywhere; }
  .research-step-footer { position:sticky; bottom:0; z-index:2; padding:.75rem; background:var(--cds-background); border-top:1px solid var(--cds-border-subtle); }
 }
+
+.research-actor-candidates { display:grid; gap:.65rem; margin:1rem 0; }
+.research-actor-candidates h4 { margin:0; }
+.research-actor-card { padding:.85rem 1rem; border:1px solid var(--cds-border-subtle); border-radius:6px; background:var(--cds-layer-01); }
+.research-actor-card p { margin:.35rem 0; color:var(--cds-text-secondary); font-size:.82rem; }
+.research-actor-card small { color:var(--cds-text-secondary); font-size:.75rem; }
+.research-saved-report details { padding:.65rem 0 1rem; border-bottom:1px solid var(--cds-border-subtle); }
+.research-saved-report summary { cursor:pointer; color:var(--cds-link-primary); font-size:.85rem; font-weight:600; }
+.research-saved-report .result-json { max-height:520px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
