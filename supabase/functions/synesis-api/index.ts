@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.58.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +17,9 @@ Deno.serve(async (req: Request) => {
     const jwt = authorization.replace(/^Bearer\s+/i, '');
     if (!jwt) return json({ error: '需要登录后操作' }, 401);
     const url = Deno.env.get('SUPABASE_URL');
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const secretKeysRaw = Deno.env.get('SUPABASE_SECRET_KEYS');
+    const secretKeys = secretKeysRaw ? JSON.parse(secretKeysRaw) : {};
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? secretKeys.default;
     if (!url || !serviceKey) return json({ error: '后端数据库服务尚未配置' }, 503);
     const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: authData, error: authError } = await admin.auth.getUser(jwt);
