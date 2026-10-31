@@ -87,4 +87,6 @@ test('classifies public company and job records without mixing entity types', ()
   assert.equal(normalizeResearchRecord('Crunchbase', { name: 'Example Inc' }).entityType, 'company');
   assert.equal(normalizeResearchRecord('Indeed', { jobTitle: 'Engineer' }).entityType, 'job');
   assert.equal(normalizeResearchRecord('Google Search', { title: 'Result' }).entityType, 'search_result');
+  assert.equal(normalizeResearchRecord('Google Play', { title: 'App listing' }).entityType, 'app');
+  assert.equal(normalizeResearchRecord('SEC EDGAR', { title: 'Filing' }).entityType, 'public_record');
 });
