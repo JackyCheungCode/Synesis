@@ -397,9 +397,28 @@ Deno.serve(async (req: Request) => {
             const record=raw as Record<string,unknown>;
             const external=readField(record,[/^(asin|sku|upc|ean|gtin|product.?id|item.?id)$/i]);
             const sourceUrl=readField(record,[/^(url|link|product.?url|item.?url|canonical.?url)$/i]);
+            // Canonicalize URLs only when no platform identifier is available.
+            // Keep product IDs case-preserving and never merge records by title.
+            const normalizeSourceUrl=(value:unknown):string|null=>{
+              if(value===null||value===undefined) return null;
+              try {
+                const parsed=new URL(String(value).trim());
+                if(!['http:','https:'].includes(parsed.protocol)) return null;
+                parsed.hash='';
+                parsed.hostname=parsed.hostname.toLowerCase();
+                for(const key of [...parsed.searchParams.keys()]) {
+                  if(/^utm_/i.test(key)||/^(fbclid|gclid|msclkid|yclid|ref|ref_|source|campaign)$/i.test(key)) parsed.searchParams.delete(key);
+                }
+                parsed.searchParams.sort();
+                if((parsed.protocol==='https:'&&parsed.port==='443')||(parsed.protocol==='http:'&&parsed.port==='80')) parsed.port='';
+                if(parsed.pathname.length>1) parsed.pathname=parsed.pathname.replace(/\\/+$/,'');
+                return parsed.toString();
+              } catch { return null; }
+            };
+            const normalizedUrl=normalizeSourceUrl(sourceUrl);
             const identity=external!==null && String(external).trim()
               ? String(external).trim()
-              : sourceUrl!==null && String(sourceUrl).trim() ? String(sourceUrl).trim() : null;
+              : normalizedUrl;
             const priceRaw=readField(record,[/^(price|sale.?price|current.?price|amount|cost|listing.?price|unit.?price)$/i]);
             const priceText=typeof priceRaw==='number'?String(priceRaw):typeof priceRaw==='string'?priceRaw.replace(/,/g,''):'';
             const priceMatch=priceText.match(/-?\d+(?:\.\d+)?/);
