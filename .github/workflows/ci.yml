@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [develop]
 
+# Prevent older builds from deploying after a newer develop commit.
+concurrency:
+  group: synesis-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
