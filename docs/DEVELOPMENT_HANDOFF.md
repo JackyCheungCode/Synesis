@@ -1,10 +1,10 @@
 # Synesis 开发交接文档
 
-更新时间：2026-10-31。新聊天请先读本文件，再检查远端状态，不要依赖旧聊天上下文。
+更新时间：2026-10-31（已补充本轮移动端双列与 Carbon 控件改动）。新聊天请先读本文件，再检查远端状态，不要依赖旧聊天上下文。
 
 ## 项目与基础设施
 - GitHub：`JackyCheungCode/Synesis`，开发分支 `develop`
-- 当前 HEAD：`0674f9eb21599b7f79aa84affc1bf7e6c331665e`
+- 当前 HEAD：`aa3940226c2c81094a825ea7a2fcf6970418cc32`
 - 前端：React + TypeScript + Vite + Carbon React
 - Cloudflare Worker：`synesis`，https://synesis.xg-y.workers.dev
 - Supabase Project：`vuyyaqsmlzixhdjvaidj`
@@ -14,15 +14,16 @@
 禁止另建 Cloudflare Zone/Worker 或 Supabase Project。不要在聊天、日志或文档中输出任何 API Token、Service Role Key、Apify Key 等秘密。曾有 Cloudflare Token 在聊天中暴露，应视为泄露并轮换；不要复述或再次索取旧 Token。
 
 ## 2026-10-31 最新部署状态
-### 前端 / Cloudflare
-- GitHub Actions：[run 41176581816](https://github.com/JackyCheungCode/Synesis/actions/runs/41176581816)
-- 状态：completed / success
-- 对应 commit：`0674f9eb21599b7f79aa84affc1bf7e6c331665e`
-- Cloudflare 最新 deployment：`20ba9c7d-5675-425f-86d0-0828be13a903`
-- Worker version：`4c9ce39d-c4f4-450a-8571-dea3743659e9`
+### 前端 / Cloudflare（最近一次移动端双列更新）
+- GitHub Actions：[run 41177172484](https://github.com/JackyCheungCode/Synesis/actions/runs/41177172484)
+- Build：success；Deploy：success。
+- 对应 commit：`aa3940226c2c81094a825ea7a2fcf6970418cc32`
+- Cloudflare 最新 deployment：`b6e54e43-3677-4faa-84f5-22a20e012b86`
+- Worker version：`41979373-0a2e-42db-a99e-927a846e5d28`
 - 流量：100% 指向上述 version
-- 部署时间：2026-10-31T06:27:32Z
-结论：最新移动端 CSS 提交 CI 成功且已部署到 Worker，deployment 流量 100%。
+- 部署时间：2026-10-31T06:36:02Z
+- 线上地址：<https://synesis.xg-y.workers.dev>
+结论：本轮移动端改动 CI 构建成功并已部署，Cloudflare deployment 显示 100% 流量指向新版本。真实设备视觉验收尚未执行。
 
 ### Supabase
 - `synesis-api` 状态 ACTIVE，Version 27。
@@ -30,6 +31,7 @@
 - Version 27 包含商品来源 URL 规范化等后端改动。
 
 ## 最近重要提交
+- `aa3940226c2c81094a825ea7a2fcf6970418cc32`：移动端双列 Cards 与边距调整（本轮最新 HEAD）
 - `0674f9eb21599b7f79aa84affc1bf7e6c331665e`：移动端页面布局与横向溢出修复
 - `6e79581c6906f37d7eb6a8a1b63f6932fcbf7fcb`：修正来源 URL 规范化正则
 - `1f771ecbe0c87d512bd12379d81356c825282bfe`：商品匹配规范化来源 URL
@@ -40,12 +42,39 @@
 - html/body/#root 和 app 根容器限制在视口宽度内，减少整页横向溢出。
 - Carbon 内容区、页面容器、卡片和网格使用 min-width:0 / max-width:100%。
 - 平板/手机修正内容区左偏移。
-- 手机端主卡片、项目卡片、分析卡片、商品卡片优先单栏；KPI 指标保留双栏，小于约 380px 再单栏。
+- 最新需求将手机端页面左右 padding 调整为约 3–4px（此前 12px，约缩至 1/3）。
+- 手机端 Cards 调整为两列：总览/分析/Key Vault/商品/项目卡片与 KPI 使用 `repeat(2,minmax(0,1fr))`；宽幅卡片可跨两列。
+- 380px 以下仍维持双列，但减小卡片 padding 与间距；注意小屏可读性与交互目标尺寸。
 - 标题、表单、通知和长文本允许收缩与换行。
 - 表格、原始结果保留容器内横向滚动，页面 body 不应横向滚动。
+- 本轮补齐部分 Carbon 原生控件：导航遮罩关闭操作改 Carbon Button，原生 details/summary 改 Carbon Accordion，商品来源链接改 Carbon Link；其他表单控件原本已使用 Carbon Button/TextInput/PasswordInput/Select/Toggle/TextArea/Modal 等。
 
 **未完成：** 尚未在真实 Android/iOS 设备逐页手动验收。CSS 当前是在旧样式末尾追加覆盖规则，后续要逐步合并重复媒体查询，避免持续堆叠。
 验收页面：总览、项目、任务、分析报告、商品库、凭证库。检查 Carbon Header、SideNav 展开/关闭、弹窗、表单、长标题、按钮组、表格局部滚动。建议视口：320、360、390、430、768 px。检查 document.documentElement.scrollWidth 是否大于 clientWidth，定位撑宽的具体元素；不要只用全局 overflow:hidden 掩盖问题。数据表/JSON 可局部滚动，但 body 不可横向滚动。
+
+
+
+## 2026-10-31 本轮最新移动端需求与实施记录
+用户最新明确要求：
+1. 手机端页面左右边距调整为此前的 1/3。
+2. 页面 Cards 排版变为 2 列。
+3. 页面控件统一使用 Carbon 原生控件。
+4. 修改后完成部署。
+
+已实施：
+- `src/styles.scss`：移动端页面 padding 约 4px；小于 380px 约 3px。项目/分析/KPI/商品/Key Vault 卡片等采用双列网格，卡片间距和内边距压缩。
+- `src/App.tsx`：导航关闭遮罩操作替换为 Carbon Button；商品来源锚点改为 Carbon Link；原生 details/summary 改为 Carbon Accordion。已有表单输入、下拉、开关、弹窗和主要按钮继续采用 Carbon React 控件。
+- 两个文件分别提交；最新 develop HEAD 是 `aa3940226c2c81094a825ea7a2fcf6970418cc32`。
+- CI run `41177172484` 的 Build 与 Deploy job 均 success。
+- Cloudflare 最新 deployment `b6e54e43-3677-4faa-84f5-22a20e012b86`，version `41979373-0a2e-42db-a99e-927a846e5d28`，100% traffic。
+
+待办/注意：
+- 尚未完成真实 Android/iOS 手机实机验收。
+- “所有控件 Carbon 原生”需要下一轮逐页静态审查 `src/App.tsx` 及其他组件文件，搜查原生 `button/input/select/textarea/a/details/summary` 等交互元素；装饰性 HTML 不必替换。特别确认无原生交互控件残留，且 Carbon 组件 props/API 使用正确。
+- 双列 Cards 在 320px 宽设备上可能造成文本与按钮拥挤，需要逐页面检查；若卡片内容复杂，保持两列但调整内部布局/截断/按钮堆叠，不要未经确认又改回单列。
+- 3–4px 外边距非常紧凑，检查卡片边缘与屏幕安全区/圆角的视觉效果；必要时区分 page gutter 与卡片 gutter，但遵守用户要求。
+- 检查全页横向溢出，表格仅允许局部滚动。
+- CSS 当前存在历史重复媒体查询与末尾覆盖块，后续可重构为统一断点规则，避免继续堆叠 patch。
 
 ## 现有功能摘要
 - React + TypeScript + Vite + Carbon React；研究项目、任务、分析、商品标准库、凭证配置等页面。
@@ -111,4 +140,4 @@
 ## 新聊天窗口启动指令
 请将下面内容作为新聊天第一条消息：
 
-> 继续开发 Synesis。先读取仓库 docs/DEVELOPMENT_HANDOFF.md，检查 GitHub develop 最新 HEAD、CI、Cloudflare Worker deployment 和 Supabase Edge Function 状态。不要重新规划或重复已完成工作。优先完成移动端逐页布局验收与修复（body 横向溢出、页面边距、内容拥挤、表格局部滚动），然后继续 WP1 同步检查点可靠性和 WP2 商品身份匹配。直接执行代码修改、测试、提交和必要部署；每次汇报区分提交、CI、部署和真实设备验收。沿用现有 Cloudflare Worker 与 Supabase Project，不要新建基础设施，不要泄露秘密。
+> 继续开发 Synesis。先读取仓库 docs/DEVELOPMENT_HANDOFF.md，检查 GitHub develop 最新 HEAD、CI、Cloudflare Worker deployment 和 Supabase Edge Function 状态。不要重新规划或重复已完成工作。优先完成本轮移动端双列布局和 Carbon 控件的逐页审查/实机验收（320/360/390/430/768px，body 横向溢出、3–4px 边距、Cards 双列、表格局部滚动），修正遗留原生交互控件；然后继续 WP1 同步检查点可靠性和 WP2 商品身份匹配。直接执行代码修改、测试、提交和必要部署；每次汇报区分提交、CI、部署和真实设备验收。沿用现有 Cloudflare Worker 与 Supabase Project，不要新建基础设施，不要泄露秘密。
