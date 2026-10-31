@@ -121,6 +121,56 @@ Deno.serve(async (req: Request) => {
       return json({ok:true});
     }
 
+    if (action === 'models.list') {
+      const slug = String(body.slug ?? '').trim();
+      const supportedProviders = new Set(['openai','googlegemini','deepseek','anthropic','cloudflare','mistral','x']);
+      if (!supportedProviders.has(slug)) return json({error:'不支持的 AI Provider'},400);
+      const { config, clear } = await getCredential(slug,'provider');
+      let endpoint = '';
+      const headers:Record<string,string> = {};
+      if (slug === 'openai') { endpoint = 'https://api.openai.com/v1/models'; headers.Authorization = `Bearer ${clear}`; }
+      else if (slug === 'deepseek') { endpoint = 'https://api.deepseek.com/models'; headers.Authorization = `Bearer ${clear}`; }
+      else if (slug === 'mistral') { endpoint = 'https://api.mistral.ai/v1/models'; headers.Authorization = `Bearer ${clear}`; }
+      else if (slug === 'x') { endpoint = 'https://api.x.ai/v1/models'; headers.Authorization = `Bearer ${clear}`; }
+      else if (slug === 'anthropic') { endpoint = 'https://api.anthropic.com/v1/models?limit=100'; headers['x-api-key'] = clear; headers['anthropic-version'] = '2023-06-01'; }
+      else if (slug === 'googlegemini') endpoint = `https://generativelanguage.googleapis.com/v1beta/models?pageSize=100&key=${encodeURIComponent(clear)}`;
+      else {
+        if (!config.base_url) return json({error:'请先填写 Cloudflare Account ID'},400);
+        endpoint = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/models/search`;
+        headers.Authorization = `Bearer ${clear}`;
+      }
+      const upstream = await fetch(endpoint,{headers});
+      if (!upstream.ok) {
+        await admin.from('ai_provider_configs').update({connection_status:'error'}).eq('id',config.id).eq('user_id',userId);
+        return json({error:`${config.display_name} 模型目录请求失败（HTTP ${upstream.status}），请检查 API Key 权限及账户配置。`},502);
+      }
+      const payload = await upstream.json();
+      const rows = slug === 'googlegemini' ? (payload.models ?? []) : slug === 'cloudflare' ? (payload.result ?? []) : (payload.data ?? payload.models ?? []);
+      const models = (Array.isArray(rows) ? rows : []).map((item:Record<string,unknown>) => {
+        const rawId = String(item.id ?? item.name ?? item.model_id ?? '').trim();
+        const id = slug === 'googlegemini' ? rawId.replace(/^models\//,'') : rawId;
+        if (!id) return null;
+        const displayName = String(item.displayName ?? item.name ?? item.id ?? id).replace(/^models\//,'');
+        const task = String(item.task ?? item.type ?? '');
+        return {id,name:displayName, ...(task ? {task} : {})};
+      }).filter((item):item is {id:string;name:string;task?:string} => Boolean(item))
+        .filter((item,index,all)=>all.findIndex(other=>other.id===item.id)===index)
+        .sort((a,b)=>a.name.localeCompare(b.name));
+      await admin.from('ai_provider_configs').update({connection_status:'validated',last_validated_at:new Date().toISOString()}).eq('id',config.id).eq('user_id',userId);
+      return json({models,selected_model:config.default_model ?? ''});
+    }
+
+    if (action === 'models.select') {
+      const slug = String(body.slug ?? '').trim();
+      const model = String(body.model ?? '').trim();
+      if (!/^[a-z0-9_-]{2,48}$/.test(slug) || !model || model.length > 256) return json({error:'Provider 或模型参数无效'},400);
+      const {data:config,error:configError} = await admin.from('ai_provider_configs').select('id').eq('user_id',userId).eq('provider_slug',slug).maybeSingle();
+      if (configError || !config) return json({error:'找不到该 Provider 凭证配置'},404);
+      const {error:updateError} = await admin.from('ai_provider_configs').update({default_model:model,updated_at:new Date().toISOString()}).eq('id',config.id).eq('user_id',userId);
+      if (updateError) throw updateError;
+      return json({ok:true,slug,selected_model:model});
+    }
+
     if (action === 'connection.test') {
       const { slug, kind, model } = body;
       const { config, clear } = await getCredential(slug,kind);
