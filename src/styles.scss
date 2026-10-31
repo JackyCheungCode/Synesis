@@ -256,3 +256,11 @@ h3 { color:#161616; font-size:15px; margin:0 0 6px; font-weight:600; }
 .task-table th,.task-table td { text-align:left; padding:.8rem .65rem; border-bottom:1px solid var(--cds-border-subtle,#e0e0e0); vertical-align:middle; }
 .task-table th { color:var(--cds-text-secondary,#525252); font-weight:600; background:var(--cds-layer-01,#f4f4f4); }
 .task-table td .card-actions { flex-wrap:wrap; }
+
+.pie-layout { display:flex; align-items:center; gap:1.25rem; min-height:150px; }
+.pie-svg { width:148px; max-width:45%; flex:0 0 auto; }
+.pie-legend { display:flex; flex:1; flex-direction:column; gap:.5rem; min-width:0; }
+.pie-legend>div { display:grid; grid-template-columns:10px minmax(0,1fr) auto; align-items:center; gap:.5rem; font-size:.78rem; }
+.pie-legend>div span:nth-child(2) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pie-dot { width:9px; height:9px; border-radius:50%; background:#0f62fe; }
+.pie-dot-1 { background:#24a148; } .pie-dot-2 { background:#ff832b; } .pie-dot-3 { background:#da1e28; } .pie-dot-4 { background:#8a3ffc; } .pie-dot-5 { background:#009d9a; }
