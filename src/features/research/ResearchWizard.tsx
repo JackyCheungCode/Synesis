@@ -23,7 +23,7 @@ export type ResearchTask = { id:string; project_id:string; platform_slug:string;
 export type ResearchReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; report_type?:string; evidence?:Array<{task_id?:string;platform_slug?:string}>; content:Record<string,any> };
 type Props = {
  projects:ResearchProject[]; plans:ResearchPlan[]; tasks:ResearchTask[]; reports:ResearchReport[];
- projectId?:string; busy:boolean; projectResultRows?:Array<{task_id:string;platform_slug:string;item_index:number;raw_data:unknown}>; projectResultTotal?:number; projectResultOffset?:number; onLoadProjectResults:(projectId:string,offset?:number)=>void; onParse:(brief:string)=>Promise<ResearchProfile>; onCreate:(brief:string,profile:ResearchProfile,projectId?:string)=>void;
+ projectId?:string; busy:boolean; projectResultRows?:Array<{task_id:string;platform_slug:string;item_index:number;raw_data:unknown;normalized?:{entity_type:string;canonical_key:string|null;normalized_data:Record<string,unknown>;field_sources:Record<string,string>;quality_score:number;warnings:string[];normalization_version:number}|null}>; projectResultTotal?:number; projectResultOffset?:number; onLoadProjectResults:(projectId:string,offset?:number)=>void; onParse:(brief:string)=>Promise<ResearchProfile>; onCreate:(brief:string,profile:ResearchProfile,projectId?:string)=>void;
  onSaveDraft:(draft:{brief:string;formValues:Record<string,string>;profile:ResearchProfile|null;activeStep:number;selectedSources:string[]},projectId?:string)=>void;
  onOpen:(id:string)=>void; onBack:()=>void; onGeneratePlan:(project:ResearchProject,categories:string[])=>void;
  onApprove:(plan:ResearchPlan)=>void; onCancel:(task:ResearchTask)=>void;
