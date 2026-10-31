@@ -155,7 +155,7 @@ const goalOptions=['市场进入','竞品分析','选品开发'];
 const toItems=(values:string[])=>values.map(value=>({id:value,text:value}));
 function ResearchProgress({activeStep,maxUnlockedStep,stepReady}:{activeStep:number;maxUnlockedStep:number;stepReady:boolean[]}) {
  return <Tile className="research-progress-tile">
-  <div className="module-heading"><div><h3 className="cds--type-heading-03">五步研究工作流</h3><p>按顺序完成研究流程；后续步骤将在前置数据准备完成后解锁。</p></div><Tag type="blue" className="synesis-workspace-tag">第 {activeStep+1} / 5 步</Tag></div>
+  <div className="module-heading"><div><h3 className="section-title">五步研究工作流</h3><p>按顺序完成研究流程；后续步骤将在前置数据准备完成后解锁。</p></div><Tag type="blue" className="synesis-workspace-tag">第 {activeStep+1} / 5 步</Tag></div>
   <div className="research-progress-scroll" role="region" aria-label="研究流程步骤，可横向滚动查看" tabIndex={0}>
    <ProgressIndicator currentIndex={activeStep} spaceEqually className="research-progress">
     {stages.map((label,index)=><ProgressStep key={label} label={label} description={index===activeStep?'当前步骤':stepReady[index]?'已满足前置条件':'等待前序步骤完成'} complete={stepReady[index]&&index<activeStep} current={index===activeStep} disabled={index>maxUnlockedStep}/>)}
@@ -369,7 +369,7 @@ function ResearchWizardContent(props:Props) {
    <header className="research-intake-header">
     <div className="research-intake-heading-copy">
      
-     <h2 className="cds--type-heading-03">建立你的市场研究需求</h2>
+     <h2 className="section-title">建立你的市场研究需求</h2>
      <p>填写核心关键词和目标市场，其他信息可稍后补充。</p>
     </div>
     <div className="research-intake-header-meta"><Tag type="blue">需求配置</Tag><span>约 5–10 分钟</span></div>
@@ -380,7 +380,7 @@ function ResearchWizardContent(props:Props) {
     <Accordion align="start" className="research-intake-accordion">
      <AccordionItem title={<span className="research-accordion-title"><b>01</b> 核心研究目标 <small>研究范围、关键词与目标市场</small></span>} open={openPanels[0]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===0?!isOpen:x))}>
       <div className="research-fluid-grid">
-       <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setTouchedRequired(v=>({...v,keywords:true}))}><FluidTextInput id="intake-keywords" labelText="核心关键词 *" value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" invalid={touchedRequired.keywords&&!formValues.keywords?.trim()} invalidText="请输入至少一个核心关键词。"  onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/><small className="cds--form__helper-text">必填。多个关键词请使用逗号分隔。</small></div>
+       <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setTouchedRequired(v=>({...v,keywords:true}))}><FluidTextInput id="intake-keywords" labelText="核心关键词 *" value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" invalid={touchedRequired.keywords&&!formValues.keywords?.trim()} invalidText="请输入至少一个核心关键词。"  onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/><small className="field-help">必填。多个关键词请使用逗号分隔。</small></div>
        <div className="research-fluid-field research-fluid-span research-country-field" onBlurCapture={()=>setTouchedRequired(v=>({...v,countries:true}))}><FluidMultiSelect id="intake-countries" titleText="目标国家 / 地区 *" label={selectedCountrySummary} items={countryOptions} itemToString={(item:any)=>item?.text??''} itemToElement={CountryOptionElement} selectedItems={selectedCountryItems} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:(selectedItems??[]).map((x:any)=>x.text).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen" invalid={touchedRequired.countries&&!formValues.countries?.trim()} invalidText="请至少选择一个目标国家或地区。"/></div>
        <div className="research-fluid-field research-fluid-span"><div className="research-selected-countries" aria-label="已选择的国家和地区">{selectedCountryItems.map(item=><span className="research-selected-country" key={item.id}><img className="research-selected-country-flag" src={item.flag} alt="" loading="lazy"/><span className="research-selected-country-name">{item.text}</span><Button kind="ghost" size="sm" hasIconOnly renderIcon={Close} iconDescription={`移除${item.text}`} onClick={()=>{setFormValues(v=>({...v,countries:splitValues(v.countries??'').filter(value=>value!==item.text&&value!==item.legacyText&&value!==item.id).join(', ')}));setProfile(null);}}/></span>)}</div></div>
         <div className="research-fluid-field research-fluid-span"><CountrySelectionMap selectedCodes={selectedCountryCodes}/></div>
@@ -395,7 +395,7 @@ function ResearchWizardContent(props:Props) {
        <div className="research-fluid-field"><FluidTextInput id="intake-attributes" labelText="产品属性与规格" value={formValues.product_attributes??''} placeholder="材质、尺寸、容量、功能、连接方式等" onChange={(e:any)=>{setFormValues(v=>({...v,product_attributes:e.target.value}));setProfile(null);}}/></div>
        <div className="research-fluid-field"><FluidTextInput id="intake-brands" labelText="品牌" value={formValues.brands??''} placeholder="输入品牌名称" onChange={(e:any)=>{setFormValues(v=>({...v,brands:e.target.value}));setProfile(null);}}/></div>
        <div className="research-fluid-field research-fluid-span"><FluidTextArea id="intake-models" labelText="型号 / SKU / UPC / EAN" helperText="支持多行输入，每行填写一个型号或商品标识符。" rows={3} value={formValues.models_identifiers??''} onChange={(e:any)=>{setFormValues(v=>({...v,models_identifiers:e.target.value}));setProfile(null);}}/></div>
-       <div className="research-fluid-field research-fluid-span"><label className="cds--label">价格范围与币种</label><div className="research-price-range">
+       <div className="research-fluid-field research-fluid-span"><label className="field-label">价格范围与币种</label><div className="research-price-range">
         <FluidNumberInput id="intake-price-min" label="最低价格" min={0} step={1} value={formValues.price_min??''} onChange={(e:any)=>{setFormValues(v=>({...v,price_min:e.target.value,price_range:formatPriceRange(e.target.value,v.price_max,v.price_currency)}));setProfile(null);}}/>
         <FluidNumberInput id="intake-price-max" label="最高价格" min={0} step={1} value={formValues.price_max??''} onChange={(e:any)=>{setFormValues(v=>({...v,price_max:e.target.value,price_range:formatPriceRange(v.price_min,e.target.value,v.price_currency)}));setProfile(null);}}/>
         <FluidDropdown id="intake-price-currency" titleText="币种" label="币种" items={toItems(['USD','EUR','CNY'])} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(['USD','EUR','CNY']).find(x=>x.id===(formValues.price_currency??'USD'))??toItems(['USD','EUR','CNY'])[0]} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,price_currency:selectedItem?.id??'USD',price_range:formatPriceRange(v.price_min,v.price_max,selectedItem?.id??'USD')}));setProfile(null);}}/>
@@ -454,7 +454,7 @@ function ResearchWizardContent(props:Props) {
   </section>;
 
  return <section className="module-stack research-workspace research-fullwidth">
-  <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><h1 className="cds--type-heading-04">{project.name}</h1></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
+  <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><h1 className="page-title">{project.name}</h1></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
   <ResearchProgress activeStep={activeStep} maxUnlockedStep={maxUnlockedStep} stepReady={stepReady}/>
   {activeStep===0&&<Tile><div className="module-heading"><h3>研究需求</h3><Tag type="green">已保存</Tag></div><p>{savedProfile?.summary??project.objective}</p>{savedProfile?.dimensions.filter(item=>item.values.length).map(item=><div className="research-saved-row" key={item.key}><b>{item.label} <Tag type={statusType[item.status]}>{statusLabel[item.status]}</Tag></b><p>{item.values.join(' · ')}</p></div>)}{!savedProfile&&<p>{project.objective}</p>}</Tile>}
   {activeStep===1&&<Tile className="research-source-tile"><div className="module-heading"><div><h3>选择调研平台与数据类别</h3><p>选择需要覆盖的数据类别与平台。</p></div>{plan?<Tag type="green">平台方案已生成</Tag>:<Tag type="blue">待选择</Tag>}</div>
