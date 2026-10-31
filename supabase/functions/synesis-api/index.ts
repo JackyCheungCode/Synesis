@@ -419,7 +419,7 @@ Deno.serve(async (req: Request) => {
       const categories = new Map<string, number>();
       const words = new Map<string, number>();
       const currencyPrices = new Map<string, number[]>();
-      const fieldCounts = { title:0, price:0, currency:0, rating:0, reviews:0, brand:0, category:0, image:0, link:0, sku:0, description:0, sales:0, stock:0 };
+      const fieldCounts = { title:0, price:0, currency:0, rating:0, reviews:0, brand:0, category:0, image:0, link:0, sku:0, description:0, sales:0, sales_rank:0, stock:0 };
       const trendMap = new Map<string, {count:number;prices:number[]}>();
       const funnel = { total: records.length, titled: 0, priced: 0, rated: 0, imaged: 0, linked: 0 };
       const stop = new Set(['the','and','for','with','from','this','that','you','your','new','pack','set','inch','inches','of','to','a','an','on','by','is','are','（','）']);
@@ -436,7 +436,8 @@ Deno.serve(async (req: Request) => {
         const link = pick(row, [/^(url|link|product.?url|item.?url|canonical.?url)$/i]);
         const sku = pick(row, [/^(sku|asin|upc|ean|gtin|product.?id|item.?id)$/i]);
         const description = pick(row, [/^(description|product.?description|about)$/i]);
-        const sales = numeric(pick(row, [/sales.?volume|units.?sold|sold.?count|monthly.?sales|sales.?rank/i]));
+        const sales = numeric(pick(row, [/^(sales.?volume|units.?sold|sold.?count|monthly.?sales|estimated.?sales|sales.?count)$/i]));
+        const salesRank = numeric(pick(row, [/^(sales.?rank|best.?seller.?rank|bsr|rank)$/i]));
         const stock = numeric(pick(row, [/^(stock|inventory|quantity|available.?quantity|in.?stock)$/i]));
         const dateValue = pick(row, [/^(date|created.?at|published.?at|scraped.?at|timestamp|date.?created)$/i]);
         if (dateValue !== null) {
@@ -466,6 +467,7 @@ Deno.serve(async (req: Request) => {
         if (sku) fieldCounts.sku++;
         if (description) fieldCounts.description++;
         if (sales !== null && sales >= 0) fieldCounts.sales++;
+        if (salesRank !== null && salesRank >= 0) fieldCounts.sales_rank++;
         if (stock !== null && stock >= 0) fieldCounts.stock++;
         if (brand) { const key=String(brand).trim(); brands.set(key,(brands.get(key)??0)+1); }
         if (category) { const key=String(category).trim(); categories.set(key,(categories.get(key)??0)+1); }
@@ -497,7 +499,7 @@ Deno.serve(async (req: Request) => {
         distributions:{price_bands:bands,price_bands_by_currency:bandsByCurrency,brands:top(brands),categories:top(categories),words:top(words),price_by_currency:[...currencyPrices.entries()].map(([currency,values])=>({currency,count:values.length,average:average(values),min:Math.min(...values),max:Math.max(...values)})).sort((a,b)=>b.count-a.count)},
         trends,
         funnel, field_counts:fieldCounts,
-        quality:{title_rate:records.length?fieldCounts.title/records.length:0,price_rate:records.length?fieldCounts.price/records.length:0,currency_rate:records.length?fieldCounts.currency/records.length:0,rating_rate:records.length?fieldCounts.rating/records.length:0,reviews_rate:records.length?fieldCounts.reviews/records.length:0,brand_rate:records.length?fieldCounts.brand/records.length:0,category_rate:records.length?fieldCounts.category/records.length:0,image_rate:records.length?fieldCounts.image/records.length:0,link_rate:records.length?fieldCounts.link/records.length:0,sku_rate:records.length?fieldCounts.sku/records.length:0,description_rate:records.length?fieldCounts.description/records.length:0,sales_rate:records.length?fieldCounts.sales/records.length:0,stock_rate:records.length?fieldCounts.stock/records.length:0}
+        quality:{title_rate:records.length?fieldCounts.title/records.length:0,price_rate:records.length?fieldCounts.price/records.length:0,currency_rate:records.length?fieldCounts.currency/records.length:0,rating_rate:records.length?fieldCounts.rating/records.length:0,reviews_rate:records.length?fieldCounts.reviews/records.length:0,brand_rate:records.length?fieldCounts.brand/records.length:0,category_rate:records.length?fieldCounts.category/records.length:0,image_rate:records.length?fieldCounts.image/records.length:0,link_rate:records.length?fieldCounts.link/records.length:0,sku_rate:records.length?fieldCounts.sku/records.length:0,description_rate:records.length?fieldCounts.description/records.length:0,sales_rate:records.length?fieldCounts.sales/records.length:0,sales_rank_rate:records.length?fieldCounts.sales_rank/records.length:0,stock_rate:records.length?fieldCounts.stock/records.length:0}
       });
     }
 
