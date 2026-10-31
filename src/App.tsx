@@ -12,12 +12,14 @@ import { platforms, providers, apiIntegrations } from './data/catalog';
 import { useAuth } from './auth/AuthProvider';
 import { supabase } from './lib/supabase';
 
-type Page = 'dashboard' | 'vault' | 'projects' | 'tasks' | 'reports';
+type Page = 'dashboard' | 'vault' | 'projects' | 'tasks' | 'reports' | 'products';
 type Credential = { slug: string; name: string; kind: 'provider' | 'integration'; status: string; key_last4?: string; last_validated_at?: string };
 type Project = { id: string; name: string; objective: string; status: string; target_regions: string[]; platform_slugs: string[] };
 type Plan = { id: string; project_id: string; status: string; plan: Record<string, unknown>; estimated_cost: number | null; created_at: string };
 type Task = { id: string; project_id: string; platform_slug: string; status: string; actor_id: string | null; created_at: string; progress?: number; result_count?: number; run_status?: string | null; external_run_id?: string | null; error_message?: string | null; finished_at?: string | null; result_synced_count?: number };
 type MarketReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; content:Record<string,unknown> };
+type Product = {id:string;canonical_key:string;title:string|null;brand:string|null;category:string|null;description:string|null;image_url:string|null;updated_at:string};
+type ProductHistory = {id:string;price:number;currency:string;observed_at:string;source_task_id:string;source?:{platform_slug:string;external_product_id:string;source_url:string}|null};
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://vuyyaqsmlzixhdjvaidj.supabase.co';
 const fnUrl = `${supabaseUrl}/functions/v1/synesis-api`;
@@ -58,6 +60,14 @@ function App() {
   const [integrationMeta, setIntegrationMeta] = useState<Record<string,string>>({});
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [productSearch,setProductSearch]=useState('');
+  const [products,setProducts]=useState<Product[]>([]);
+  const [productTotal,setProductTotal]=useState(0);
+  const [productOffset,setProductOffset]=useState(0);
+  const [selectedProduct,setSelectedProduct]=useState<Product|null>(null);
+  const [productHistory,setProductHistory]=useState<ProductHistory[]>([]);
+  const [productHistoryTotal,setProductHistoryTotal]=useState(0);
+  const [productHistoryOffset,setProductHistoryOffset]=useState(0);
 
   const token = session?.access_token ?? '';
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_3zXUJ5hz_1cl9sFQqPVqCQ_Tu5KfaCu', 'Content-Type': 'application/json' }), [token]);
@@ -215,6 +225,25 @@ function App() {
     finally { setBusy(false); }
   }
 
+  async function loadProducts(offset=0,searchValue=productSearch) {
+    setBusy(true);
+    try {
+      const data=await api('products.list',{limit:25,offset,search:searchValue});
+      setProducts(data.products??[]);setProductTotal(data.total??0);setProductOffset(offset);
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+
+  async function loadProductHistory(product:Product,offset=0) {
+    setBusy(true);
+    try {
+      const data=await api('products.history',{productId:product.id,limit:50,offset});
+      setSelectedProduct(product);setProductHistory(data.history??[]);
+      setProductHistoryTotal(data.total??0);setProductHistoryOffset(offset);
+    } catch(e) { setNotice({kind:'error',text:message(e)}); }
+    finally { setBusy(false); }
+  }
+
   async function exportTaskResults(task: Task) {
     setBusy(true);
     try {
@@ -242,7 +271,7 @@ function App() {
     finally { setBusy(false); }
   }
 
-  const title: Record<Page,string> = {dashboard:'全球外贸情报总览',vault:'Key Vault 与连接管理',projects:'研究项目中心',tasks:'采集任务中心',reports:'市场研究报告'};
+  const title: Record<Page,string> = {dashboard:'全球外贸情报总览',vault:'Key Vault 与连接管理',projects:'研究项目中心',tasks:'采集任务中心',reports:'市场研究报告',products:'标准化商品库'};
   const pendingPlans = plans.filter(p => p.status === 'pending_approval');
   const pageRows = tasks.filter(t => !search || t.platform_slug.includes(search.toLowerCase()));
 
@@ -264,6 +293,7 @@ function App() {
           <SideNavLink renderIcon={Folder} isActive={page==='projects'} onClick={()=>navigate('projects')}>研究项目中心</SideNavLink>
           <SideNavLink renderIcon={Play} isActive={page==='tasks'} onClick={()=>navigate('tasks')}>采集任务中心</SideNavLink>
           <SideNavLink renderIcon={ChartLine} isActive={page==='reports'} onClick={()=>navigate('reports')}>市场监控与报告</SideNavLink>
+          <SideNavLink renderIcon={Folder} isActive={page==='products'} onClick={()=>{navigate('products');void loadProducts(0);}}>标准化商品库</SideNavLink>
         </SideNavItems>
       </SideNav>
       {navExpanded && <button className="nav-dismiss-overlay" aria-label="关闭导航菜单" onClick={()=>setNavExpanded(false)} />}
@@ -317,6 +347,23 @@ function App() {
                 {task.status==='succeeded'&&<Button size="sm" kind="ghost" onClick={()=>void viewTaskResults(task)}>查看结果</Button>}
               </div></td></tr>)}
             </tbody></table></div>
+          </section>}
+          {page==='products' && <section className="module-stack">
+            <Tile>
+              <div className="module-heading"><div><h2>跨平台商品目录</h2><p>统一查看采集任务中识别的商品主档、来源平台与历史价格。原始采集记录仍独立保留。</p></div><Tag type="blue">{productTotal.toLocaleString()} 件商品</Tag></div>
+              <div className="product-search-row"><TextInput id="product-search" labelText="搜索商品" placeholder="商品名称、品牌或平台商品标识" value={productSearch} onChange={e=>setProductSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')void loadProducts(0,productSearch);}}/><Button kind="primary" onClick={()=>void loadProducts(0,productSearch)} disabled={busy}>搜索</Button><Button kind="tertiary" renderIcon={Renew} onClick={()=>void loadProducts(productOffset)} disabled={busy}>刷新</Button></div>
+            </Tile>
+            <div className="product-grid">{products.map(product=><Tile key={product.id} className="product-tile">
+              {product.image_url&&<img className="product-image" src={product.image_url} alt="" loading="lazy" onError={e=>{e.currentTarget.style.display='none';}}/>}
+              <div><h3>{product.title||'未命名商品'}</h3><p>{product.brand||'品牌未知'} · {product.category||'未分类'}</p><small>{product.canonical_key}</small></div>
+              <Button kind="tertiary" size="sm" onClick={()=>void loadProductHistory(product)}>查看价格历史</Button>
+            </Tile>)}</div>
+            <div className="card-actions"><Button kind="secondary" size="sm" disabled={productOffset===0||busy} onClick={()=>void loadProducts(Math.max(0,productOffset-25))}>上一页</Button><Tag type="blue">{productTotal?Math.floor(productOffset/25)+1:0} / {Math.max(1,Math.ceil(productTotal/25))}</Tag><Button kind="secondary" size="sm" disabled={productOffset+25>=productTotal||busy} onClick={()=>void loadProducts(productOffset+25)}>下一页</Button></div>
+            {selectedProduct&&<Tile className="history-tile"><div className="module-heading"><div><h2>{selectedProduct.title||'商品'} · 价格历史</h2><p>{selectedProduct.canonical_key}</p></div><Button kind="ghost" onClick={()=>{setSelectedProduct(null);setProductHistory([]);}}>关闭</Button></div>
+              {productHistory.length?<><div className="history-table-wrap"><table className="task-table"><thead><tr><th>采集时间</th><th>价格</th><th>币种</th><th>来源平台</th><th>平台商品 ID</th></tr></thead><tbody>{productHistory.map(item=><tr key={item.id}><td>{new Date(item.observed_at).toLocaleString()}</td><td>{Number(item.price).toLocaleString(undefined,{maximumFractionDigits:4})}</td><td>{item.currency}</td><td>{item.source?.platform_slug||'—'}</td><td>{item.source?.source_url?<a href={item.source.source_url} target="_blank" rel="noreferrer">{item.source.external_product_id}</a>:item.source?.external_product_id||'—'}</td></tr>)}</tbody></table></div>
+              <div className="card-actions"><Button kind="secondary" size="sm" disabled={productHistoryOffset===0||busy} onClick={()=>void loadProductHistory(selectedProduct,Math.max(0,productHistoryOffset-50))}>上一页</Button><Tag>{productHistoryOffset+1}–{Math.min(productHistoryOffset+50,productHistoryTotal)} / {productHistoryTotal}</Tag><Button kind="secondary" size="sm" disabled={productHistoryOffset+50>=productHistoryTotal||busy} onClick={()=>void loadProductHistory(selectedProduct,productHistoryOffset+50)}>下一页</Button></div></>:<p>暂无价格快照。需要采集记录包含可识别的价格与币种。</p>}
+            </Tile>}
+            {!products.length&&<Tile><p>暂时没有标准化商品。完成采集任务并成功同步结果后，符合身份识别条件的商品会自动进入商品库。</p></Tile>}
           </section>}
           {page==='reports' && <section className="module-stack">
             <Tile><div className="module-heading"><div><h2>产品数据分析工作台</h2><p>从完整采集明细中计算价格、评分、品牌、类目、关键词、商品信息完整度和转化漏斗。</p></div><Tag type="blue">多维分析</Tag></div>
