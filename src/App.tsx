@@ -166,7 +166,7 @@ function App() {
         input_mode:'structured_research',
         workflow_state:existing?.scope?.workflow_state==='draft'||!existing?'draft':'in_progress',
         active_step:draft.activeStep,
-        intake_form:draft.formValues,
+        intake_form:Object.keys(draft.formValues).length?draft.formValues:(existing?.scope?.intake_form??{}),
         original_brief:originalBrief,
         research_profile:draft.profile,
         selected_data_sources:draft.selectedSources,
