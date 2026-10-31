@@ -933,6 +933,25 @@ Deno.serve(async (req: Request) => {
       if(normalizedError) throw normalizedError;
       const platformByTask=new Map(tasks.map(task=>[task.id,task.platform_slug]));
       const normalizedByKey=new Map((normalizedRows??[]).map(row=>[`${row.task_id}:${row.item_index}`,row]));
+      // Lazy backfill: older projects are normalized page-by-page when opened.
+      const missingRows=(rows??[]).filter(row=>!normalizedByKey.has(`${row.task_id}:${row.item_index}`));
+      if(missingRows.length) {
+        const backfillRows=missingRows.map(row=>{
+          const platform=platformByTask.get(row.task_id)??'unknown';
+          const normalizedRecord=normalizeResearchRecord(platform,row.raw_data as Record<string,unknown>);
+          return {
+            user_id:userId,project_id:projectId,task_id:row.task_id,item_index:row.item_index,
+            platform_slug:platform,entity_type:normalizedRecord.entityType,canonical_key:normalizedRecord.canonicalKey,
+            normalized_data:normalizedRecord.normalizedData,field_sources:normalizedRecord.fieldSources,
+            quality_score:normalizedRecord.qualityScore,warnings:normalizedRecord.warnings,
+            normalization_version:normalizedRecord.normalizationVersion,normalized_at:new Date().toISOString(),
+          };
+        });
+        const {error:backfillError}=await admin.from('research_normalized_records')
+          .upsert(backfillRows,{onConflict:'task_id,item_index'});
+        if(backfillError) throw backfillError;
+        for(const row of backfillRows) normalizedByKey.set(`${row.task_id}:${row.item_index}`,row);
+      }
       return json({
         project_id:projectId,tasks,
         results:(rows??[]).map(row=>({
