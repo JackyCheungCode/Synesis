@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep, Breadcrumb, BreadcrumbItem } from '@carbon/react';
-import { Add, ArrowLeft, ArrowRight, CheckmarkFilled, Renew, ChartLine } from '@carbon/icons-react';
+import { Add, ArrowLeft, ArrowRight, Renew, ChartLine } from '@carbon/icons-react';
 
 export type ResearchDimension = { key:string; label:string; values:string[]; status:'provided'|'suggested'|'needs_confirmation'|'user_confirmed'; note?:string };
 export type ResearchProfile = { summary:string; dimensions:ResearchDimension[]; research_goals:string[]; assumptions:string[]; missing_information:string[] };
@@ -163,12 +163,15 @@ export function ResearchWizard(props:Props) {
    <div className="research-profile-hint">研究条件已整理完成。点击底部「下一步」保存并进入调研平台选择。</div>
   </Tile>}
   <div className="research-step-footer research-workflow-actions">
-   <Button className="research-workflow-button" kind="tertiary" disabled={activeStep===0} onClick={()=>setActiveStep(v=>Math.max(0,v-1))}>上一步</Button>
+   <Button className="research-workflow-button" kind="tertiary" disabled>上一步</Button>
    <div className="research-workflow-spacer"/>
    <Button className="research-workflow-button" kind="danger--ghost" disabled={busy} onClick={onBack}>取消</Button>
-   <Button className="research-workflow-button" kind="tertiary" disabled={busy} onClick={()=>onSaveDraft({brief:project.objective,formValues,profile:savedProfile??null,activeStep,selectedSources},project.id)}>暂存</Button>
-   <Button className="research-workflow-button" kind="primary" disabled={activeStep===4||!stepReady[activeStep+1]} onClick={()=>setActiveStep(v=>Math.min(4,v+1))}>下一步 <ArrowRight size={16}/></Button>
+   <Button className="research-workflow-button" kind="tertiary" disabled={busy||(!brief.trim()&&!Object.values(formValues).some(v=>v.trim())&&!profile)} onClick={()=>onSaveDraft({brief:[fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\n'),brief.trim()].filter(Boolean).join('\n\n'),formValues,profile,activeStep:0,selectedSources},project?.id)}>暂存</Button>
+   <Button className="research-workflow-button" kind="primary" disabled={busy||!profile||!profile.dimensions.some(item=>item.values.length>0)} onClick={()=>onCreate([fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\n'),brief.trim()].filter(Boolean).join('\n\n'),profile!,project?.id)}>下一步：调研平台 <ArrowRight size={16}/></Button>
   </div>
+  <div className="module-heading"><div><h2>我的研究项目</h2><p>每项研究都保留需求、采集、统计与报告记录。</p></div><Tag type="blue">{projects.length} 个项目</Tag></div>
+  <div className="project-card-grid">{projects.map(item=><Tile key={item.id} className="list-tile"><div><h3>{item.name}</h3><p>{item.objective}</p><Tag type={item.status==='completed'?'green':'blue'}>{item.status}</Tag></div><Button kind="ghost" renderIcon={ArrowRight} onClick={()=>onOpen(item.id)}>打开研究工作区</Button></Tile>)}</div>
+  {!projects.length&&<Tile><p>还没有研究项目。填写上方研究需求即可开始。</p></Tile>}
  </section>;
 
  const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
@@ -211,6 +214,12 @@ export function ResearchWizard(props:Props) {
    {projectReports.map(report=><div className="research-saved-report" key={report.id}><div className="report-row"><div><strong>{report.title}</strong><p>{new Date(report.created_at).toLocaleString()} · {report.status}</p></div><Tag type="green">已保存</Tag></div><details><summary>查看报告内容</summary><pre className="result-json">{JSON.stringify(report.content,null,2)}</pre></details></div>)}
    {!projectReports.some(report=>report.report_type==="market_research")&&<div className="research-ai-report-action"><p>{statsSavedForAllTasks?"第五步已就绪。AI 将综合全部采集数据与第四步保存的统计快照，生成产品、定价、市场、人群、竞争和营销策略。":"请先在第四步为每个采集任务生成并保存统计快照。完成后即可启动 AI 深度分析。"}</p><Button kind="primary" disabled={busy||!statsSavedForAllTasks} onClick={()=>onGenerateReport(project.id)}>开始 AI 深度分析并保存报告方案</Button></div>}
   </Tile>}
-  <div className="research-step-footer research-workflow-actions"><Button className="research-workflow-button" kind="ghost" disabled={activeStep===0} onClick={()=>setActiveStep(v=>Math.max(0,v-1))}>上一步</Button><Button className="research-workflow-button" kind="primary" disabled={activeStep===4||!stepReady[activeStep+1]} onClick={()=>setActiveStep(v=>Math.min(4,v+1))}>下一步 <ArrowRight size={16}/></Button><Button className="research-workflow-button" kind="secondary" disabled={busy} onClick={()=>onSaveDraft({brief:project.objective,formValues,profile:savedProfile??null,activeStep,selectedSources},project.id)}>暂存</Button><Button className="research-workflow-button" kind="danger--tertiary" disabled={busy} onClick={onBack}>取消</Button></div>
+  <div className="research-step-footer research-workflow-actions">
+   <Button className="research-workflow-button" kind="tertiary" disabled={activeStep===0} onClick={()=>setActiveStep(v=>Math.max(0,v-1))}>上一步</Button>
+   <div className="research-workflow-spacer"/>
+   <Button className="research-workflow-button" kind="danger--ghost" disabled={busy} onClick={onBack}>取消</Button>
+   <Button className="research-workflow-button" kind="tertiary" disabled={busy} onClick={()=>onSaveDraft({brief:project.objective,formValues,profile:savedProfile??null,activeStep,selectedSources},project.id)}>暂存</Button>
+   <Button className="research-workflow-button" kind="primary" disabled={activeStep===4||!stepReady[activeStep+1]} onClick={()=>setActiveStep(v=>Math.min(4,v+1))}>下一步 <ArrowRight size={16}/></Button>
+  </div>
  </section>;
 }
