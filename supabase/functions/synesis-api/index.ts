@@ -596,25 +596,7 @@ Deno.serve(async (req: Request) => {
               settingsWarnings.push('reviewsCutoffDate 格式已自动规范为 Apify 支持的相对时间/日期格式。');
             }
           }
-          const productUrlsDefinition=properties.productUrls;
-          if(productUrlsDefinition) {
-            const originalProductUrls=Array.isArray(input.productUrls)?input.productUrls:[];
-            const urlPattern=typeof productUrlsDefinition.items?.pattern==='string'?new RegExp(productUrlsDefinition.items.pattern):null;
-            const validProductUrls=(input.productUrls as unknown[]).filter((value):value is string=>{
-              if(typeof value!=='string') return false;
-              try { const parsed=new URL(value); return (parsed.protocol==='https:'||parsed.protocol==='http:')&&(!urlPattern||urlPattern.test(value)); } catch { return false; }
-            });
-            if(validProductUrls.length!==originalProductUrls.length) settingsWarnings.push('已移除不符合 Actor URL 规范的 productUrls 条目。');
-            input.productUrls=validProductUrls;
-            if(validProductUrls.length===0 && researchKeywords.length) {
-              const generated=researchKeywords.map(keyword=>`https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`);
-              const compatible=generated.filter(value=>{try{return !urlPattern||urlPattern.test(value);}catch{return false;}});
-              if(compatible.length) {
-                input.productUrls=compatible;
-                settingsWarnings.push('Actor 的 productUrls 为空或无效；已使用 Amazon 搜索入口补齐 URL。');
-              }
-            }
-          }
+
         }
         if(String(task.platform_slug??'').toLowerCase()==='amazon'&&researchKeywords.length) {
           const amazonUrlField=['categoryOrProductUrls','startUrls','urls'].find(name=>{
@@ -622,7 +604,7 @@ Deno.serve(async (req: Request) => {
             return (Array.isArray(fieldType)?fieldType:[fieldType]).includes('array');
           });
           if(amazonUrlField&&(!Array.isArray(input[amazonUrlField])||(input[amazonUrlField] as unknown[]).length===0)) {
-            input[amazonUrlField]=researchKeywords.map(keyword=>`https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`);
+            input[amazonUrlField]=researchKeywords.map(keyword=>({url:`https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`}));
             settingsWarnings.push('Actor 未收到商品或分类 URL；系统已根据核心关键词生成 Amazon.com 搜索入口。目标国家若无 Amazon 本地站点，结果可能不代表当地站点库存与价格。');
           }
         }
