@@ -75,20 +75,21 @@ const fieldSpecs=[
  ['other_research_notes','其他研究说明 / 自然语言补充','补充背景、研究假设、特殊关注点或其他说明'],
 ];
 function flagImageUrl(code:string){return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;}
+const legacyCountryNames=new Intl.DisplayNames(['zh-Hant'],{type:'region'});
 const ISO_3166_1_CODES='AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'.split(' ');
 function buildCountryOptions() {
- const names=new Intl.DisplayNames(['zh-Hant'],{type:'region'});
+ const names=new Intl.DisplayNames(['zh-CN'],{type:'region'});
  return ISO_3166_1_CODES.map(code=>{
   const name=names.of(code)??code;
   const text=code==='CN'?'中国大陆':code==='HK'?'中国香港':code==='MO'?'中国澳门':code==='TW'?'中国台湾':name;
-  return {id:code,text,flag:flagImageUrl(code)};
+  return {id:code,text,legacyText:legacyCountryNames.of(code)??code,flag:flagImageUrl(code)};
  }).sort((a,b)=>a.text.localeCompare(b.text,'zh-Hant'));
 }
-type CountryOptionItem={id:string;text:string;flag:string};
+type CountryOptionItem={id:string;text:string;legacyText?:string;flag:string};
 const countryOptions:CountryOptionItem[]=buildCountryOptions();
 function CountryOptionElement(value:unknown):React.ReactElement {
  const item=value as CountryOptionItem;
- return <span className="research-country-option"><span className="research-country-flag" aria-hidden="true">{item.flag}</span><span>{item.text}</span></span>;
+ return <span className="research-country-option"><img className="research-country-flag" src={item.flag} alt="" loading="lazy"/><span>{item.text}</span></span>;
 }
 const englishRegionNames=new Intl.DisplayNames(['en'],{type:'region'});
 const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson';
@@ -221,7 +222,7 @@ export function ResearchWizard(props:Props) {
  const filledFieldCount=fieldSpecs.filter(([key])=>String(formValues[key]??(key==='other_research_notes'?brief:'' )).trim().length>0).length;
  const completeness=Math.round(filledFieldCount/fieldSpecs.length*100);
  const selectedLabels=splitValues(formValues.countries??'');
- const selectedCountryItems=countryOptions.filter(item=>selectedLabels.includes(item.text));
+ const selectedCountryItems=countryOptions.filter(item=>selectedLabels.includes(item.text)||selectedLabels.includes(item.legacyText??'')||selectedLabels.includes(item.id));
  const selectedCountryCodes=selectedCountryItems.map(item=>item.id);
  const selectedCountrySummary=selectedCountryItems.length
   ? selectedCountryItems.slice(0,3).map(item=>item.text).join('、')+(selectedCountryItems.length>3?' 等 '+selectedCountryItems.length+' 个地区':'')
@@ -256,7 +257,7 @@ export function ResearchWizard(props:Props) {
       <div className="research-fluid-grid">
        <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setTouchedRequired(v=>({...v,keywords:true}))}><FluidTextInput id="intake-keywords" labelText="核心关键词 *" value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" invalid={touchedRequired.keywords&&!formValues.keywords?.trim()} invalidText="请输入至少一个核心关键词。"  onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/><small className="cds--form__helper-text">必填。多个关键词请使用逗号分隔。</small></div>
        <div className="research-fluid-field research-fluid-span research-country-field" onBlurCapture={()=>setTouchedRequired(v=>({...v,countries:true}))}><FluidMultiSelect id="intake-countries" titleText="目标国家 / 地区 *" label={selectedCountrySummary} items={countryOptions} itemToString={(item:any)=>item?.text??''} itemToElement={CountryOptionElement} selectedItems={selectedCountryItems} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:(selectedItems??[]).map((x:any)=>x.text).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen" invalid={touchedRequired.countries&&!formValues.countries?.trim()} invalidText="请至少选择一个目标国家或地区。"/></div>
-       <div className="research-fluid-field research-fluid-span"><div className="research-selected-countries" aria-label="已选择的国家和地区">{countryOptions.filter(item=>selectedLabels.includes(item.text)).map(item=><span className="research-selected-country" key={item.id}><span className="research-selected-country-flag" aria-hidden="true">{item.flag}</span><span className="research-selected-country-name">{item.text}</span><Button kind="ghost" size="sm" hasIconOnly renderIcon={Close} iconDescription={`移除${item.text}`} onClick={()=>{setFormValues(v=>({...v,countries:splitValues(v.countries??'').filter(value=>value!==item.text).join(', ')}));setProfile(null);}}/></span>)}</div></div>
+       <div className="research-fluid-field research-fluid-span"><div className="research-selected-countries" aria-label="已选择的国家和地区">{countryOptions.filter(item=>selectedLabels.includes(item.text)).map(item=><span className="research-selected-country" key={item.id}><img className="research-selected-country-flag" src={item.flag} alt="" loading="lazy"/><span className="research-selected-country-name">{item.text}</span><Button kind="ghost" size="sm" hasIconOnly renderIcon={Close} iconDescription={`移除${item.text}`} onClick={()=>{setFormValues(v=>({...v,countries:splitValues(v.countries??'').filter(value=>value!==item.text).join(', ')}));setProfile(null);}}/></span>)}</div></div>
         <div className="research-fluid-field research-fluid-span"><CountrySelectionMap selectedCodes={selectedCountryCodes}/></div>
        <div className="research-fluid-field"><FluidTextInput id="intake-regions" labelText="目标地区 / 城市" value={formValues.regions??''} placeholder="例如：加州、巴伐利亚州、伦敦" onChange={(e:any)=>{setFormValues(v=>({...v,regions:e.target.value}));setProfile(null);}}/></div>
        <div className="research-fluid-field" onBlurCapture={()=>setTouchedRequired(v=>({...v,languages:true}))}><FluidDropdown id="intake-languages" titleText="研究语言 *" label="选择研究语言" items={toItems(languageOptions)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(languageOptions).find(x=>x.id===formValues.languages)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,languages:selectedItem?.id??''}));setProfile(null);}} invalid={touchedRequired.languages&&!formValues.languages?.trim()} invalidText="请选择研究语言。" /></div>
