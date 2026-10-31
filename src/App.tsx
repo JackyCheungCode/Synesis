@@ -336,6 +336,48 @@ function App() {
     finally { setBusy(false); }
   }
 
+  async function saveProjectAnalytics(projectId:string) {
+    const project=projects.find(item=>item.id===projectId);
+    const projectTasks=tasks.filter(item=>item.project_id===projectId);
+    if(!project||!session?.user.id||!projectTasks.length) return;
+    if(projectTasks.some(task=>task.status!=='succeeded'||Number(task.result_synced_count??0)<Number(task.result_count??0))) {
+      throw new Error('仍有采集任务未完成或数据尚未全部同步，暂不能进行项目统计。');
+    }
+    setBusy(true);
+    try {
+      const savedTaskIds=new Set(reports.filter(report=>report.project_id===projectId&&report.report_type==='dataset_analytics')
+        .flatMap(report=>(report.evidence??[]).map(item=>item.task_id).filter((id):id is string=>Boolean(id))));
+      const pendingTasks=projectTasks.filter(task=>!savedTaskIds.has(task.id));
+      if(!pendingTasks.length) {
+        setNotice({kind:'success',text:'所有数据源均已有统计快照。'});
+        return;
+      }
+      const analyses=await Promise.all(pendingTasks.map(async task=>({
+        task,
+        analysis:await api('tasks.analytics',{taskId:task.id}),
+      })));
+      const now=new Date().toISOString();
+      const rows=analyses.map(({task,analysis})=>({
+        user_id:session.user.id,project_id:projectId,
+        title:`${task.platform_slug} 数据统计快照 · ${now.slice(0,10)}`,
+        report_type:'dataset_analytics',content:analysis,
+        evidence:[{task_id:task.id,platform_slug:task.platform_slug,result_count:task.result_count,result_synced_count:task.result_synced_count}],
+        status:'generated',generated_at:now,
+      }));
+      const {error}=await supabase.from('market_reports').insert(rows);
+      if(error) throw error;
+      setAnalytics(analyses[analyses.length-1]?.analysis??null);
+      setAnalyticsTaskId(analyses[analyses.length-1]?.task.id??'');
+      await loadAll();
+      setNotice({kind:'success',text:`项目统计完成：新增 ${rows.length} 个数据源统计快照。可进入第五步生成 AI 报告。`});
+    } catch(e) {
+      setNotice({kind:'error',text:'项目统计失败：'+message(e)});
+      throw e;
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function loadTaskLogs(task: Task) {
     if (!task.external_run_id) return;
     try {
@@ -483,7 +525,7 @@ function App() {
             onLoadProjectResults={(id,offset)=>void loadProjectResults(id,offset)}
             analytics={analytics} analyticsTaskId={analyticsTaskId}
             taskLogs={taskLogs} onLoadLogs={(task)=>void loadTaskLogs(task)}
-            onSaveAnalytics={()=>void saveAnalyticsReport()}
+            onSaveAnalytics={()=>void saveAnalyticsReport()}\n            onSaveProjectAnalytics={(id)=>void saveProjectAnalytics(id)}
             onGenerateReport={(id)=>{setBusy(true);void generateResearchReport(id).catch(error=>setNotice({kind:'error',text:'AI 报告生成失败：'+message(error)})).finally(()=>setBusy(false));}}
           />}
           {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
