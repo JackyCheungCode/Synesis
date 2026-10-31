@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import {
   Add, Analytics, ArrowRight, ChartLine, ChevronDown, ChevronRight, Cloud,
   Dashboard, DataBase, Document, Folder, Globe, Menu, Moon, Notification,
-  Search, Settings, Sun, Task, WatsonHealth, Close, Api,
+  Search, Settings, Sun, Task, Ai, Close, Api,
 } from '@carbon/icons-react';
 import { Button, InlineNotification, Tag, TextInput, Tile } from '@carbon/react';
 import { BrandIcon } from './components/BrandIcon';
@@ -47,6 +47,10 @@ function App() {
     setNotice(`${provider}：前端输入界面已就绪。安全凭证 API 尚未部署，密钥没有发送或保存。`);
   }
 
+  function saveIntegration(name: string) {
+    setNotice(`${name}：安全凭证 API 尚未部署，密钥没有发送或保存。`);
+  }
+
   return (
     <div className={`synesis-shell ${dark ? 'theme-dark cds--g100' : 'theme-light cds--white'}`}>
       <aside className={`side-nav ${mobileNav ? 'side-nav--open' : ''}`}>
@@ -62,10 +66,10 @@ function App() {
           </button>
           {expanded.intelligence && <div className="nav-submenu">
             {navPlatformItems.map(item => <button key={item.name} className="nav-link nav-link--child" onClick={() => setPage('platforms')}><BrandIcon slug={item.slug} label={item.name} fallback={item.fallback} size={20}/><span>{item.name}</span></button>)}
-            <button className="nav-link nav-link--child" onClick={() => setPage('platforms')}><WatsonHealth size={19}/><span>AI 市场分析</span></button>
+            <button className="nav-link nav-link--child" onClick={() => setPage('platforms')}><Ai size={19}/><span>AI 市场分析</span></button>
           </div>}
           <button className="nav-link nav-link--parent" onClick={() => setExpanded(v => ({ ...v, ai: !v.ai }))}>
-            <WatsonHealth size={20}/><span>AI 智能中心</span>{expanded.ai ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+            <Ai size={20}/><span>AI 智能中心</span>{expanded.ai ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
           </button>
           {expanded.ai && <div className="nav-submenu">
             <button className={`nav-link nav-link--child ${page === 'ai-models' ? 'is-active' : ''}`} onClick={() => setPage('ai-models')}><Api size={18}/><span>模型与 API 管理</span></button>
@@ -155,7 +159,7 @@ function DashboardPage() {
     </div>
     <div className="dashboard-grid">
       <Tile className="panel market-panel"><div className="panel-heading"><div><h2><Globe size={18}/> 全球市场活动</h2><p>跨平台市场情报覆盖区域</p></div><Tag type="blue">数据接入后启用</Tag></div><div className="world-placeholder"><div className="world-grid"/><div className="world-copy"><Globe size={42}/><strong>Global Intelligence Layer</strong><span>等待首批平台数据进入 Synesis</span></div></div></Tile>
-      <Tile className="panel ai-panel"><div className="panel-heading"><div><h2><WatsonHealth size={18}/> AI 智能中心</h2><p>多模型服务连接状态</p></div><Tag type="cool-gray">配置中</Tag></div><div className="provider-mini-grid">{providers.slice(0,5).map(p => <div key={p.name}><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={28}/><span>{p.name.replace('Google ', '')}</span></div>)}</div><div className="panel-bottom-note">填写 API Key 后启用模型连接与智能路由</div></Tile>
+      <Tile className="panel ai-panel"><div className="panel-heading"><div><h2><Ai size={18}/> AI 智能中心</h2><p>多模型服务连接状态</p></div><Tag type="cool-gray">配置中</Tag></div><div className="provider-mini-grid">{providers.slice(0,5).map(p => <div key={p.name}><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={28}/><span>{p.name.replace('Google ', '')}</span></div>)}</div><div className="panel-bottom-note">填写 API Key 后启用模型连接与智能路由</div></Tile>
       <Tile className="panel trend-panel"><div className="panel-heading"><div><h2><ChartLine size={18}/> 市场趋势</h2><p>历史趋势分析 · 按平台比较</p></div><Tag type="cool-gray">暂无数据</Tag></div><div className="chart-placeholder"><div className="chart-lines"><span/><span/><span/><span/></div><div className="chart-empty">采集数据后生成趋势分析</div></div></Tile>
       <Tile className="panel connections-panel"><div className="panel-heading"><div><h2><Api size={18}/> 数据连接</h2><p>项目基础设施与外部服务</p></div></div>{services.map(s => <div className="connection-row" key={s.name}><BrandIcon slug={s.slug} label={s.name} fallback={s.fallback} size={23}/><span>{s.name}</span><Tag type="cool-gray">待接入</Tag></div>)}</Tile>
     </div>
