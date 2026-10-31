@@ -399,10 +399,31 @@ Deno.serve(async (req: Request) => {
         if(!config.base_url) throw new Error('请先配置 Cloudflare Account ID');
         response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/@cf/meta/llama-3.3-70b-instruct`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:system},{role:'user',content:prompt}]})});
       } else throw new Error('该 Provider 暂不支持计划生成');
-      const result=await response.json();
-      if(!response.ok) throw new Error(result?.error?.message??'AI 计划生成失败');
+      const responseText=await response.text();
+      let result:Record<string,any>={};
+      try { result=JSON.parse(responseText); }
+      catch {
+        if(!response.ok) throw new Error(`AI Provider 请求失败（${provider}，HTTP ${response.status}）：${responseText.slice(0,400)||'服务未返回错误详情'}`);
+        throw new Error(`AI Provider（${provider}）返回了无法解析的响应，请检查模型与接口兼容性`);
+      }
+      const providerError=[
+        result?.error?.message,
+        result?.message,
+        Array.isArray(result?.errors)?result.errors.map((item:Record<string,unknown>)=>item?.message??item?.code).filter(Boolean).join('；'):'',
+        result?.detail,
+      ].find(value=>typeof value==='string'&&value.trim());
+      if(!response.ok || result?.success===false) {
+        const detail=String(providerError??'服务未提供具体错误信息').slice(0,500);
+        throw new Error(`AI Provider 请求失败（${provider}，HTTP ${response.status}）：${detail}`);
+      }
       const raw=provider==='googlegemini'?result.candidates?.[0]?.content?.parts?.[0]?.text:provider==='anthropic'?result.content?.[0]?.text:provider==='cloudflare'?result.result?.response:result.choices?.[0]?.message?.content;
-      const plan=JSON.parse(String(raw).replace(/^```json\s*/,'').replace(/```$/,''));
+      if(typeof raw!=='string'||!raw.trim()) {
+        const reason=result?.promptFeedback?.blockReason??result?.candidates?.[0]?.finishReason??result?.stop_reason??'响应中没有可用的文本内容';
+        throw new Error(`AI Provider（${provider}）未返回计划文本：${String(reason).slice(0,200)}`);
+      }
+      let plan:Record<string,any>;
+      try { plan=JSON.parse(raw.replace(/^```json\s*/,'').replace(/```$/,'')); }
+      catch { throw new Error(`AI Provider（${provider}）返回的计划不是有效 JSON，请更换模型或重试`); }
       const candidateById=new Map(actorCandidates.map(actor=>[String(actor.id),actor]));
       const platformTasks=Array.isArray(plan.platform_tasks)?plan.platform_tasks:[];
       const collectionSettings=(project.scope as Record<string,any>|null)?.collection_settings??{};
