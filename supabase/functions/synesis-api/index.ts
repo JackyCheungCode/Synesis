@@ -282,6 +282,20 @@ Deno.serve(async (req: Request) => {
         .eq('id', taskId).eq('user_id', userId).maybeSingle();
       if (taskError || !task) return json({ error: '采集任务不存在' }, 404);
       if (!task.external_run_id) return json({ error: '任务尚未取得 Apify Run ID' }, 409);
+
+      // Acquire a database-backed lease so concurrent sync requests cannot read
+      // and advance the same result_synced_count cursor.
+      const syncLockToken = crypto.randomUUID();
+      const lockNow = new Date();
+      const lockExpiresAt = new Date(lockNow.getTime() + 10 * 60 * 1000).toISOString();
+      const { data: lock, error: lockError } = await admin.from('collection_tasks')
+        .update({ sync_lock_token: syncLockToken, sync_lock_expires_at: lockExpiresAt })
+        .eq('id', taskId).eq('user_id', userId)
+        .or(`sync_lock_expires_at.is.null,sync_lock_expires_at.lt.${lockNow.toISOString()}`)
+        .select('id').maybeSingle();
+      if (lockError) throw lockError;
+      if (!lock) return json({ error: '该任务正在同步，请稍后重试' }, 409);
+
       const { clear: apifyToken } = await getCredential('apify', 'integration');
       const runResponse = await fetch(`https://api.apify.com/v2/actor-runs/${encodeURIComponent(task.external_run_id)}`, {
         headers: { Authorization: `Bearer ${apifyToken}` },
@@ -311,6 +325,13 @@ Deno.serve(async (req: Request) => {
         const pageSize = 250;
         const maxPagesPerRequest = 4;
         for (let page = 0; page < maxPagesPerRequest && syncedCount < totalCount; page++) {
+          const renewedUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+          const { data: renewed, error: renewError } = await admin.from('collection_tasks')
+            .update({ sync_lock_expires_at: renewedUntil })
+            .eq('id', taskId).eq('user_id', userId).eq('sync_lock_token', syncLockToken)
+            .select('id').maybeSingle();
+          if (renewError) throw renewError;
+          if (!renewed) return json({ error: '同步租约已失效，请重新发起同步' }, 409);
           const pageOffset = syncedCount;
           const dataResponse = await fetch(`https://api.apify.com/v2/datasets/${encodeURIComponent(datasetId)}/items?clean=false&format=json&limit=${pageSize}&offset=${pageOffset}`, {
             headers: { Authorization: `Bearer ${apifyToken}` },
@@ -348,8 +369,13 @@ Deno.serve(async (req: Request) => {
         update.finished_at = run.finishedAt ?? new Date().toISOString();
         update.error_message = run.statusMessage ?? `Apify run ${runStatus}`;
       }
-      const { error: updateError } = await admin.from('collection_tasks').update(update).eq('id', taskId).eq('user_id', userId);
+      const { error: updateError } = await admin.from('collection_tasks').update(update)
+        .eq('id', taskId).eq('user_id', userId).eq('sync_lock_token', syncLockToken);
       if (updateError) throw updateError;
+      const { error: releaseError } = await admin.from('collection_tasks')
+        .update({ sync_lock_token: null, sync_lock_expires_at: null })
+        .eq('id', taskId).eq('user_id', userId).eq('sync_lock_token', syncLockToken);
+      if (releaseError) throw releaseError;
       return json({
         ok: true,
         task: { id: taskId, status, run_status: runStatus, progress: update.progress,
