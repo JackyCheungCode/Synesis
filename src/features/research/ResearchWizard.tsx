@@ -89,7 +89,6 @@ function buildCountryOptions() {
  }
  return [...values.values()].sort((a,b)=>a.text.localeCompare(b.text,'zh-Hant'));
 }
-type CountryOptionItem={id:string;text:string;flag:string};
 const countryOptions=buildCountryOptions();
 const countryByLabel=new Map(countryOptions.map(item=>[item.text,item]));
 const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
