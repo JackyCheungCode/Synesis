@@ -173,3 +173,35 @@ h3 { color:#161616; font-size:15px; margin:0 0 6px; font-weight:600; }
   .synesis-app .cds--header__global { padding-right:8px; gap:2px; }
   .synesis-app .cds--header__global .cds--btn { padding-inline:10px; }
 }
+
+
+/* Mobile layout refinements: compact gutters, two-column cards, dismissible nav. */
+.nav-dismiss-overlay { display:none; }
+@media (max-width:1055px) {
+  .nav-dismiss-overlay {
+    display:block; position:fixed; inset:3rem 0 0; z-index:8998;
+    width:100%; height:calc(100vh - 3rem); padding:0; border:0;
+    background:rgba(22,22,22,.32); cursor:pointer;
+  }
+  .synesis-app .cds--side-nav { z-index:8999; }
+}
+@media (max-width:672px) {
+  .page-wrap { padding:16px 12px 32px; gap:14px; }
+  .carbon-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .carbon-grid > .cds--tile { min-height:116px; padding:14px; }
+  .carbon-grid .wide-tile { grid-column:1/-1; }
+  .vault-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:10px 0; }
+  .vault-card { padding:12px; gap:12px; }
+  .card-head { flex-wrap:wrap; align-items:flex-start; gap:8px; }
+  .card-head > div:nth-child(2) { flex:1 1 calc(100% - 48px); }
+  .card-head > .cds--tag { margin-left:0; }
+  .card-actions { justify-content:flex-start; gap:4px; }
+  .card-actions .cds--btn { min-width:0; padding-inline:8px; }
+  .metric-value { font-size:28px; }
+  .page-title-row,.module-heading { gap:10px; }
+}
+@media (max-width:360px) {
+  .page-wrap { padding-left:10px; padding-right:10px; }
+  .vault-card { padding:10px; }
+  .card-actions { flex-direction:column; align-items:stretch; }
+}
