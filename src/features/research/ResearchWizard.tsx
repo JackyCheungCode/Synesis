@@ -158,8 +158,15 @@ export function ResearchWizard(props:Props) {
  if(!project||project.scope?.workflow_state==='draft')return <section className="module-stack research-workspace research-fullwidth">
   <ResearchProgress activeStep={0} maxUnlockedStep={0} stepReady={[true,false,false,false,false]}/>
   <Tile className="research-start-tile">
-   <p className="eyebrow">STEP 1 / RESEARCH SCOPE</p><h2 className="cds--type-heading-03">建立你的市场研究需求</h2>
-   <p>按字段填写关键信息；不确定的项目可以留空。AI 会帮助整理、识别缺失项，并保留信息来源状态。</p>
+   <header className="research-intake-header">
+    <div className="research-intake-heading-copy">
+     <p className="eyebrow">RESEARCH WORKSPACE / STEP 01</p>
+     <h2 className="cds--type-heading-03">建立你的市场研究需求</h2>
+     <p>定义市场、商品与商业目标。填写已知信息即可，暂时不确定的字段可以留空。</p>
+    </div>
+    <div className="research-intake-header-meta"><Tag type="blue">需求配置</Tag><span>约 5–10 分钟</span></div>
+   </header>
+   <div className="research-intake-guidance"><span className="research-guidance-mark">i</span><p><b>填写提示</b>　先确定研究市场与核心关键词，再补充产品、渠道和供应链信息。AI 整理时会区分用户提供的信息与模型建议，不会覆盖你填写的内容。</p></div>
    <FluidForm className="research-fluid-form">
     <Accordion align="start" className="research-intake-accordion">
      <AccordionItem title={<span className="research-accordion-title"><b>01</b> 核心研究目标 <small>研究范围、关键词与目标市场</small></span>} open={openPanels[0]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===0?!isOpen:x))}>
@@ -227,7 +234,7 @@ export function ResearchWizard(props:Props) {
   <div className="module-heading"><div><h2>我的研究项目</h2><p>每项研究都保留需求、采集、统计与报告记录。</p></div><Tag type="blue">{projects.length} 个项目</Tag></div>
   <div className="project-card-grid">{projects.map(item=><Tile key={item.id} className="list-tile"><div><h3>{item.name}</h3><p>{item.objective}</p><Tag type={item.status==='completed'?'green':'blue'}>{item.status}</Tag></div><Button kind="ghost" renderIcon={ArrowRight} onClick={()=>onOpen(item.id)}>打开研究工作区</Button></Tile>)}</div>
   {!projects.length&&<Tile><p>还没有研究项目。填写上方研究需求即可开始。</p></Tile>}
-  <div className="research-step-footer research-workflow-actions research-intake-sticky-footer">
+  <div className="research-step-footer research-workflow-actions research-intake-actions">
    <Button className="research-workflow-button" kind="tertiary" disabled>上一步</Button>
    <div className="research-workflow-spacer"/>
    <Button className="research-workflow-button" kind="danger--ghost" disabled={busy} onClick={onBack}>取消</Button>
