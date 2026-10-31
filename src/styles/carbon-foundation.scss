@@ -38,6 +38,8 @@ body { margin: 0; color: var(--cds-text-primary); background: var(--cds-backgrou
 .synesis-app :where(p,small,.subheading,.eyebrow,.metric-label,.collection-setting-heading p,.collection-depth-descriptions p) {
   color: var(--cds-text-secondary);
 }
+.synesis-app .synesis-carbon-side-nav.cds--side-nav--hidden { visibility: hidden; }
+.synesis-app .synesis-carbon-side-nav.cds--side-nav--expanded { visibility: visible; }
 .synesis-app .synesis-carbon-side-nav {
   z-index: 9000;
   color: var(--cds-text-primary);
