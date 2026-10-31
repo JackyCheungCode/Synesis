@@ -227,7 +227,8 @@ function ResearchReportContent({content}:{content:Record<string,any>}) {
 function ResearchAnalyticsView({data}:{data:any}) {
  const metrics=data?.metrics??{}, distributions=data?.distributions??{};
  const sections=[
-  {title:'实体类型分布',items:distributions.entity_types??[],label:(x:any)=>x.label??'类型'},\n  {title:'价格区间',items:distributions.price_bands??[],label:(x:any)=>x.label??'区间'},
+  {title:'实体类型分布',items:distributions.entity_types??[],label:(x:any)=>x.label??'类型'},
+  {title:'价格区间',items:distributions.price_bands??[],label:(x:any)=>x.label??'区间'},
   {title:'国家 / 地区分布',items:distributions.countries??[],label:(x:any)=>x.label??'地区'},
   {title:'品牌分布',items:distributions.brands??[],label:(x:any)=>x.label??'品牌'},
   {title:'商品类目分布',items:distributions.categories??[],label:(x:any)=>x.label??'类目'},
@@ -415,7 +416,8 @@ export function ResearchWizard(props:Props) {
   ...(task.finished_at?[{time:task.finished_at,label:task.platform_slug+' 运行结束',detail:task.status+(task.error_message?' · '+task.error_message:'')}]:[]),
   ...(Number(task.result_synced_count??0)>0?[{time:task.updated_at??task.finished_at??task.created_at,label:task.platform_slug+' 数据同步进度',detail:(task.result_synced_count??0)+' / '+(task.result_count??0)+' 条'}]:[]),
  ]).sort((a,b)=>new Date(b.time).getTime()-new Date(a.time).getTime()).slice(0,30);
- const savedAnalyticsTaskIds=new Set(projectReports.filter(report=>report.report_type==='dataset_analytics').flatMap(report=>(report.evidence??[]).map(item=>item.task_id).filter((id):id is string=>Boolean(id))));\n const savedAnalyticsTaskCount=projectTasks.filter(task=>savedAnalyticsTaskIds.has(task.id)).length;\n const statsSavedForAllTasks=projectTasks.length>0&&projectTasks.every(task=>savedAnalyticsTaskIds.has(task.id));
+ const savedAnalyticsTaskIds=new Set(projectReports.filter(report=>report.report_type==='dataset_analytics').flatMap(report=>(report.evidence??[]).map(item=>item.task_id).filter((id):id is string=>Boolean(id))));
+ const savedAnalyticsTaskCount=projectTasks.filter(task=>savedAnalyticsTaskIds.has(task.id)).length;\n const statsSavedForAllTasks=projectTasks.length>0&&projectTasks.every(task=>savedAnalyticsTaskIds.has(task.id));
  const analyticsSavedForCurrentTask=Boolean(analyticsTaskId&&projectReports.some(report=>report.report_type==='dataset_analytics'&&report.evidence?.some(item=>item.task_id===analyticsTaskId)));
  const stepReady=[true,true,projectTasks.length>0,allSynced,statsSavedForAllTasks];
  let maxUnlockedStep=0; for(let index=1;index<stepReady.length;index++){if(!stepReady[index])break;maxUnlockedStep=index;}
