@@ -14,6 +14,7 @@ import {
 import {
   Search as SearchIcon, UserAvatar,
 } from '@carbon/icons-react';
+import { LineChart, DonutChart } from '@carbon/charts-react';
 import { useAuth } from './auth/AuthProvider';
 import { supabase } from './lib/supabase';
 
@@ -592,7 +593,7 @@ function App() {
             onStepChange={(id,step)=>void updateResearchWorkflowStep(id,step)}
             onExportProjectResults={(id)=>void exportProjectResults(id)}
           />}
-          {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
+          {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics} theme={theme}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
           {page==='products' && <ProductLibrary
             products={products} productTotal={productTotal} productOffset={productOffset}
             productSearch={productSearch} setProductSearch={setProductSearch} busy={busy}
@@ -798,23 +799,16 @@ function PlatformResultsTable({platform,rows}:{platform:string;rows:unknown[]}) 
  </section>;
 }
 
-function AnalyticsDashboard({data}:{data:any}) {
+function AnalyticsDashboard({data,theme}:{data:any;theme:'white'|'g100'}) {
   const metrics=data.metrics??{}, coverage=data.coverage??{}, bands=data.distributions?.price_bands??[];
   const bandsByCurrency=data.distributions?.price_bands_by_currency??[];
   const maxBand=Math.max(1,...bands.map((x:any)=>x.count),...bandsByCurrency.flatMap((g:any)=>g.bands.map((x:any)=>x.count))), words=data.distributions?.words??[];
   const brands=data.distributions?.brands??[], categories=data.distributions?.categories??[], countries=data.distributions?.countries??[], reviewWords=data.distributions?.review_words??[], ratingDistribution=data.distributions?.rating_distribution??[], funnel=data.funnel??{};
   const trends=data.trends??[];
-  const maxTrend=Math.max(1,...trends.map((point:any)=>point.count));
-  const trendCoordinates=trends.map((point:any,index:number)=>{
-    const x=24+(trends.length<=1?0:index*552/(trends.length-1));
-    const y=176-(point.count/maxTrend)*148;
-    return x+','+y;
-  }).join(' ');
-  const pieRows=categories.slice(0,6);
-  const pieTotal=Math.max(1,pieRows.reduce((sum:number,row:any)=>sum+row.count,0));
-  const circumference=2*Math.PI*42;
-  let pieOffset=0;
-  const pieSlices=pieRows.map((row:any,index:number)=>{const length=row.count/pieTotal*circumference;const slice={...row,length,offset:pieOffset,index};pieOffset+=length;return slice;});
+  const trendData=trends.map((point:any)=>({group:'每日商品数量',date:point.date,value:Number(point.count)}));
+  const trendOptions:any={theme,resizable:true,height:'240px',axes:{bottom:{title:'日期',mapsTo:'date',scaleType:'labels'},left:{title:'记录数',mapsTo:'value',scaleType:'linear',includeZero:true}},accessibility:{svgAriaLabel:'按商品源时间字段统计的每日商品数量趋势'}};
+  const donutData=categories.slice(0,6).map((row:any)=>({group:String(row.label),value:Number(row.count)}));
+  const donutOptions:any={theme,resizable:true,height:'260px',donut:{center:{label:'商品类目'}},pie:{valueMapsTo:'value'},legend:{enabled:true,position:'right'},accessibility:{svgAriaLabel:'商品类目占比环形图'}};
   const stages=[['全部记录',funnel.total??0],['有商品标题',funnel.titled??0],['有价格',funnel.priced??0],['有评分',funnel.rated??0],['有图片',funnel.imaged??0],['有商品链接',funnel.linked??0]];
   const money=(n:number|null)=>n===null||n===undefined?'—':n.toLocaleString(undefined,{maximumFractionDigits:2});
   return <section className="module-stack analytics-stack">
@@ -828,14 +822,14 @@ function AnalyticsDashboard({data}:{data:any}) {
     </div>
     <div className="analytics-grid">
       <Tile className="analytics-card"><h3>价格区间分布</h3>{bandsByCurrency.length>0?<div className="currency-band-groups">{bandsByCurrency.map((group:any)=><div className="currency-band-group" key={group.currency}><h4>{group.currency}</h4><div className="bar-chart">{group.bands.map((b:any)=><div className="bar-row" key={b.label}><span>{b.label}</span><div className="bar-track"><div className="bar-fill" style={{width:`${b.count/maxBand*100}%`}}/></div><b>{b.count}</b></div>)}</div></div>)}</div>:<p>暂无可用于价格区间分析的有效数据。</p>}</Tile>
-      <Tile className="analytics-card trend-card"><h3>商品采集时间趋势 · 折线图</h3>{trends.length>1?<><svg viewBox="0 0 600 205" role="img" aria-label="按商品源时间字段统计的每日商品数量趋势"><line x1="24" y1="28" x2="24" y2="176" stroke="var(--cds-border-strong)"/><line x1="24" y1="176" x2="576" y2="176" stroke="var(--cds-border-strong)"/><polyline points={trendCoordinates} fill="none" stroke="var(--cds-chart-1)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>{trends.map((point:any,index:number)=><circle key={point.date} cx={24+(trends.length<=1?0:index*552/(trends.length-1))} cy={176-(point.count/maxTrend)*148} r="3.5" fill="var(--cds-chart-1)"/>)}</svg><div className="trend-axis"><span>{trends[0].date}</span><span>{trends[trends.length-1].date}</span></div><p>按原始记录中的日期、创建时间、发布时间或采集时间字段分组。</p></>:<p>当前数据集没有足够的可识别源时间字段，暂不绘制趋势线；不会用同步时间伪造商品趋势。</p>}</Tile>
+      <Tile className="analytics-card trend-card"><h3>商品采集时间趋势 · 折线图</h3>{trends.length>1?<><LineChart data={trendData} options={trendOptions}/><p>按原始记录中的日期、创建时间、发布时间或采集时间字段分组。</p></>:<p>当前数据集没有足够的可识别源时间字段，暂不绘制趋势线；不会用同步时间伪造商品趋势。</p>}</Tile>
       <Tile className="analytics-card"><h3>数据采集漏斗</h3><div className="funnel-chart">{stages.map(([label,value])=><div className="funnel-row" key={String(label)}><span>{label}</span><div className="funnel-track"><div style={{width:`${funnel.total?Number(value)/funnel.total*100:0}%`}}/></div><b>{Number(value).toLocaleString()}</b></div>)}</div></Tile>
       <Tile className="analytics-card"><h3>品牌 Top 10</h3><RankList rows={brands}/></Tile>
       <Tile className="analytics-card"><h3>类目 Top 10</h3><RankList rows={categories}/></Tile>
       <Tile className="analytics-card"><h3>国家 / 地区分布</h3><RankList rows={countries}/><p>仅统计采集记录中可识别的国家或地区字段。</p></Tile>
       <Tile className="analytics-card"><h3>评分分布</h3><RankList rows={ratingDistribution.map((row:any)=>({label:String(row.rating)+' 星',count:row.count}))}/></Tile>
       <Tile className="analytics-card word-cloud-card"><h3>消费者评价关键词</h3><div className="word-cloud">{reviewWords.slice(0,32).map((w:any)=><span key={w.label} style={{fontSize:`${Math.max(12,Math.min(30,12+(w.count/(reviewWords[0]?.count||1))*18))}px`}}>{w.label}</span>)}</div><p>仅在采集结果包含可识别的评论文本时生成。</p></Tile>
-      <Tile className="analytics-card"><h3>类目占比 · 扇形图</h3><div className="pie-layout"><svg className="pie-svg" viewBox="0 0 120 120" role="img" aria-label="类目占比扇形图"><circle cx="60" cy="60" r="42" fill="none" stroke="var(--cds-layer-02)" strokeWidth="18"/>{pieSlices.map((slice:any)=><circle key={slice.label} cx="60" cy="60" r="42" fill="none" stroke={['var(--cds-chart-1)','var(--cds-chart-2)','var(--cds-chart-3)','var(--cds-chart-4)','var(--cds-chart-5)','var(--cds-chart-6)'][slice.index]} strokeWidth="18" strokeDasharray={slice.length+' '+(circumference-slice.length)} strokeDashoffset={-slice.offset} transform="rotate(-90 60 60)"/>)}</svg><div className="pie-legend">{pieRows.map((row:any,index:number)=><div key={row.label}><span className={'pie-dot pie-dot-'+index}/><span title={row.label}>{row.label}</span><b>{Math.round(row.count/pieTotal*100)}%</b></div>)}</div></div></Tile>
+      <Tile className="analytics-card"><h3>类目占比 · 环形图</h3>{donutData.length?<DonutChart data={donutData} options={donutOptions}/>:<p>暂无可用于类目占比分析的数据。</p>}</Tile>
       <Tile className="analytics-card word-cloud-card"><h3>关键词词云</h3><div className="word-cloud">{words.slice(0,32).map((w:any)=><span key={w.label} style={{fontSize:`${Math.max(12,Math.min(30,12+(w.count/(words[0]?.count||1))*18))}px`}}>{w.label}</span>)}</div></Tile>
       <Tile className="analytics-card"><h3>不同货币价格分布</h3><div className="rank-list">{(data.distributions?.price_by_currency??[]).map((row:any)=><div className="rank-row" key={row.currency}><span>{row.currency}</span><div className="bar-track"><div className="bar-fill" style={{width:`${row.count/Math.max(1,...(data.distributions?.price_by_currency??[]).map((x:any)=>x.count))*100}%`}}/></div><b>{row.count.toLocaleString()}</b><small>均价 {row.average===null?'—':Number(row.average).toLocaleString(undefined,{maximumFractionDigits:2})} · {row.min}–{row.max}</small></div>)}</div><p>不同货币分别统计，避免直接混合币种计算市场均价；未标注货币的数据单独列为 UNKNOWN。</p></Tile>
       <Tile className="analytics-card"><h3>字段完整度</h3><div className="quality-list">{[['标题',data.quality?.title_rate],['价格',data.quality?.price_rate],['货币',data.quality?.currency_rate],['评分',data.quality?.rating_rate],['评论数',data.quality?.reviews_rate],['品牌',data.quality?.brand_rate],['类目',data.quality?.category_rate],['图片',data.quality?.image_rate],['商品链接',data.quality?.link_rate],['SKU/标识',data.quality?.sku_rate],['描述',data.quality?.description_rate],['销量',data.quality?.sales_rate],['库存',data.quality?.stock_rate],['国家/地区',data.quality?.country_rate],['评价文本',data.quality?.review_text_rate]].map(([label,rate]:any)=><div className="quality-row" key={label}><span>{label}</span><b>{Math.round((rate??0)*100)}%</b><div className="bar-track"><div className="bar-fill" style={{width:`${(rate??0)*100}%`}}/></div></div>)}</div></Tile>
