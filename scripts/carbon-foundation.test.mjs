@@ -193,5 +193,5 @@ test('feature pages use concise page-level copy and shared Carbon hierarchy', ()
   assert.doesNotMatch(vault, /不会写入 localStorage、sessionStorage 或前端环境变量/);
   assert.doesNotMatch(research, /RESEARCH WORKSPACE \/ STEP 01|STEP 2 \/ DATA SOURCE MARKETPLACE/);
   assert.match(foundation, /Global page rhythm — concise Carbon productive UI hierarchy/);
-  assert.match(foundation, /module-stack \\{ gap: var\\(--cds-spacing-06\\); \}/);
+  assert.ok(foundation.includes('.synesis-app .module-stack { gap: var(--cds-spacing-06); }'));
 });
