@@ -36,3 +36,9 @@ test('URL fallback strips tracking but preserves host, country and variants', ()
   assert.notEqual(first.canonicalKey, country.canonicalKey);
   assert.equal(normalizeSourceUrl('javascript:alert(1)'), null);
 });
+
+test('nested camelCase and punctuation variants are resolved case-insensitively', () => {
+  const nested = resolveProductIdentity('amazon', { product: { productId: 'ABC-1', productName: 'Example' }, meta: { GTIN13: '4006381333931' } });
+  assert.equal(nested.externalProductId, 'ABC-1');
+  assert.equal(nested.canonicalKey, 'gtin:4006381333931');
+});
