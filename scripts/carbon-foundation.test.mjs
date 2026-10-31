@@ -182,3 +182,14 @@ test('workspace headings are concise and page canvas uses available width', () =
  assert.match(foundation,/\.page-wrap/);
  assert.match(foundation,/max-width: none/);
 });
+
+
+test('feature pages use concise page-level copy and shared Carbon hierarchy', () => {
+  assert.doesNotMatch(dashboard, /已建立的研究项目|人工批准前不会启动采集|Apify 任务运行记录/);
+  assert.doesNotMatch(products, /统一查看采集任务中识别的商品主档、来源平台与历史价格/);
+  assert.doesNotMatch(settings, /WORKSPACE \/ RESEARCH PREFERENCES|这些是新建调研任务的默认值/);
+  assert.doesNotMatch(vault, /不会写入 localStorage、sessionStorage 或前端环境变量/);
+  assert.doesNotMatch(research, /RESEARCH WORKSPACE \/ STEP 01|STEP 2 \/ DATA SOURCE MARKETPLACE/);
+  assert.match(foundation, /Global page rhythm — concise Carbon productive UI hierarchy/);
+  assert.match(foundation, /module-stack \\{ gap: var\\(--cds-spacing-06\\); \}/);
+});

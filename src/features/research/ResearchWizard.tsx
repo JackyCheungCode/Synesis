@@ -368,14 +368,14 @@ function ResearchWizardContent(props:Props) {
   <Tile className="research-start-tile">
    <header className="research-intake-header">
     <div className="research-intake-heading-copy">
-     <p className="eyebrow">RESEARCH WORKSPACE / STEP 01</p>
+     
      <h2 className="cds--type-heading-03">建立你的市场研究需求</h2>
-     <p>定义市场、商品与商业目标。填写已知信息即可，暂时不确定的字段可以留空。</p>
+     <p>填写核心关键词和目标市场，其他信息可稍后补充。</p>
     </div>
     <div className="research-intake-header-meta"><Tag type="blue">需求配置</Tag><span>约 5–10 分钟</span></div>
    </header>
-   <div className="research-intake-completeness"><div><b>研究需求完整度</b><Tag type={completeness===100?"green":"blue"}>{completeness}%</Tag><span>{filledFieldCount} / {fieldSpecs.length} 项已填写</span></div><ProgressBar label="研究需求完整度" value={completeness} max={100} helperText="填写越完整，后续调研平台匹配越准确。"/></div>
-   <div className="research-intake-guidance"><span className="research-guidance-mark">i</span><p><b>填写提示</b>　先确定研究市场与核心关键词，再补充产品、渠道和供应链信息。AI 整理时会区分用户提供的信息与模型建议，不会覆盖你填写的内容。</p></div>
+   <div className="research-intake-completeness"><div><b>研究需求完整度</b><Tag type={completeness===100?"green":"blue"}>{completeness}%</Tag><span>{filledFieldCount} / {fieldSpecs.length} 项已填写</span></div><ProgressBar label="研究需求完整度" value={completeness} max={100} helperText=""/></div>
+   
    <FluidForm className="research-fluid-form">
     <Accordion align="start" className="research-intake-accordion">
      <AccordionItem title={<span className="research-accordion-title"><b>01</b> 核心研究目标 <small>研究范围、关键词与目标市场</small></span>} open={openPanels[0]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===0?!isOpen:x))}>
@@ -429,9 +429,9 @@ function ResearchWizardContent(props:Props) {
    {parseError&&<p className="error-text">{parseError}</p>}
   </Tile>
   {profile&&<Tile className="research-profile-tile">
-   <div className="module-heading"><div><p className="eyebrow">AI STRUCTURED RESEARCH PROFILE</p><h2>检查并确认研究条件</h2><p>{profile.summary}</p></div><Tag type="green">解析完成</Tag></div>
+   <div className="module-heading"><div><h2>检查并确认研究条件</h2><p>{profile.summary}</p></div><Tag type="green">解析完成</Tag></div>
    <div className="research-profile-stats"><Tag type="green">{confirmedCount} 项已明确</Tag><Tag type="blue">{suggestedCount} 项 AI 建议</Tag><Tag type="warm-gray">{missingCount} 项待补充</Tag></div>
-   <p className="research-profile-hint">绿色是用户提供或确认的信息；蓝色是 AI 建议；灰色是待补充。修改为空的字段会重新标记为待补充。</p>
+   <p className="research-profile-hint">绿色为已确认，蓝色为 AI 建议，灰色为待补充。</p>
    {dimensionGroups.map(group=><div className="research-dimension-group" key={group.title}><div><h3>{group.title}</h3><p>{group.description}</p></div><div className="research-dimension-grid">
     {profile.dimensions.filter(item=>group.keys.includes(item.key)).map(item=><div className="research-dimension" key={item.key}><div className="research-dimension-heading"><b>{item.label}</b><Tag type={statusType[item.status]}>{statusLabel[item.status]}</Tag></div><TextArea id={'dimension-'+item.key} labelText={item.label} hideLabel rows={2} value={item.values.join('\n')} placeholder="未提供，可留空或补充" onChange={e=>updateDimension(item.key,e.target.value)}/>{item.note&&<small>{item.note}</small>}</div>)}
    </div></div>)}
@@ -447,20 +447,20 @@ function ResearchWizardContent(props:Props) {
    <Button className="research-workflow-button" kind="secondary" disabled>上一步</Button>
    <Button className="research-workflow-button" kind="primary" disabled={busy||!requiredReady} onClick={proceedToSources}>下一步：调研平台 <ArrowRight size={16}/></Button>
   </div>
-  <div className="module-heading"><div><h2>我的研究项目</h2><p>每项研究都保留需求、采集、统计与报告记录。</p></div><Tag type="blue">{projects.length} 个项目</Tag></div>
+  <div className="module-heading"><h2>研究项目</h2><Tag type="blue">{projects.length}</Tag></div>
   <div className="project-card-grid">{projects.map(item=><Tile key={item.id} className="list-tile"><div><h3>{item.name}</h3><p>{item.objective}</p><Tag type={item.status==='completed'?'green':'blue'}>{item.status}</Tag></div><Button kind="ghost" renderIcon={ArrowRight} onClick={()=>onOpen(item.id)}>打开研究工作区</Button></Tile>)}</div>
-  {!projects.length&&<Tile><p>还没有研究项目。填写上方研究需求即可开始。</p></Tile>}
+  {!projects.length&&<Tile><p>暂无其他研究项目。</p></Tile>}
 
   </section>;
 
  return <section className="module-stack research-workspace research-fullwidth">
-  <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><p className="eyebrow">RESEARCH PROJECT WORKSPACE</p><h2>{project.name}</h2><p>{savedProfile?.summary??project.objective}</p></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
+  <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><h2>{project.name}</h2></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
   <ResearchProgress activeStep={activeStep} maxUnlockedStep={maxUnlockedStep} stepReady={stepReady}/>
-  {activeStep===0&&<Tile><div className="module-heading"><div><h3>第一步 · 已确认的研究需求</h3><p>查看第一步保存的结构化画像。修改需求时应重新评估后续采集计划。</p></div><Tag type="green">已保存</Tag></div><p>{savedProfile?.summary??project.objective}</p>{savedProfile?.dimensions.filter(item=>item.values.length).map(item=><div className="research-saved-row" key={item.key}><b>{item.label} <Tag type={statusType[item.status]}>{statusLabel[item.status]}</Tag></b><p>{item.values.join(' · ')}</p></div>)}{!savedProfile&&<p>{project.objective}</p>}</Tile>}
-  {activeStep===1&&<Tile className="research-source-tile"><div className="module-heading"><div><p className="eyebrow">STEP 2 / DATA SOURCE MARKETPLACE</p><h3>选择调研平台与数据类别</h3><p>先选择需要覆盖的数据类别和具体平台。Synesis 将据此搜索 Apify Store 中真实存在且有输入 Schema 的 Actor。</p></div>{plan?<Tag type="green">平台方案已生成</Tag>:<Tag type="blue">待选择</Tag>}</div>
+  {activeStep===0&&<Tile><div className="module-heading"><h3>研究需求</h3><Tag type="green">已保存</Tag></div><p>{savedProfile?.summary??project.objective}</p>{savedProfile?.dimensions.filter(item=>item.values.length).map(item=><div className="research-saved-row" key={item.key}><b>{item.label} <Tag type={statusType[item.status]}>{statusLabel[item.status]}</Tag></b><p>{item.values.join(' · ')}</p></div>)}{!savedProfile&&<p>{project.objective}</p>}</Tile>}
+  {activeStep===1&&<Tile className="research-source-tile"><div className="module-heading"><div><h3>选择调研平台与数据类别</h3><p>选择需要覆盖的数据类别与平台。</p></div>{plan?<Tag type="green">平台方案已生成</Tag>:<Tag type="blue">待选择</Tag>}</div>
    <div className="research-platform-picker">
     <section className="research-selected-platforms" aria-label="已选择的平台">
-     <div className="research-selected-heading"><div><h4>已选择的平台</h4><p>跨分类自由组合；切换分类不会清除已选平台。</p></div><div className="research-selected-actions"><Tag type={selectedPlanSources.length?'blue':'gray'}>{selectedPlanSources.length} 个平台</Tag><Button kind="ghost" size="sm" disabled={!selectedPlanSources.length||busy} onClick={()=>setSelectedSources([])}>清空选择</Button></div></div>
+     <div className="research-selected-heading"><div><h4>已选择的平台</h4></div><div className="research-selected-actions"><Tag type={selectedPlanSources.length?'blue':'gray'}>{selectedPlanSources.length} 个平台</Tag><Button kind="ghost" size="sm" disabled={!selectedPlanSources.length||busy} onClick={()=>setSelectedSources([])}>清空选择</Button></div></div>
      {selectedPlanSources.length>0?<div className="research-selected-tags">{Array.from(new Set(selectedPlanSources)).map(platform=><Tag key={platform} type="blue" filter onClose={()=>setSelectedSources(values=>values.filter(value=>value!==platform))}>{platform}</Tag>)}</div>:<p className="research-selected-empty">尚未选择平台。请在下方分类中勾选一个或多个数据来源。</p>}
     </section>
     <div className="research-platform-tabs"><Tabs selectedIndex={activeSourceTab} onChange={({selectedIndex}:any)=>setActiveSourceTab(selectedIndex)}>
