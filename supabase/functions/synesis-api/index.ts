@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
       else if (slug === 'googlegemini') endpoint = `https://generativelanguage.googleapis.com/v1beta/models?pageSize=100&key=${encodeURIComponent(clear)}`;
       else {
         if (!config.base_url) return json({error:'请先填写 Cloudflare Account ID'},400);
-        endpoint = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/models/search`;
+        endpoint = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/models/search?per_page=100&hide_experimental=true`;
         headers.Authorization = `Bearer ${clear}`;
       }
       const upstream = await fetch(endpoint,{headers});
@@ -147,7 +147,7 @@ Deno.serve(async (req: Request) => {
       const payload = await upstream.json();
       const rows = slug === 'googlegemini' ? (payload.models ?? []) : slug === 'cloudflare' ? (payload.result ?? []) : (payload.data ?? payload.models ?? []);
       const models = (Array.isArray(rows) ? rows : []).map((item:Record<string,unknown>) => {
-        const rawId = String(item.id ?? item.name ?? item.model_id ?? '').trim();
+        const rawId = String(slug === 'cloudflare' ? (item.name ?? item.model_id ?? item.id ?? '') : (item.id ?? item.name ?? item.model_id ?? '')).trim();
         const id = slug === 'googlegemini' ? rawId.replace(/^models\//,'') : rawId;
         if (!id) return null;
         const displayName = String(item.displayName ?? item.name ?? item.id ?? id).replace(/^models\//,'');
