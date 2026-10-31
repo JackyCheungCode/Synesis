@@ -1,5 +1,5 @@
-import React from 'react';
-type P={size?:number;className?:string};
+import type { ReactNode } from 'react';
+type P={size?:number;className?:string;children?:ReactNode};
 function Glyph({children,size=20,className}:P){return <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>}
 export const Add=(p:P)=><Glyph {...p}><path d="M12 5v14M5 12h14"/></Glyph>;
 export const ArrowLeft=(p:P)=><Glyph {...p}><path d="m15 18-6-6 6-6M9 12h11"/></Glyph>;
