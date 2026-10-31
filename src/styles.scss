@@ -24,7 +24,7 @@ body { margin: 0; min-width: 320px; background: #f4f4f4; }
 .workspace-bar { width:100%; position: sticky; top: 3rem; z-index: 5; display:flex; align-items:center; gap:20px; justify-content:space-between; padding: 12px clamp(24px,3vw,48px); background:#ffffff; border-bottom:1px solid #e0e0e0; }
 .workspace-bar .cds--search { width:min(560px,65%); }
 .workspace-user { display:flex; align-items:center; gap:12px; color:#393939; font-size:12px; }
-.page-wrap { width:100%; max-width:1600px; margin:0 auto; padding:32px clamp(24px,3vw,48px) 72px; display:flex; flex-direction:column; gap:24px; }
+.page-wrap { width:100%; max-width:none; margin:0; padding:20px clamp(16px,1.5vw,26px) 48px; display:flex; flex-direction:column; gap:18px; }
 .page-title-row,.module-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; }
 .eyebrow { color:#6f6f6f; letter-spacing:1.5px; font-size:10px; margin:0 0 8px; }
 h1 { color:#161616; font-size:28px; font-weight:500; margin:0; }
@@ -159,3 +159,17 @@ h3 { color:#161616; font-size:15px; margin:0 0 6px; font-weight:600; }
 .synesis-app .cds--data-table td { color:#161616; background:#fff; }
 .synesis-app .cds--tag { color:#393939; }
 @media (min-width: 1600px) { .page-wrap { max-width:1600px; } }
+
+/* Compact workspace canvas and top-level header actions. */
+.synesis-content { padding-top:3rem; }
+.synesis-app .cds--header__global { gap:8px; padding-right:16px; }
+.synesis-app .cds--header__global .cds--btn { min-height:2rem; padding-inline:14px; }
+.synesis-app .cds--header__global .cds--header__action { color:#393939; }
+.synesis-app .cds--header__global .cds--header__action:hover { background:#e8e8e8; color:#161616; }
+.page-wrap { max-width:none; padding-left:clamp(16px,1.5vw,26px); padding-right:clamp(16px,1.5vw,26px); padding-top:18px; gap:16px; }
+.page-title-row { margin-bottom:2px; }
+@media (max-width:672px) {
+  .page-wrap { padding:16px 14px 36px; gap:16px; }
+  .synesis-app .cds--header__global { padding-right:8px; gap:2px; }
+  .synesis-app .cds--header__global .cds--btn { padding-inline:10px; }
+}
