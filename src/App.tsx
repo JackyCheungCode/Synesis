@@ -421,12 +421,15 @@ function App() {
     if (!project || !projectTasks.length || projectTasks.some(item=>item.status!=='succeeded' || Number(item.result_synced_count??0)<Number(item.result_count??0))) return;
     const analyses = await Promise.all(projectTasks.map(async task=>({platform:task.platform_slug,taskId:task.id,analysis:await api('tasks.analytics',{taskId:task.id})})));
     const response = await api('ai.invoke',{provider:selectedProvider,model:providerModels[selectedProvider],messages:[
-      {role:'system',content:'你是 Synesis 的跨境商业市场研究顾问。只依据用户研究条件、实际采集记录和统计结果撰写中文商业研究报告。必须分别给出产品开发策略、定价策略、目标国家/市场进入策略、消费者人群与需求策略、竞争策略、营销与销售渠道策略、风险与30/60/90天行动计划。区分可验证数据事实、AI 推断、商业建议和待验证假设；不得虚构销量、市场规模、利润、人口属性或数据源未提供的指标。每条重要建议尽可能引用具体统计值、覆盖记录数、来源平台；数据不足时明确说明限制。返回 JSON，字段包括 executive_summary、market_overview、product_development_strategy、pricing_strategy、market_entry_strategy、customer_persona_strategy、competitive_strategy、marketing_channel_strategy、opportunities、risks、action_roadmap、limitations。'},
-      {role:'user',content:JSON.stringify({research_objective:project.objective,target_regions:project.target_regions,platforms:project.platform_slugs,data:analyses})}
+      {role:'system',content:'你是 Synesis 的跨境商业智能研究负责人。请用中文输出一份可供管理层决策的完整研究报告。严格依据研究目标、研究画像、目标地区、实际采集任务和各数据源统计快照。报告必须包含：执行摘要、研究范围与方法、市场概览、跨平台对比、产品开发策略、定价策略、目标市场进入策略、消费者画像与需求、竞争策略、营销与销售渠道、商业机会、风险、30/60/90天行动路线图、数据质量评估、数据局限和待验证假设。对每项关键结论标记“数据事实 / AI 推断 / 商业建议 / 待验证假设”，引用对应平台名称、统计覆盖数和实际字段/指标；不能把不同币种价格直接比较，不能把播放量、销量、搜索排名混为同一指标。不得虚构市场规模、销量、利润、人口属性、竞争份额或未提供的指标。没有证据时明确写“数据不足，暂不判断”。输出严格 JSON，不要 Markdown 代码围栏，字段使用 executive_summary、research_scope、market_overview、cross_platform_comparison、product_development_strategy、pricing_strategy、market_entry_strategy、customer_persona_strategy、competitive_strategy、marketing_channel_strategy、opportunities、risks、action_roadmap、data_quality_assessment、limitations、assumptions_to_validate。数组项应包含结论、依据、类型和来源。'},
+      {role:'user',content:JSON.stringify({research_objective:project.objective,research_profile:project.scope?.research_profile??null,intake_form:project.scope?.intake_form??{},target_regions:project.target_regions,selected_platforms:project.platform_slugs,collection_settings:project.scope?.collection_settings??null,data:analyses})}
     ]});
-    const raw = extractAIText(response.result,selectedProvider);
+    const raw = extractAIText(response.result,selectedProvider).trim();
     let content:Record<string,unknown>;
-    try { content=JSON.parse(raw); } catch { content={executive_summary:raw,analysis_format:'plain_text'}; }
+    try {
+      const jsonText=raw.replace(/^\`\`\`(?:json)?\s*/i,'').replace(/\s*\`\`\`$/,'').trim();
+      content=JSON.parse(jsonText);
+    } catch { content={executive_summary:raw,analysis_format:'plain_text',limitations:['模型未返回可解析的结构化 JSON，请查看原始内容并重新生成。']}; }
     const {error}=await supabase.from('market_reports').insert({
       user_id:session.user.id,project_id:projectId,title:`${project.name} · AI 研究报告`,
       report_type:'market_research',content,evidence:analyses.map(item=>({task_id:item.taskId,platform_slug:item.platform})),
