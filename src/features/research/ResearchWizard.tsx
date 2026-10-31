@@ -212,7 +212,7 @@ function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:Res
 const splitValues=(value:string)=>value.split(/\n|,/).map(v=>v.trim()).filter(Boolean);
 const formatPriceRange=(min:string|undefined,max:string|undefined,currency:string|undefined)=>{const values=[min,max].filter((value):value is string=>Boolean(value?.trim()));return values.length?values.join(' - ')+' '+(currency||'USD'):'';};
 export function ResearchWizard(props:Props) {
- const {projects,plans,tasks,reports,projectId,busy,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs,onSaveAnalytics,onGenerateReport,onSaveDraft}=props;
+ const {projects,plans,tasks,reports,projectId,busy,projectResultRows=[],projectResultTotal=0,projectResultOffset=0,onLoadProjectResults,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs,onSaveAnalytics,onGenerateReport,onSaveDraft}=props;
  const [brief,setBrief]=React.useState('');
  const [formValues,setFormValues]=React.useState<Record<string,string>>({});
  const [profile,setProfile]=React.useState<ResearchProfile|null>(null);
@@ -389,7 +389,7 @@ export function ResearchWizard(props:Props) {
      <div className="research-selected-heading"><div><h4>已选择的平台</h4><p>跨分类自由组合；切换分类不会清除已选平台。</p></div><div className="research-selected-actions"><Tag type={selectedPlanSources.length?'blue':'gray'}>{selectedPlanSources.length} 个平台</Tag><Button kind="ghost" size="sm" disabled={!selectedPlanSources.length||busy} onClick={()=>setSelectedSources([])}>清空选择</Button></div></div>
      {selectedPlanSources.length>0?<div className="research-selected-tags">{Array.from(new Set(selectedPlanSources)).map(platform=><Tag key={platform} type="blue" filter onClose={()=>setSelectedSources(values=>values.filter(value=>value!==platform))}>{platform}</Tag>)}</div>:<p className="research-selected-empty">尚未选择平台。请在下方分类中勾选一个或多个数据来源。</p>}
     </section>
-    <Tabs selectedIndex={activeSourceTab} onChange={({selectedIndex}:any)=>setActiveSourceTab(selectedIndex)} className="research-platform-tabs">
+    <div className="research-platform-tabs"><Tabs selectedIndex={activeSourceTab} onChange={({selectedIndex}:any)=>setActiveSourceTab(selectedIndex)}>
      <TabList aria-label="调研平台分类" contained>
       {sourceGroups.map(group=><Tab key={group.id}>{group.title}</Tab>)}
      </TabList>
@@ -404,7 +404,7 @@ export function ResearchWizard(props:Props) {
        </div>
       </TabPanel>)}
      </TabPanels>
-    </Tabs>
+    </Tabs></div>
    </div>
    {plan&&<><div className="research-actor-candidates"><h4>Apify Store 发现的候选 Actor</h4>{(Array.isArray(plan.plan.actor_candidates)?plan.plan.actor_candidates:[]).map((actor:any,index:number)=><div className="research-actor-card" key={String(actor.id??index)}><div><b>{String(actor.title??actor.name??actor.id??'Apify Actor')}</b><p>{String(actor.description??'暂无描述')}</p><small>{Array.isArray(actor.categories)?actor.categories.join(' · '):'Apify Store 候选'} · {String(actor.pricing_model??'计费方式未提供')}{actor.rating?' · 评分 '+actor.rating:''}</small></div></div>)}</div><div className="research-plan-meta"><span>发现候选 Actor：{Array.isArray(plan.plan.actor_candidates)?plan.plan.actor_candidates.length:0}</span><span>拟执行任务：{proposedTasks.length}</span><span>预计费用（AI 估算）：{plan.estimated_cost===null?'暂不可估算':'$ '+Number(plan.estimated_cost).toFixed(2)}</span></div><p>{String(plan.plan.executive_summary??'AI 已生成调研平台方案。')}</p><div className="research-plan-list">{proposedTasks.map((task:any,index:number)=><div className="research-plan-row" key={index}><div><b>{String(task.platform_slug??'平台')} · {String(task.actor_title??'待选择 Actor')}</b><p>{String(task.purpose??task.description??'按研究目标采集')}</p><p>目标记录：{task.estimated_items??'未估算'} · 深度：{task.collection_depth==='deep'?'深度':task.collection_depth==='light'?'快速':'标准'} · 计费：{String(task.pricing_model??'未提供')}{task.actor_rating?' · 评分 '+task.actor_rating:''}</p>{task.schema_valid?<Tag type="green">输入参数已校验</Tag>:<Tag type="warm-gray">参数待调整</Tag>}{(task.validation_errors??[]).map((error:string)=><p key={error}>{error}</p>)}{(task.settings_warnings??[]).map((warning:string)=><p className="research-settings-warning" key={warning}>{warning}</p>)}</div></div>)}</div><div className="research-start-actions"><span>可以修改上方平台勾选，再按当前选择重新搜索候选 Actor。</span><Button kind="tertiary" disabled={!selectedPlanSources.length||busy} onClick={()=>onGeneratePlan(project,selectedPlanSources)}>按当前选择重新生成方案</Button></div><div className="research-approval"><p>{actorsReady?'所有拟执行任务均已匹配真实 Apify Actor，并通过输入 Schema 校验。批准后将开始抓取。':'部分任务未找到可执行的真实 Actor 或未通过 Schema 校验，不能批准执行。可调整平台选择后重新生成。'}</p><Button kind="primary" disabled={!actorsReady||busy||plan.status!=='pending_approval'} onClick={()=>onApprove(plan)}>确认平台方案并开始抓取</Button></div></>}
    {!plan&&<div className="research-start-actions"><span>选择一个或多个分类 / 平台。实际 Actor 以 Apify Store 搜索结果为准。</span><Button kind="primary" disabled={!selectedPlanSources.length||busy} onClick={()=>onGeneratePlan(project,selectedPlanSources)}>搜索 Apify 平台并生成方案 <ArrowRight size={16}/></Button></div>}
