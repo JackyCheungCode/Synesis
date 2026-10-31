@@ -109,3 +109,13 @@ test('Amazon queued task execution sanitizes legacy categoryOrProductUrls before
   assert.match(executeBranch, /body:JSON\.stringify\(executionInput\)/);
   assert.match(executeBranch, /executionInput\.reviewsCutoffDate='1 year'/);
 });
+
+
+test('Amazon Actor input normalization wraps URL objects and repairs enum values on all entry paths', () => {
+  assert.match(backend, /normalizeAmazonActorInput/);
+  assert.match(backend, /toUrlObjects\('categoryOrProductUrls'\)/);
+  assert.match(backend, /toUrlObjects\('productUrls'\)/);
+  assert.match(backend, /input\.sort='helpful'/);
+  assert.match(backend, /const retryInput=String\(task\.platform_slug/);
+  assert.match(backend, /normalizeAmazonActorInput\(task\.actor_id,task\.input\)/);
+});
