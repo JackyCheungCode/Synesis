@@ -5,7 +5,7 @@ import {
   Toggle, Select, SelectItem, TextArea, Modal, Loading, Accordion, AccordionItem, Link,
 } from '@carbon/react';
 import {
-  Dashboard, Globe, Ai, Folder, ChartLine, Add, Renew, Play, Search as SearchIcon, UserAvatar, Close,
+  Dashboard, Globe, Ai, ChartLine, Add, Renew, Play, Search as SearchIcon, UserAvatar,
 } from '@carbon/icons-react';
 import { BrandIcon } from './components/BrandIcon';
 import { platforms, providers, apiIntegrations } from './data/catalog';
