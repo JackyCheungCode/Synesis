@@ -261,7 +261,7 @@ Deno.serve(async (req: Request) => {
       const { brief, provider } = body;
       if (typeof brief !== 'string' || !brief.trim() || brief.length > 16000) return json({error:'研究需求不能为空，且最多 16,000 个字符'},400);
       if (typeof provider !== 'string' || !/^[a-z0-9_-]{2,48}$/.test(provider)) return json({error:'AI Provider 参数无效'},400);
-      const { clear } = await getCredential(provider,'provider');
+      const { config, clear } = await getCredential(provider,'provider');
       const fields = [
         ['keywords','核心关键词'],['languages','研究语言'],['countries','目标国家'],['regions','目标地区'],
         ['time_range','研究时间范围'],['product_categories','产品类别'],['product_attributes','产品属性与规格'],
