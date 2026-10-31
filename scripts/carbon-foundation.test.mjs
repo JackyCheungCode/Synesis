@@ -11,6 +11,7 @@ const navigation = read('../src/components/WorkspaceNavigation.tsx');
 const collection = read('../src/features/settings/CollectionSettingsPage.tsx');
 const research = read('../src/features/research/ResearchWizard.tsx');
 const vault = read('../src/features/settings/CredentialVault.tsx');
+const wizard = read('../src/features/research/ResearchWizard.tsx');
 
 test('application styling uses Carbon semantic color tokens', () => {
   assert.doesNotMatch(styles, /#[0-9a-fA-F]{3,8}\b/);
