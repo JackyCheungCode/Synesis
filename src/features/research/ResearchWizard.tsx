@@ -343,7 +343,7 @@ export function ResearchWizard(props:Props) {
   </section>;
 
  const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
- const selectedPlanSources=selectedSources;
+ const selectedPlanSources=Array.from(new Set(selectedSources.filter(source=>sourceGroups.some(group=>group.items.includes(source)))));
  const completedCount=projectTasks.filter(t=>t.status==='succeeded'&&Number(t.result_synced_count??0)>=Number(t.result_count??0)).length;
  const taskEvents=projectTasks.flatMap(task=>[
   {time:task.created_at,label:task.platform_slug+' 任务已创建',detail:'等待执行'},
