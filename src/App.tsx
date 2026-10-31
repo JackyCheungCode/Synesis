@@ -2,13 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction,
   SideNav, SideNavItems, SideNavLink, SideNavMenu, SideNavMenuItem, Content,
-  Button, InlineNotification, Tag, TextInput, PasswordInput, Tile, Tabs, Tab,
+  Button, InlineNotification, Tag, TextInput, PasswordInput, Tile,
   Toggle, Select, SelectItem, TextArea, Modal, DataTable, Table, TableHead,
-  TableRow, TableHeader, TableBody, TableCell, Search, Loading, Layer,
+  TableRow, TableHeader, TableBody, TableCell, Search, Loading,
 } from '@carbon/react';
 import {
-  Dashboard, Globe, Ai, Folder, ChartLine, Document, Api, Moon, Sun,
-  Notification, Add, Renew, Play, Checkmark, Menu as MenuIcon, Cloud,
+  Dashboard, Globe, Ai, Folder, ChartLine, Moon, Sun, Notification, Add, Renew, Play,
 } from '@carbon/icons-react';
 import { BrandIcon } from './components/BrandIcon';
 import { platforms, providers, apiIntegrations } from './data/catalog';
@@ -181,19 +180,18 @@ function App() {
           </div>}
           {page==='vault' && <section className="module-stack">
             <div className="module-heading"><div><h2>AI Provider API Keys</h2><p>输入后立即发送到认证后端，采用 AES-GCM 加密保存。不会写入 localStorage、sessionStorage 或前端环境变量。</p></div><Tag type="green">BYOK</Tag></div>
-            <Tabs><Tab label="AI 模型"><div className="vault-grid">{providers.map(p=><Tile key={p.slug} className="vault-card">
+            <section><h3>AI 模型</h3><div className="vault-grid">{providers.map(p=><Tile key={p.slug} className="vault-card">
               <div className="card-head"><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={34}/><div><h3>{p.name}</h3><p>{providerModels[p.slug] ?? '模型可在路由配置中指定'}</p></div><Tag type={credentials.some(c=>c.slug===p.slug)?'green':'cool-gray'}>{credentials.find(c=>c.slug===p.slug)?.status==='validated'?'已验证':credentials.some(c=>c.slug===p.slug)?'已保存':'未配置'}</Tag></div>
               <PasswordInput id={`key-${p.slug}`} labelText={p.slug==='cloudflare'?'Cloudflare API Token':'API Key'} placeholder="粘贴 API Key" value={keyValues[p.slug]??''} onChange={e=>setKeyValues(v=>({...v,[p.slug]:e.target.value}))} autoComplete="off"/>
               {p.slug==='cloudflare' && <TextInput id="cloudflare-account-id" labelText="Cloudflare Account ID" placeholder="输入 Account ID" value={cloudflareAccountId} onChange={e=>setCloudflareAccountId(e.target.value)} />} 
               <div className="card-actions"><Button kind="tertiary" size="sm" onClick={()=>void saveCredential(p.slug,p.name,'provider')} disabled={!keyValues[p.slug]?.trim()}>加密保存</Button><Button kind="secondary" size="sm" renderIcon={Renew} onClick={()=>void testConnection(p.slug,'provider')} disabled={!credentials.some(c=>c.slug===p.slug)}>连接测试</Button></div>
-            </Tile>)}</div></Tab>
-            <Tab label="平台与外部 API"><div className="vault-grid">{apiIntegrations.map(s=><Tile key={s.slug} className="vault-card">
+            </Tile>)}</div></section><section><h3>平台与外部 API</h3><div className="vault-grid">{apiIntegrations.map(s=><Tile key={s.slug} className="vault-card">
               <div className="card-head"><BrandIcon slug={s.slug} label={s.name} fallback={s.fallback} size={34}/><div><h3>{s.name}</h3><p>{s.credentialLabel}</p></div><Tag type={credentials.some(c=>c.slug===s.slug)?'green':'cool-gray'}>{credentials.some(c=>c.slug===s.slug)?'已保存':'未配置'}</Tag></div>
               <PasswordInput id={`key-${s.slug}`} labelText={s.credentialLabel} placeholder={s.placeholder} value={keyValues[s.slug]??''} onChange={e=>setKeyValues(v=>({...v,[s.slug]:e.target.value}))} autoComplete="off"/>
               {s.slug==='reddit' && <TextInput id="reddit-client-id" labelText="Reddit Client ID" placeholder="填写 OAuth Client ID" value={integrationMeta.reddit??''} onChange={e=>setIntegrationMeta(v=>({...v,reddit:e.target.value}))}/>}
               {s.slug==='tiktok' && <TextInput id="tiktok-client-key" labelText="TikTok Client Key" placeholder="填写 Client Key" value={integrationMeta.tiktok??''} onChange={e=>setIntegrationMeta(v=>({...v,tiktok:e.target.value}))}/>}
               <div className="card-actions"><Button kind="tertiary" size="sm" onClick={()=>void saveCredential(s.slug,s.name,'integration')} disabled={!keyValues[s.slug]?.trim()}>加密保存</Button><Button kind="secondary" size="sm" onClick={()=>void testConnection(s.slug,'integration')} disabled={!credentials.some(c=>c.slug===s.slug)}>连接测试</Button></div>
-            </Tile>)}</div></Tab></Tabs>
+            </Tile>)}</div></section>
             <Tile><h3>统一 AI 模型路由</h3><p>系统通过单一后端入口路由至 OpenAI、Gemini、DeepSeek、Claude、Workers AI。各供应商凭证独立保存，按用户隔离。</p><Select id="default-provider" labelText="默认模型 Provider" value={selectedProvider} onChange={e=>setSelectedProvider(e.target.value)}>{providers.map(p=><SelectItem key={p.slug} value={p.slug} text={p.name}/>)}</Select></Tile>
           </section>}
           {page==='projects' && <section className="module-stack">
@@ -211,8 +209,8 @@ function App() {
             {pendingPlans.map(p=><Tile key={p.id} className="list-tile"><div><h3>研究计划 · {projects.find(x=>x.id===p.project_id)?.name ?? p.project_id}</h3><p>{JSON.stringify(p.plan).slice(0,500)}</p><Tag type="warm-gray">待人工审批</Tag></div><Button kind="primary" onClick={()=>{setApprovalPlan(p);setApprovalPlanText(JSON.stringify(p.plan,null,2));}}>审阅并审批</Button></Tile>)}
           </section>}
           {page==='tasks' && <section className="module-stack"><div className="module-heading"><div><h2>Apify 采集任务</h2><p>只有通过人工审批的研究计划才会产生可执行任务。</p></div><Button kind="tertiary" renderIcon={Renew} onClick={()=>void loadAll()}>刷新</Button></div>
-            <DataTable rows={pageRows.map(t=>({...t,id:t.id.slice(0,8),fullId:t.id}))} headers={[{key:'platform_slug',header:'平台'},{key:'status',header:'状态'},{key:'actor_id',header:'Apify Actor'},{key:'created_at',header:'创建时间'},{key:'actions',header:'操作'}]}>
-              {({rows,headers,getHeaderProps,getRowProps,getTableProps})=><Table {...getTableProps()}><TableHead><TableRow>{headers.map(h=><TableHeader {...getHeaderProps({header:h})} key={h.key}>{h.header}</TableHeader>)}</TableRow></TableHead><TableBody>{rows.map(row=><TableRow {...getRowProps({row})} key={row.id}>{row.cells.map(cell=><TableCell key={cell.id}>{cell.info.header==='actions'?<Button size="sm" kind="tertiary" renderIcon={Play} disabled={row.cells.find(c=>c.info.header==='status')?.value!=='queued'} onClick={()=>{const t=tasks.find(x=>x.id===row.fullId);if(t)void runTask(t)}}>执行</Button>:String(cell.value??'—')}</TableCell>)}</TableRow>)}</TableBody></Table>}
+            <DataTable rows={pageRows.map(t=>({...t,id:t.id.slice(0,8)}))} headers={[{key:'platform_slug',header:'平台'},{key:'status',header:'状态'},{key:'actor_id',header:'Apify Actor'},{key:'created_at',header:'创建时间'},{key:'actions',header:'操作'}]}>
+              {({rows,headers,getHeaderProps,getRowProps,getTableProps})=><Table {...getTableProps()}><TableHead><TableRow>{headers.map(h=><TableHeader {...getHeaderProps({header:h})} key={h.key}>{h.header}</TableHeader>)}</TableRow></TableHead><TableBody>{rows.map(row=><TableRow {...getRowProps({row})} key={row.id}>{row.cells.map(cell=><TableCell key={cell.id}>{cell.info.header==='actions'?<Button size="sm" kind="tertiary" renderIcon={Play} disabled={row.cells.find(c=>c.info.header==='status')?.value!=='queued'} onClick={()=>{const t=tasks.find(x=>x.id.startsWith(row.id));if(t)void runTask(t)}}>执行</Button>:String(cell.value??'—')}</TableCell>)}</TableRow>)}</TableBody></Table>}
             </DataTable>
           </section>}
           {page==='reports' && <section className="module-stack"><Tile><h2>市场研究报告</h2><p>研究项目、采集证据与 AI 分析完成后，在此生成可追溯的市场报告。</p><Tag type="cool-gray">报告模块骨架</Tag></Tile></section>}
