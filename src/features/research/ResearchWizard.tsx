@@ -96,6 +96,13 @@ const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/nvkelso/natural-earth
 function CountryMapViewport({features}:{features:any[]}) {
  const map=useMap();
  React.useEffect(()=>{
+  const container=map.getContainer();
+  if(typeof ResizeObserver==='undefined')return;
+  const observer=new ResizeObserver(()=>map.invalidateSize({pan:false}));
+  observer.observe(container);
+  return ()=>observer.disconnect();
+ },[map]);
+ React.useEffect(()=>{
   if(!features.length){map.setView([20,0],2);return;}
   map.invalidateSize();
   const bounds=L.featureGroup(features.map(feature=>L.geoJSON(feature))).getBounds();
