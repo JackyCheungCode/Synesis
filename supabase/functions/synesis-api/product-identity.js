@@ -57,12 +57,12 @@ export function resolveProductIdentity(platformSlug, record) {
 const PLATFORM_ENTITY_RULES = [
   ['product', /amazon|ebay|walmart|etsy|aliexpress|shopify|tiktok.?shop|temu|shopee|lazada|rakuten|mercari|qoo10|淘宝|天猫|1688|京东|拼多多|商城|ecommerce|retail/i],
   ['social_content', /tiktok|instagram|youtube|twitter|^x$|linkedin|facebook|reddit|threads|douyin|抖音|小红书|xiaohongshu|weibo|微博|bilibili|知乎|豆瓣|pinterest|snapchat|twitch/i],
+  ['app', /google.?play|play.?store|app.?store|apple.?store|应用商店/i],
   ['search_result', /google|bing|baidu|百度|yandex|naver|yahoo|duckduckgo|brave|搜狗|360搜索|search|seo|trends/i],
   ['company', /crunchbase|opencorporates|companies.?house|sunbiz|builtwith|wappalyzer|similarweb|企查查|天眼查|爱企查|法人番号|dart|company|business|linkedin.?company/i],
   ['job', /indeed|glassdoor|ziprecruiter|wellfound|monster|careerbuilder|remote.?ok|we.?work|himalayas|boss|直聘|51job|智联|猎聘|拉勾|doda|mynavi|jobkorea|saramin|jobstreet|jobs|招聘/i],
   ['property', /zillow|redfin|realtor|apartments|rightmove|zoopla|suumo|home.?s|airbnb|booking|trip\.com|expedia|agoda|vrbo|房产|住宿|property|real.?estate/i],
   ['news', /news|bbc|reuters|techcrunch|wired|guardian|financial.?times|bloomberg|hacker.?news|新浪新闻|网易新闻|腾讯新闻|澎湃|36氪|虎嗅|界面|财新|arxiv|pubmed|rss/i],
-  ['app', /google.?play|play.?store|app.?store|apple.?store|应用商店/i],
   ['public_record', /sec|edgar|usaspending|grants|fec|epa|clinicaltrials|openfda|nhtsa|ofac|court|cms|irs|ted|gleif|政府|公共数据/i],
 ];
 
