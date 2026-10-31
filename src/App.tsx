@@ -536,6 +536,7 @@ function App() {
   }
 
   const title: Record<Page,string> = {dashboard:'情报总览',vault:'AI 模型与 Key Vault',settings:'调研采集设置',projects:projectId?'研究项目详情':'研究项目中心',products:'标准化商品库'};
+  const pageDescription: Record<Page,string> = {dashboard:'查看研究进展与关键指标。',vault:'安全管理 AI 与数据连接凭证。',settings:'配置新研究任务的数据采集默认值。',projects:'创建研究项目并管理调研流程。',products:'统一查看和检索跨平台标准化商品。'};
   const pendingPlans = plans.filter(p => p.status === 'pending_approval');
   const searchTerm = search.trim().toLocaleLowerCase();
   const projectSearchResults = searchTerm ? projects.filter(item => [item.name,item.objective].some(value => value.toLocaleLowerCase().includes(searchTerm))).slice(0,6) : [];
@@ -566,7 +567,7 @@ function App() {
       <WorkspaceNavigation page={page} open={navExpanded} onNavigate={(target)=>navigate(target)} onClose={()=>setNavExpanded(false)}/>
       <Content id="main-content" tabIndex={-1} className="synesis-content">
         <div className="page-wrap">
-          <div className="page-title-row"><div>{page==='projects'?<Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb>:<p className="eyebrow">SYNESIS / WORKSPACE</p>}<h1 className="cds--type-heading-04">{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue" className="synesis-workspace-tag">个人工作空间</Tag></div>
+          <div className="page-title-row">{page==='projects'&&projectId?<Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb>:<div><h1 className="cds--type-heading-04">{title[page]}</h1><p className="subheading">{pageDescription[page]}</p></div>}</div>
           {notice && <InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
           {busy && <Loading small withOverlay={false} description="处理中"/>}
           {page==='dashboard' && <WorkspaceDashboard projectCount={projects.length} pendingPlanCount={pendingPlans.length} taskCount={tasks.length} credentialCount={credentials.length} onCreateResearch={()=>navigate('projects')}/>}

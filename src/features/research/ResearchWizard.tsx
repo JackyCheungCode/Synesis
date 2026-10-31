@@ -272,7 +272,7 @@ function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:Res
 }
 const splitValues=(value:string)=>value.split(/\n|,/).map(v=>v.trim()).filter(Boolean);
 const formatPriceRange=(min:string|undefined,max:string|undefined,currency:string|undefined)=>{const values=[min,max].filter((value):value is string=>Boolean(value?.trim()));return values.length?values.join(' - ')+' '+(currency||'USD'):'';};
-export function ResearchWizard(props:Props) {
+function ResearchWizardContent(props:Props) {
  const {projects,plans,tasks,reports,projectId,busy,projectResultRows=[],projectResultTotal=0,projectResultOffset=0,onLoadProjectResults,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs,onSaveAnalytics,onSaveProjectAnalytics,onGenerateReport,onStepChange,onExportProjectResults,onSaveDraft}=props;
  const [brief,setBrief]=React.useState('');
  const [formValues,setFormValues]=React.useState<Record<string,string>>({});
@@ -337,6 +337,32 @@ export function ResearchWizard(props:Props) {
   const combined=[formBrief,brief.trim()].filter(Boolean).join('\n\n补充说明：\n');
   onCreate(combined,profile??createProfileFromForm(),project?.id);
  }
+ const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
+ const selectedPlanSources=Array.from(new Set(selectedSources.filter(source=>sourceGroups.some(group=>group.items.includes(source)))));
+ const completedCount=projectTasks.filter(t=>t.status==='succeeded'&&Number(t.result_synced_count??0)>=Number(t.result_count??0)).length;
+ const taskEvents=projectTasks.flatMap(task=>[
+  {time:task.created_at,label:task.platform_slug+' 任务已创建',detail:'等待执行'},
+  ...(task.started_at?[{time:task.started_at,label:task.platform_slug+' 开始运行',detail:task.run_status??'Apify Run'}]:[]),
+  ...(task.finished_at?[{time:task.finished_at,label:task.platform_slug+' 运行结束',detail:task.status+(task.error_message?' · '+task.error_message:'')}]:[]),
+  ...(Number(task.result_synced_count??0)>0?[{time:task.updated_at??task.finished_at??task.created_at,label:task.platform_slug+' 数据同步进度',detail:(task.result_synced_count??0)+' / '+(task.result_count??0)+' 条'}]:[]),
+ ]).sort((a,b)=>new Date(b.time).getTime()-new Date(a.time).getTime()).slice(0,30);
+ const projectAnalyticsReports=projectReports.filter(report=>report.report_type==='dataset_analytics');
+ const savedAnalyticsTaskIds=new Set(projectAnalyticsReports.flatMap(report=>(report.evidence??[]).map(item=>item.task_id).filter((id):id is string=>Boolean(id))));
+ const savedAnalyticsTaskCount=projectTasks.filter(task=>savedAnalyticsTaskIds.has(task.id)).length;
+ const statsSavedForAllTasks=projectTasks.length>0&&projectTasks.every(task=>savedAnalyticsTaskIds.has(task.id));
+ const analyticsSavedForCurrentTask=Boolean(analyticsTaskId&&projectReports.some(report=>report.report_type==='dataset_analytics'&&report.evidence?.some(item=>item.task_id===analyticsTaskId)));
+ const stepReady=[true,true,projectTasks.length>0,allSynced,statsSavedForAllTasks];
+ let maxUnlockedStep=0; for(let index=1;index<stepReady.length;index++){if(!stepReady[index])break;maxUnlockedStep=index;}
+ function changeStep(next:number){
+  const safe=Math.max(0,Math.min(maxUnlockedStep,Math.min(4,next)));
+  setActiveStep(safe);
+  if(project)onStepChange(project.id,safe);
+ }
+ React.useEffect(()=>{if(activeStep>maxUnlockedStep){setActiveStep(maxUnlockedStep);if(project)onStepChange(project.id,maxUnlockedStep);}},[activeStep,maxUnlockedStep,project?.id]);
+ const syncRate=expected>0?Math.min(100,Math.round(synced/expected*100)):0;
+ const normalizedCurrentPage=(projectResultRows??[]).filter(row=>row.normalized);
+ const normalizedWarningRows=(projectResultRows??[]).filter(row=>(row.normalized?.warnings?.length??0)>0);
+ React.useEffect(()=>{if(activeStep>maxUnlockedStep){setActiveStep(maxUnlockedStep);if(project)onStepChange(project.id,maxUnlockedStep);}},[activeStep,maxUnlockedStep,project?.id]);
  if(!project||project.scope?.workflow_state==='draft')return <section className="module-stack research-workspace research-fullwidth">
   <ResearchProgress activeStep={0} maxUnlockedStep={0} stepReady={[true,false,false,false,false]}/>
   <Tile className="research-start-tile">
@@ -427,31 +453,6 @@ export function ResearchWizard(props:Props) {
 
   </section>;
 
- const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
- const selectedPlanSources=Array.from(new Set(selectedSources.filter(source=>sourceGroups.some(group=>group.items.includes(source)))));
- const completedCount=projectTasks.filter(t=>t.status==='succeeded'&&Number(t.result_synced_count??0)>=Number(t.result_count??0)).length;
- const taskEvents=projectTasks.flatMap(task=>[
-  {time:task.created_at,label:task.platform_slug+' 任务已创建',detail:'等待执行'},
-  ...(task.started_at?[{time:task.started_at,label:task.platform_slug+' 开始运行',detail:task.run_status??'Apify Run'}]:[]),
-  ...(task.finished_at?[{time:task.finished_at,label:task.platform_slug+' 运行结束',detail:task.status+(task.error_message?' · '+task.error_message:'')}]:[]),
-  ...(Number(task.result_synced_count??0)>0?[{time:task.updated_at??task.finished_at??task.created_at,label:task.platform_slug+' 数据同步进度',detail:(task.result_synced_count??0)+' / '+(task.result_count??0)+' 条'}]:[]),
- ]).sort((a,b)=>new Date(b.time).getTime()-new Date(a.time).getTime()).slice(0,30);
- const projectAnalyticsReports=projectReports.filter(report=>report.report_type==='dataset_analytics');
- const savedAnalyticsTaskIds=new Set(projectAnalyticsReports.flatMap(report=>(report.evidence??[]).map(item=>item.task_id).filter((id):id is string=>Boolean(id))));
- const savedAnalyticsTaskCount=projectTasks.filter(task=>savedAnalyticsTaskIds.has(task.id)).length;
- const statsSavedForAllTasks=projectTasks.length>0&&projectTasks.every(task=>savedAnalyticsTaskIds.has(task.id));
- const analyticsSavedForCurrentTask=Boolean(analyticsTaskId&&projectReports.some(report=>report.report_type==='dataset_analytics'&&report.evidence?.some(item=>item.task_id===analyticsTaskId)));
- const stepReady=[true,true,projectTasks.length>0,allSynced,statsSavedForAllTasks];
- let maxUnlockedStep=0; for(let index=1;index<stepReady.length;index++){if(!stepReady[index])break;maxUnlockedStep=index;}
- function changeStep(next:number){
-  const safe=Math.max(0,Math.min(maxUnlockedStep,Math.min(4,next)));
-  setActiveStep(safe);
-  if(project)onStepChange(project.id,safe);
- }
- React.useEffect(()=>{if(activeStep>maxUnlockedStep){setActiveStep(maxUnlockedStep);if(project)onStepChange(project.id,maxUnlockedStep);}},[activeStep,maxUnlockedStep,project?.id]);
- const syncRate=expected>0?Math.min(100,Math.round(synced/expected*100)):0;
- const normalizedCurrentPage=(projectResultRows??[]).filter(row=>row.normalized);
- const normalizedWarningRows=(projectResultRows??[]).filter(row=>(row.normalized?.warnings?.length??0)>0);
  return <section className="module-stack research-workspace research-fullwidth">
   <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><p className="eyebrow">RESEARCH PROJECT WORKSPACE</p><h2>{project.name}</h2><p>{savedProfile?.summary??project.objective}</p></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
   <ResearchProgress activeStep={activeStep} maxUnlockedStep={maxUnlockedStep} stepReady={stepReady}/>
@@ -519,3 +520,12 @@ export function ResearchWizard(props:Props) {
   </div>
  </section>;
 }
+
+
+class ResearchWizardErrorBoundary extends React.Component<{children:React.ReactNode;onBack:()=>void},{hasError:boolean}> {
+ state={hasError:false};
+ static getDerivedStateFromError(){return {hasError:true};}
+ componentDidCatch(error:Error,info:React.ErrorInfo){console.error('Research workspace render failed',error,info.componentStack);}
+ render(){if(this.state.hasError)return <section className="module-stack research-workspace research-fullwidth" role="alert"><Tile><h2>研究工作区暂时无法显示</h2><p>页面遇到异常，但你的研究记录不会因此被删除。请返回研究项目列表后重新打开。</p><Button kind="primary" onClick={this.props.onBack}>返回研究项目</Button></Tile></section>;return this.props.children;}
+}
+export function ResearchWizard(props:Props){return <ResearchWizardErrorBoundary key={props.projectId??'research-list'} onBack={props.onBack}><ResearchWizardContent {...props}/></ResearchWizardErrorBoundary>;}

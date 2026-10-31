@@ -162,3 +162,23 @@ test('LAY-03 uses one responsive Carbon five-step progress system and one action
   assert.doesNotMatch(styles, /\.research-step-footer\s*\{/);
   assert.doesNotMatch(styles, /research-workflow-actions[^}]*position:\s*(?:sticky|fixed)/);
 });
+
+
+test('ResearchWizard keeps hooks before conditional returns and isolates render failures', () => {
+ const start=research.indexOf('function ResearchWizardContent(props:Props)');
+ const end=research.indexOf('class ResearchWizardErrorBoundary',start);
+ const component=research.slice(start,end);
+ const early=component.indexOf("if(!project||project.scope?.workflow_state==='draft')");
+ assert.ok(early>0);
+ assert.doesNotMatch(component.slice(early),/React\\.use(?:State|Effect|Memo|Callback|Ref)\\(/);
+ assert.match(research,/class ResearchWizardErrorBoundary extends React\\.Component/);
+ assert.match(research,/页面遇到异常，但你的研究记录不会因此被删除/);
+});
+
+test('workspace headings are concise and page canvas uses available width', () => {
+ assert.match(app,/const pageDescription: Record<Page,string>/);
+ assert.doesNotMatch(app,/全球商业数据 · 跨平台情报 · AI 驱动研究/);
+ assert.doesNotMatch(app,/个人工作空间/);
+ assert.match(foundation,/\\.page-wrap/);
+ assert.match(foundation,/max-width: none/);
+});
