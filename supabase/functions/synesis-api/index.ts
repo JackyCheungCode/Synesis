@@ -583,7 +583,9 @@ Deno.serve(async (req: Request) => {
         if(!candidate) return {...task,actor_id:null,schema_valid:false,validation_errors:['未从 Apify Store 的候选 Actor 中选择有效 Actor']};
         const schema=candidate.input_schema as CompactInputSchema;
         const properties=schema.properties??{};
-        const input=task.input&&typeof task.input==='object'&&!Array.isArray(task.input)?{...(task.input as Record<string,unknown>)}:{};
+        const input=String(task.platform_slug??'').toLowerCase()==='amazon'
+          ?normalizeAmazonActorInput(String(task.actor_id),task.input)
+          :(task.input&&typeof task.input==='object'&&!Array.isArray(task.input)?{...(task.input as Record<string,unknown>)}:{});
         const settingsWarnings:string[]=[];
         if(String(task.platform_slug??'').toLowerCase()==='amazon') {
           const cutoffDefinition=properties.reviewsCutoffDate;
@@ -739,25 +741,6 @@ Deno.serve(async (req: Request) => {
         ?normalizeAmazonActorInput(task.actor_id,task.input)
         :(task.input&&typeof task.input==='object'&&!Array.isArray(task.input)?{...(task.input as Record<string,unknown>)}:{});
       if(String(task.platform_slug??'').toLowerCase()==='amazon') {
-        const amazonUrlFields=['categoryOrProductUrls','productUrls','startUrls','urls'];
-        const isValidHttpUrl=(value:unknown):value is string=>{
-          if(typeof value!=='string'||!value.trim()||/[<>\u0000-\u001f]/.test(value)) return false;
-          try { const parsed=new URL(value.trim()); return (parsed.protocol==='https:'||parsed.protocol==='http:')&&Boolean(parsed.hostname.includes('.')); } catch { return false; }
-        };
-        for(const field of amazonUrlFields) {
-          if(!(field in executionInput)) continue;
-          const original=Array.isArray(executionInput[field])?executionInput[field] as unknown[]:[];
-          const valid=original.filter(isValidHttpUrl).map(value=>value.trim());
-          if(valid.length===0) {
-            const keywordCandidates=[
-              ...original.filter((value):value is string=>typeof value==='string'&&value.trim()&&!isValidHttpUrl(value)),
-              ...(Array.isArray(executionInput.searchTerms)?executionInput.searchTerms.filter((value):value is string=>typeof value==='string'&&value.trim()):[]),
-            ];
-            const keywords=[...new Set(keywordCandidates.map(value=>value.trim()))];
-            executionInput[field]=keywords.length?keywords.map(keyword=>`https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`):['https://www.amazon.com/'];
-          } else executionInput[field]=valid;
-        }
-        if(typeof executionInput.reviewsCutoffDate!=='string'||!/^(\\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])(T[0-2]\\d:[0-5]\\d(:[0-5]\\d)?(\\.\\d+)?Z?)?$|^(\\d+)\\s*(minute|hour|day|week|month|year)s?$/.test(executionInput.reviewsCutoffDate)) executionInput.reviewsCutoffDate='1 year';
         await admin.from('collection_tasks').update({input:executionInput,updated_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId);
       }
       let response: Response;
