@@ -17,10 +17,11 @@ export function BrandIcon({ slug, label, fallback, size = 28 }: BrandIconProps) 
         loading="lazy"
         onError={(event) => {
           event.currentTarget.style.display = 'none';
-          event.currentTarget.parentElement?.classList.add('brand-icon--fallback');
+          const fallback = event.currentTarget.parentElement?.querySelector('span[aria-hidden="true"]') as HTMLElement | null;
+          if (fallback) fallback.style.display = 'grid';
         }}
       />
-      <span aria-hidden="true">{fallback}</span>
+      <span aria-hidden="true" style={{ display: 'none' }}>{fallback}</span>
     </span>
   );
 }
