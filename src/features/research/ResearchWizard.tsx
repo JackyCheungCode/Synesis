@@ -7,7 +7,7 @@ export type ResearchProfile = { summary:string; dimensions:ResearchDimension[]; 
 export type ResearchProject = { id:string; name:string; objective:string; status:string; target_regions:string[]; platform_slugs:string[]; scope?:Record<string,any> };
 export type ResearchPlan = { id:string; project_id:string; status:string; plan:Record<string,any>; estimated_cost:number|null; created_at:string };
 export type ResearchTask = { id:string; project_id:string; platform_slug:string; status:string; actor_id:string|null; created_at:string; started_at?:string|null; finished_at?:string|null; updated_at?:string|null; external_run_id?:string|null; progress?:number; result_count?:number; result_synced_count?:number; run_status?:string|null; error_message?:string|null };
-export type ResearchReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; report_type?:string; content:Record<string,any> };
+export type ResearchReport = { id:string; title:string; status:string; created_at:string; project_id:string|null; report_type?:string; evidence?:Array<{task_id?:string;platform_slug?:string}>; content:Record<string,any> };
 type Props = {
  projects:ResearchProject[]; plans:ResearchPlan[]; tasks:ResearchTask[]; reports:ResearchReport[];
  projectId?:string; busy:boolean; onParse:(brief:string)=>Promise<ResearchProfile>; onCreate:(brief:string,profile:ResearchProfile)=>void;
@@ -15,6 +15,7 @@ type Props = {
  onApprove:(plan:ResearchPlan)=>void; onCancel:(task:ResearchTask)=>void;
  onRetry:(task:ResearchTask)=>void; onSync:(task:ResearchTask)=>void; onView:(task:ResearchTask)=>void; onAnalyze:(task:ResearchTask)=>void;
  analytics?:any; analyticsTaskId?:string; taskLogs?:Record<string,string[]>; onLoadLogs:(task:ResearchTask)=>void;
+ onSaveAnalytics:()=>void; onGenerateReport:(projectId:string)=>void;
 };
 const stages=['研究需求','调研平台','数据抓取','数据统计','AI 分析报告'];
 const statusLabel:Record<ResearchDimension['status'],string>={provided:'用户已提供',suggested:'AI 建议',needs_confirmation:'待补充确认',user_confirmed:'用户已确认'};
@@ -78,6 +79,7 @@ function ResearchAnalyticsView({data}:{data:any}) {
 }
 function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:ResearchReport[]) {
  if(reports.some(report=>report.report_type==='market_research'))return 4;
+ if(tasks.length>0&&tasks.every(task=>reports.some(report=>report.report_type==='dataset_analytics'&&report.evidence?.some(item=>item.task_id===task.id))))return 4;
  if(tasks.length&&tasks.every(t=>t.status==='succeeded'&&Number(t.result_synced_count??0)>=Number(t.result_count??0)))return 3;
  if(tasks.length)return 2;
  if(plan)return 1;
@@ -85,7 +87,7 @@ function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:Res
 }
 const splitValues=(value:string)=>value.split(/\n|,/).map(v=>v.trim()).filter(Boolean);
 export function ResearchWizard(props:Props) {
- const {projects,plans,tasks,reports,projectId,busy,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs}=props;
+ const {projects,plans,tasks,reports,projectId,busy,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs,onSaveAnalytics,onGenerateReport}=props;
  const [brief,setBrief]=React.useState('');
  const [formValues,setFormValues]=React.useState<Record<string,string>>({});
  const [profile,setProfile]=React.useState<ResearchProfile|null>(null);
@@ -163,7 +165,9 @@ export function ResearchWizard(props:Props) {
   ...(task.finished_at?[{time:task.finished_at,label:task.platform_slug+' 运行结束',detail:task.status+(task.error_message?' · '+task.error_message:'')}]:[]),
   ...(Number(task.result_synced_count??0)>0?[{time:task.updated_at??task.finished_at??task.created_at,label:task.platform_slug+' 数据同步进度',detail:(task.result_synced_count??0)+' / '+(task.result_count??0)+' 条'}]:[]),
  ]).sort((a,b)=>new Date(b.time).getTime()-new Date(a.time).getTime()).slice(0,30);
- const stepReady=[true,true,projectTasks.length>0,allSynced,projectReports.some(report=>report.report_type==='market_research')];
+ const statsSavedForAllTasks=projectTasks.length>0&&projectTasks.every(task=>projectReports.some(report=>report.report_type==='dataset_analytics'&&report.evidence?.some(item=>item.task_id===task.id)));
+ const analyticsSavedForCurrentTask=Boolean(analyticsTaskId&&projectReports.some(report=>report.report_type==='dataset_analytics'&&report.evidence?.some(item=>item.task_id===analyticsTaskId)));
+ const stepReady=[true,true,projectTasks.length>0,allSynced,statsSavedForAllTasks];
  const maxUnlockedStep=stepReady.reduce((max,ready,index)=>ready?index:max,-1);
  return <section className="module-stack research-workspace research-fullwidth">
   <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><p className="eyebrow">RESEARCH PROJECT WORKSPACE</p><h2>{project.name}</h2><p>{savedProfile?.summary??project.objective}</p></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
@@ -185,14 +189,14 @@ export function ResearchWizard(props:Props) {
   </Tile>}
   {activeStep===3&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 4 / BUSINESS INTELLIGENCE</p><h3>数据统计与多维可视化</h3><p>选择已完成同步的采集任务，生成价格、品牌、类目、评价字段和关键词统计。</p></div><Tag type={allSynced?'green':'warm-gray'}>{allSynced?'数据已就绪':'等待数据完整同步'}</Tag></div>
    {projectTasks.map(task=><div className="research-task-row" key={task.id}><div><b>{task.platform_slug}</b><p>{Number(task.result_synced_count??0).toLocaleString()} / {Number(task.result_count??0).toLocaleString()} 条已同步</p></div><Button size="sm" kind="tertiary" renderIcon={ChartLine} disabled={busy||task.status!=='succeeded'||Number(task.result_synced_count??0)<Number(task.result_count??0)} onClick={()=>onAnalyze(task)}>生成该数据源统计</Button></div>)}
-   {analytics&&analyticsTaskId&&projectTasks.some(task=>task.id===analyticsTaskId)&&<ResearchAnalyticsView data={analytics}/>}
+   {analytics&&analyticsTaskId&&projectTasks.some(task=>task.id===analyticsTaskId)&&<ResearchAnalyticsView data={analytics}/>}{analytics&&analyticsTaskId&&projectTasks.some(task=>task.id===analyticsTaskId)&&<div className="research-analytics-save"><span>{analyticsSavedForCurrentTask?"该数据源统计快照已保存。":"保存该数据源的统计快照后，才能进入第五步。"}</span><Button kind="primary" disabled={busy||analyticsSavedForCurrentTask} onClick={onSaveAnalytics}>保存统计快照</Button></div>}
    <p className="research-profile-hint">统计图表只展示数据源真实提供且可识别的字段。国家分布、评价词云、评分分布和价格区间均以实际返回字段为依据；缺少字段时会明确显示暂无可用数据。</p>
    {!projectTasks.length&&<p>尚无采集结果，请先完成第二、三步。</p>}
   </Tile>}
   {activeStep===4&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 5 / AI STRATEGY & REPORT</p><h3>AI 深度分析与商业策略报告</h3><p>基于已同步数据和统计结果，形成可追溯的市场研究报告。</p></div><Tag type={projectReports.length?'green':'blue'}>{projectReports.length?'报告已保存':'等待分析'}</Tag></div>
    <div className="research-report-topics"><span>产品开发策略</span><span>定价策略</span><span>目标市场策略</span><span>消费者人群策略</span><span>竞争策略</span><span>营销与渠道策略</span><span>风险与行动计划</span></div>
    {projectReports.map(report=><div className="research-saved-report" key={report.id}><div className="report-row"><div><strong>{report.title}</strong><p>{new Date(report.created_at).toLocaleString()} · {report.status}</p></div><Tag type="green">已保存</Tag></div><details><summary>查看报告内容</summary><pre className="result-json">{JSON.stringify(report.content,null,2)}</pre></details></div>)}
-   {!projectReports.length&&<p>完成所有数据同步后，系统会自动执行 AI 分析并保存报告。报告内容必须区分数据事实、AI 推断和商业建议。</p>}
+   {!projectReports.some(report=>report.report_type==="market_research")&&<div className="research-ai-report-action"><p>{statsSavedForAllTasks?"第五步已就绪。AI 将综合全部采集数据与第四步保存的统计快照，生成产品、定价、市场、人群、竞争和营销策略。":"请先在第四步为每个采集任务生成并保存统计快照。完成后即可启动 AI 深度分析。"}</p><Button kind="primary" disabled={busy||!statsSavedForAllTasks} onClick={()=>onGenerateReport(project.id)}>开始 AI 深度分析并保存报告方案</Button></div>}
   </Tile>}
   <div className="research-step-footer"><Button kind="ghost" disabled={activeStep===0} onClick={()=>setActiveStep(v=>Math.max(0,v-1))}>上一步</Button><Button kind="secondary" disabled={activeStep===4||!stepReady[activeStep+1]} onClick={()=>setActiveStep(v=>Math.min(4,v+1))}>下一步 <ArrowRight size={16}/></Button></div>
  </section>;
