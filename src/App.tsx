@@ -319,6 +319,13 @@ function App() {
   async function syncTask(task: Task) {
     setBusy(true);
     try {
+      if(task.status==='queued'&&!task.external_run_id) {
+        const started=await api('tasks.execute',{taskId:task.id});
+        setNotice({kind:'success',text:`Apify 任务已成功启动，Run ID：${started.runId}`});
+        await loadAll();
+        return;
+      }
+      if(!task.external_run_id) throw new Error('该任务尚未取得 Apify Run ID；排队任务请启动采集，失败任务请先查看错误详情或重试。');
       let result: any;
       let batches = 0;
       do {
@@ -524,7 +531,7 @@ function App() {
   }
 
   useEffect(() => {
-    const active = tasks.filter(task=>task.status==='running' || (task.status==='succeeded' && Number(task.result_synced_count??0)<Number(task.result_count??0)));
+    const active = tasks.filter(task=>(task.status==='running'&&Boolean(task.external_run_id)) || (task.status==='succeeded' && Number(task.result_synced_count??0)<Number(task.result_count??0)));
     if (!active.length) return;
     const timer = window.setInterval(async()=>{
       for (const task of active) {
