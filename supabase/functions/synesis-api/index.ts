@@ -10,6 +10,16 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const b64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 const fromB64 = (value: string) => Uint8Array.from(atob(value), c => c.charCodeAt(0));
 
+function cloudflareModelPath(value: string): string {
+  const model = value.trim();
+  const segments = model.split('/');
+  if (!model || segments.some(segment => !/^[A-Za-z0-9@._-]+$/.test(segment))) {
+    throw new Error('Cloudflare 模型 ID 格式无效');
+  }
+  // Preserve namespace separators: Cloudflare routes model names as path segments.
+  return segments.map(segment => encodeURIComponent(segment).replace(/%40/gi, '@')).join('/');
+}
+
 type CompactInputSchema = { type?: string; properties?: Record<string,{type?:string|string[]}>; required?: string[] };
 function validateActorInput(input: unknown, schema: CompactInputSchema): string[] {
   const errors:string[]=[];
@@ -213,7 +223,7 @@ Deno.serve(async (req: Request) => {
           response = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':clear,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:model||'claude-3-7-sonnet-latest',max_tokens:16,messages:[{role:'user',content:prompt}]})});
         } else if (slug === 'cloudflare') {
           if (!config.base_url) return json({error:'请先填写 Cloudflare Account ID'},400);
-          response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${encodeURIComponent(model || '@cf/meta/llama-3.3-70b-instruct')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}]})});
+          response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${cloudflareModelPath(model || '@cf/meta/llama-3.3-70b-instruct')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}]})});
         } else return json({error:'该 Provider 尚未实现连接测试'},400);
       } else return json({error:'该集成尚未实现连接测试'},400);
       if (!response.ok) {
@@ -240,7 +250,7 @@ Deno.serve(async (req: Request) => {
       } else if (provider === 'cloudflare') {
         const { config } = await getCredential(provider,'provider');
         if (!config.base_url) return json({error:'请先配置 Cloudflare Account ID'},400);
-        response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${encodeURIComponent(model || '@cf/meta/llama-3.3-70b-instruct')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages})});
+        response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${cloudflareModelPath(model || '@cf/meta/llama-3.3-70b-instruct')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages})});
       } else return json({error:'该模型路由暂不支持'},400);
       const result = await response.json();
       if (!response.ok) return json({error:result?.error?.message ?? '模型调用失败'},502);
