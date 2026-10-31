@@ -545,6 +545,16 @@ function App() {
   return (
     <div className={`synesis-app cds--${theme}`}>
       <Header aria-label="Synesis">
+        <a
+          className="synesis-skip-link"
+          href="#main-content"
+          onClick={event => {
+            event.preventDefault();
+            document.getElementById('main-content')?.focus();
+          }}
+        >
+          跳至主要内容
+        </a>
         <HeaderMenuButton aria-label="切换导航" aria-expanded={navExpanded} aria-controls="synesis-navigation" isActive={navExpanded} onClick={() => setNavExpanded(v=>!v)} />
         <HeaderName prefix="" href="#/dashboard">SYNESIS</HeaderName>
         <HeaderGlobalBar>
