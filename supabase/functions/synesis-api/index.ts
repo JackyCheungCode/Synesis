@@ -209,7 +209,7 @@ Deno.serve(async (req: Request) => {
       const {data:claimed,error:claimError}=await admin.from('collection_tasks').update({status:'running',started_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId).eq('status','queued').select('id').maybeSingle();
       if(claimError||!claimed) return json({error:'任务已被执行或状态已变化'},409);
       const actor=encodeURIComponent(task.actor_id).replace(/%2F/g,'~');
-      const response=await fetch(`https://api.apify.com/v2/acts/${actor}/runs?token=${encodeURIComponent(apifyToken)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(task.input??{})});
+      const response=await fetch(`https://api.apify.com/v2/acts/${actor}/runs`,{method:'POST',headers:{Authorization:`Bearer ${apifyToken}`,'Content-Type':'application/json'},body:JSON.stringify(task.input??{})});
       const result=await response.json();
       if(!response.ok) { await admin.from('collection_tasks').update({status:'failed',error_message:result?.error?.message??'Apify task failed',finished_at:new Date().toISOString()}).eq('id',taskId).eq('user_id',userId); return json({error:result?.error?.message??'Apify 任务提交失败'},502); }
       await admin.from('collection_tasks').update({external_run_id:result.data?.id}).eq('id',taskId).eq('user_id',userId);
