@@ -683,3 +683,15 @@ body, .synesis-app, .synesis-content, .synesis-app .cds--content { background:#f
 .synesis-app .research-live-log > div { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.5rem .75rem; border-bottom:1px solid #e0e0e0; }
 .synesis-app .research-live-log > div b { font-size:.8rem; }
 .synesis-app .research-live-log pre { max-height:240px; min-height:72px; margin:0; padding:.75rem; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; background:#fff; color:#393939; font:12px/1.55 'IBM Plex Mono',monospace; }
+
+
+.synesis-app .research-analytics-save,
+.synesis-app .research-ai-report-action { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:1rem 0; border-top:1px solid #e0e0e0; }
+.synesis-app .research-analytics-save span,
+.synesis-app .research-ai-report-action p { margin:0; color:#525252; font-size:.85rem; line-height:1.5; }
+@media(max-width:672px) {
+ .synesis-app .research-analytics-save,
+ .synesis-app .research-ai-report-action { align-items:stretch; flex-direction:column; }
+ .synesis-app .research-analytics-save .cds--btn,
+ .synesis-app .research-ai-report-action .cds--btn { width:100%; }
+}
