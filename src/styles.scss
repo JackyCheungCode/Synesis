@@ -15,7 +15,6 @@ body { margin: 0; min-width: 320px; background: var(--cds-background); }
 .synesis-app .cds--side-nav .cds--side-nav__submenu:hover { background: #283646; color: white; }
 .synesis-app .cds--side-nav .cds--side-nav__link[aria-current=page] { background: #0f62fe; color: white; }
 .synesis-content { padding-top: 3rem; min-height: 100vh; width: 100%; }
-.synesis-app .cds--content { margin-left: 0; }
 .synesis-app .cds--side-nav--fixed { top: 3rem; height: calc(100% - 3rem); }
 .synesis-app .cds--side-nav__navigation { padding-bottom: 3rem; }
 .workspace-bar { width:100%; position: sticky; top: 3rem; z-index: 5; display:flex; align-items:center; gap:20px; justify-content:space-between; padding: 12px 4vw; background:var(--cds-layer-01); border-bottom:1px solid var(--cds-border-subtle-01); }
@@ -97,7 +96,6 @@ h3 { font-size:15px; margin:0 0 6px; font-weight:600; }
 .cds--inline-notification { max-width:none; }
 @media (max-width: 1055px) {
   .synesis-app .cds--side-nav--fixed { top: 3rem; }
-  .synesis-app .cds--content { margin-left: 0; }
   .synesis-app .cds--side-nav { box-shadow: 0 8px 24px rgba(0,0,0,.24); }
   .carbon-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .synesis-app .cds--side-nav { z-index:9000; }
