@@ -47,8 +47,8 @@ export function resolveProductIdentity(platformSlug, record) {
   const normalizedUrl = normalizeSourceUrl(sourceUrl);
   let externalProductId = platformIdText || null;
   if (!externalProductId && sku && sellerId) externalProductId = `seller:${sellerId}:sku:${sku}`;
-  if (!externalProductId && gtin) externalProductId = `gtin:${gtin}`;
   if (!externalProductId && normalizedUrl) externalProductId = normalizedUrl;
+  if (!externalProductId && gtin) externalProductId = `gtin:${gtin}`;
   if (!externalProductId) return null;
   return { externalProductId, canonicalKey: gtin ? `gtin:${gtin}` : `${platform}:${externalProductId}`, sourceSku: sku || null, sourceUrl, matchType: gtin ? 'gtin' : platformIdText ? 'platform_id' : sku && sellerId ? 'seller_sku' : 'source_url' };
 }
