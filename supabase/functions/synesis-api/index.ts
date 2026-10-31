@@ -83,7 +83,7 @@ Deno.serve(async (req: Request) => {
       const slugColumn = kind === 'provider' ? 'provider_slug' : 'service_slug';
       const { data: config, error } = await admin.from(table).upsert({
         user_id:userId, [slugColumn]:slug, display_name:String(name).slice(0,100),
-        connection_status:'configured', key_last4:apiKey.slice(-4), enabled:true, updated_at:new Date().toISOString(),
+        connection_status:'configured', key_last4:apiKey.slice(-4), enabled:true, updated_at:new Date().toISOString(), ...(kind === 'provider' && slug === 'cloudflare' && body.accountId ? { base_url: String(body.accountId).slice(0,80) } : {}),
       },{onConflict:`user_id,${slugColumn}`}).select('id').single();
       if (error || !config) throw error ?? new Error('保存凭证配置失败');
       const { error: secretError } = await admin.rpc('synesis_store_credential', {
@@ -110,7 +110,8 @@ Deno.serve(async (req: Request) => {
         } else if (slug === 'anthropic') {
           response = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':clear,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:model||'claude-3-7-sonnet-latest',max_tokens:16,messages:[{role:'user',content:prompt}]})});
         } else if (slug === 'cloudflare') {
-          return json({error:'Workers AI 需要 Cloudflare Account ID 与 API Token；请先在 Cloudflare 集成凭证中配置。'},400);
+          if (!config.base_url) return json({error:'请先填写 Cloudflare Account ID'},400);
+          response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${encodeURIComponent(model || '@cf/meta/llama-3.3-70b-instruct')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}]})});
         } else return json({error:'该 Provider 尚未实现连接测试'},400);
       } else return json({error:'该集成尚未实现连接测试'},400);
       if (!response.ok) {
@@ -134,6 +135,10 @@ Deno.serve(async (req: Request) => {
         response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(clear)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})});
       } else if (provider === 'anthropic') {
         response = await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':clear,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model,max_tokens:4096,messages})});
+      } else if (provider === 'cloudflare') {
+        const { config } = await getCredential(provider,'provider');
+        if (!config.base_url) return json({error:'请先配置 Cloudflare Account ID'},400);
+        response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/${encodeURIComponent(model || '@cf/meta/llama-3.3-70b-instruct')}`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages})});
       } else return json({error:'该模型路由暂不支持'},400);
       const result = await response.json();
       if (!response.ok) return json({error:result?.error?.message ?? '模型调用失败'},502);
@@ -155,10 +160,14 @@ Deno.serve(async (req: Request) => {
         response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(clear)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json'}})});
       } else if(provider==='anthropic') {
         response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':clear,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:'claude-3-7-sonnet-latest',max_tokens:4096,system,messages:[{role:'user',content:prompt}]})});
+      } else if(provider==='cloudflare') {
+        const {config}=await getCredential(provider,'provider');
+        if(!config.base_url) throw new Error('请先配置 Cloudflare Account ID');
+        response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(config.base_url)}/ai/run/@cf/meta/llama-3.3-70b-instruct`,{method:'POST',headers:{Authorization:`Bearer ${clear}`,'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'system',content:system},{role:'user',content:prompt}]})});
       } else throw new Error('该 Provider 暂不支持计划生成');
       const result=await response.json();
       if(!response.ok) throw new Error(result?.error?.message??'AI 计划生成失败');
-      const raw=provider==='googlegemini'?result.candidates?.[0]?.content?.parts?.[0]?.text:provider==='anthropic'?result.content?.[0]?.text:result.choices?.[0]?.message?.content;
+      const raw=provider==='googlegemini'?result.candidates?.[0]?.content?.parts?.[0]?.text:provider==='anthropic'?result.content?.[0]?.text:provider==='cloudflare'?result.result?.response:result.choices?.[0]?.message?.content;
       const plan=JSON.parse(String(raw).replace(/^\`\`\`json\s*/,'').replace(/\`\`\`$/,''));
       const {error}=await admin.from('ai_research_plans').insert({user_id:userId,project_id:projectId,plan,status:'pending_approval',estimated_cost:plan.estimated_cost_usd??null});
       if(error) throw error;
@@ -170,9 +179,11 @@ Deno.serve(async (req: Request) => {
       const {planId}=body;
       const {data:plan,error}=await admin.from('ai_research_plans').select('*').eq('id',planId).eq('user_id',userId).single();
       if(error||!plan||plan.status!=='pending_approval') return json({error:'研究计划不存在或已处理'},409);
-      const {error:updateError}=await admin.from('ai_research_plans').update({status:'approved',approved_at:new Date().toISOString(),approved_by:userId}).eq('id',planId).eq('user_id',userId).eq('status','pending_approval');
+      const approvedContent = body.plan && typeof body.plan === 'object' ? body.plan : plan.plan;
+      if (!Array.isArray(approvedContent.platform_tasks)) return json({error:'研究计划格式无效'},400);
+      const {error:updateError}=await admin.from('ai_research_plans').update({plan:approvedContent,status:'approved',approved_at:new Date().toISOString(),approved_by:userId}).eq('id',planId).eq('user_id',userId).eq('status','pending_approval');
       if(updateError) throw updateError;
-      const items=Array.isArray(plan.plan?.platform_tasks)?plan.plan.platform_tasks:[];
+      const items=approvedContent.platform_tasks;
       const rows=items.map((item: {platform_slug?:string;actor_id?:string|null;input?:Record<string,unknown>})=>({
         user_id:userId,project_id:plan.project_id,plan_id:planId,platform_slug:String(item.platform_slug??'unknown'),
         actor_id:item.actor_id??null,input:item.input??{},status:'queued',
@@ -185,7 +196,7 @@ Deno.serve(async (req: Request) => {
     if (action === 'tasks.execute') {
       const {taskId}=body;
       const {data:task,error}=await admin.from('collection_tasks').select('*,ai_research_plans!inner(status)').eq('id',taskId).eq('user_id',userId).single();
-      if(error||!task||task.ai_research_plans.status!=='approved'||!task.actor_id) return json({error:'任务未获人工审批，或缺少经确认的 Apify Actor ID'},403);
+      if(error||!task||task.ai_research_plans.status!=='approved'||!task.actor_id||task.status!=='queued') return json({error:'任务未获人工审批、已执行，或缺少经确认的 Apify Actor ID'},403);
       const {clear:apifyToken}=await getCredential('apify','integration');
       const actor=encodeURIComponent(task.actor_id).replace(/%2F/g,'~');
       const response=await fetch(`https://api.apify.com/v2/acts/${actor}/runs?token=${encodeURIComponent(apifyToken)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(task.input??{})});
