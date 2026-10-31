@@ -2,16 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspaceRoute, type WorkspacePage } from './lib/router';
 import { WorkspaceNavigation } from './components/WorkspaceNavigation';
 import { ResearchWizard } from './features/research/ResearchWizard';
+import { WorkspaceDashboard } from './features/dashboard/WorkspaceDashboard';
+import { CredentialVault } from './features/settings/CredentialVault';
+import { ProductLibrary } from './features/products/ProductLibrary';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content,
-  Button, InlineNotification, Tag, TextInput, PasswordInput, Tile,
-  Select, SelectItem, Modal, Loading, Accordion, AccordionItem, Link,
+  Button, InlineNotification, Tag, TextInput, Tile,
+  Modal, Loading, Accordion, AccordionItem,
 } from '@carbon/react';
 import {
-  Add, Renew, Search as SearchIcon, UserAvatar,
+  Search as SearchIcon, UserAvatar,
 } from '@carbon/icons-react';
-import { BrandIcon } from './components/BrandIcon';
-import { providers, apiIntegrations } from './data/catalog';
 import { useAuth } from './auth/AuthProvider';
 import { supabase } from './lib/supabase';
 
@@ -356,29 +357,15 @@ function App() {
           <div className="page-title-row"><div><p className="eyebrow">SYNESIS / WORKSPACE</p><h1>{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue">个人工作空间</Tag></div>
           {notice && <InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
           {busy && <Loading small withOverlay={false} description="处理中"/>}
-          {page==='dashboard' && <div className="carbon-grid">
-            <Tile><div className="metric-label">研究项目</div><div className="metric-value">{projects.length}</div><p>已建立的研究项目</p></Tile>
-            <Tile><div className="metric-label">待审批研究计划</div><div className="metric-value">{pendingPlans.length}</div><p>人工批准前不会启动采集</p></Tile>
-            <Tile><div className="metric-label">采集任务</div><div className="metric-value">{tasks.length}</div><p>Apify 任务运行记录</p></Tile>
-            <Tile><div className="metric-label">已配置凭证</div><div className="metric-value">{credentials.length}</div><p>密钥仅在后端加密保存</p></Tile>
-            <Tile className="wide-tile"><h3>研究流程</h3><div className="flow-steps"><Tag type="blue">创建项目</Tag><span>→</span><Tag type="blue">AI 生成计划</Tag><span>→</span><Tag type="warm-gray">人工审批</Tag><span>→</span><Tag type="cool-gray">Apify 采集</Tag><span>→</span><Tag type="cool-gray">报告</Tag></div><p>只有明确批准的研究计划，才能创建采集任务；任务执行接口还会再次检查批准状态。</p><Button kind="primary" renderIcon={Add} onClick={()=>navigate('projects')}>创建研究项目</Button></Tile>
-          </div>}
-          {page==='vault' && <section className="module-stack">
-            <div className="module-heading"><div><h2>AI Provider API Keys</h2><p>输入后立即发送到认证后端，采用 AES-GCM 加密保存。不会写入 localStorage、sessionStorage 或前端环境变量。</p></div><Tag type="green">BYOK</Tag></div>
-            <section><h3>AI 模型</h3><div className="vault-grid">{providers.map(p=><Tile key={p.slug} className="vault-card">
-              <div className="card-head"><BrandIcon slug={p.slug} label={p.name} fallback={p.fallback} size={34}/><div><h3>{p.name}</h3><p>{providerModels[p.slug] ?? '模型可在路由配置中指定'}</p></div><Tag type={credentials.some(c=>c.slug===p.slug)?'green':'cool-gray'}>{credentials.find(c=>c.slug===p.slug)?.status==='validated'?'已验证':credentials.some(c=>c.slug===p.slug)?'已保存':'未配置'}</Tag></div>
-              <PasswordInput id={`key-${p.slug}`} labelText={p.slug==='cloudflare'?'Cloudflare API Token':'API Key'} placeholder="粘贴 API Key" value={keyValues[p.slug]??''} onChange={e=>setKeyValues(v=>({...v,[p.slug]:e.target.value}))} autoComplete="off"/>
-              {p.slug==='cloudflare' && <TextInput id="cloudflare-account-id" labelText="Cloudflare Account ID" placeholder="输入 Account ID" value={cloudflareAccountId} onChange={e=>setCloudflareAccountId(e.target.value)} />} 
-              <div className="card-actions"><Button kind="tertiary" size="sm" onClick={()=>void saveCredential(p.slug,p.name,'provider')} disabled={!keyValues[p.slug]?.trim()}>加密保存</Button><Button kind="secondary" size="sm" renderIcon={Renew} onClick={()=>void testConnection(p.slug,'provider')} disabled={!credentials.some(c=>c.slug===p.slug)}>连接测试</Button></div>
-            </Tile>)}</div></section><section><h3>平台与外部 API</h3><div className="vault-grid">{apiIntegrations.map(s=><Tile key={s.slug} className="vault-card">
-              <div className="card-head"><BrandIcon slug={s.slug} label={s.name} fallback={s.fallback} size={34}/><div><h3>{s.name}</h3><p>{s.credentialLabel}</p></div><Tag type={credentials.some(c=>c.slug===s.slug)?'green':'cool-gray'}>{credentials.some(c=>c.slug===s.slug)?'已保存':'未配置'}</Tag></div>
-              <PasswordInput id={`key-${s.slug}`} labelText={s.credentialLabel} placeholder={s.placeholder} value={keyValues[s.slug]??''} onChange={e=>setKeyValues(v=>({...v,[s.slug]:e.target.value}))} autoComplete="off"/>
-              {s.slug==='reddit' && <TextInput id="reddit-client-id" labelText="Reddit Client ID" placeholder="填写 OAuth Client ID" value={integrationMeta.reddit??''} onChange={e=>setIntegrationMeta(v=>({...v,reddit:e.target.value}))}/>}
-              {s.slug==='tiktok' && <TextInput id="tiktok-client-key" labelText="TikTok Client Key" placeholder="填写 Client Key" value={integrationMeta.tiktok??''} onChange={e=>setIntegrationMeta(v=>({...v,tiktok:e.target.value}))}/>}
-              <div className="card-actions"><Button kind="tertiary" size="sm" onClick={()=>void saveCredential(s.slug,s.name,'integration')} disabled={!keyValues[s.slug]?.trim()}>加密保存</Button><Button kind="secondary" size="sm" onClick={()=>void testConnection(s.slug,'integration')} disabled={!credentials.some(c=>c.slug===s.slug)}>连接测试</Button></div>
-            </Tile>)}</div></section>
-            <Tile><h3>统一 AI 模型路由</h3><p>系统通过单一后端入口路由至 OpenAI、Gemini、DeepSeek、Claude、Workers AI。各供应商凭证独立保存，按用户隔离。</p><Select id="default-provider" labelText="默认模型 Provider" value={selectedProvider} onChange={e=>setSelectedProvider(e.target.value)}>{providers.map(p=><SelectItem key={p.slug} value={p.slug} text={p.name}/>)}</Select></Tile>
-          </section>}
+          {page==='dashboard' && <WorkspaceDashboard projectCount={projects.length} pendingPlanCount={pendingPlans.length} taskCount={tasks.length} credentialCount={credentials.length} onCreateResearch={()=>navigate('projects')}/>}
+          {page==='vault' && <CredentialVault
+            credentials={credentials} keyValues={keyValues} setKeyValues={setKeyValues}
+            cloudflareAccountId={cloudflareAccountId} setCloudflareAccountId={setCloudflareAccountId}
+            integrationMeta={integrationMeta} setIntegrationMeta={setIntegrationMeta}
+            providerModels={providerModels} selectedProvider={selectedProvider} setSelectedProvider={setSelectedProvider}
+            onSave={(slug,name,kind)=>void saveCredential(slug,name,kind)}
+            onTest={(slug,kind)=>void testConnection(slug,kind)}
+          />}
           {page==='projects' && <ResearchWizard
             projects={projects} plans={plans} tasks={tasks} reports={reports} projectId={projectId} busy={busy}
             onCreate={(brief)=>void createProject(brief)}
@@ -392,24 +379,16 @@ function App() {
             onAnalyze={(task)=>void loadAnalytics(task.id)}
           />}
           {page==='projects' && analytics && <section className="module-stack"><AnalyticsDashboard data={analytics}/><Button kind="secondary" onClick={()=>void saveAnalyticsReport()} disabled={busy}>保存数据分析快照</Button></section>}
-          {page==='products' && <section className="module-stack">
-            <Tile>
-              <div className="module-heading"><div><h2>跨平台商品目录</h2><p>统一查看采集任务中识别的商品主档、来源平台与历史价格。原始采集记录仍独立保留。</p></div><Tag type="blue">{productTotal.toLocaleString()} 件商品</Tag></div>
-              <div className="product-search-row"><TextInput id="product-search" labelText="搜索商品" placeholder="商品名称、品牌或平台商品标识" value={productSearch} onChange={e=>setProductSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')void loadProducts(0,productSearch);}}/><Button kind="primary" onClick={()=>void loadProducts(0,productSearch)} disabled={busy}>搜索</Button><Button kind="tertiary" renderIcon={Renew} onClick={()=>void loadProducts(productOffset)} disabled={busy}>刷新</Button></div>
-            </Tile>
-            <div className="product-grid">{products.map(product=><Tile key={product.id} className="product-tile">
-              {product.image_url&&<img className="product-image" src={product.image_url} alt="" loading="lazy" onError={e=>{e.currentTarget.style.display='none';}}/>}
-              <div><h3>{product.title||'未命名商品'}</h3><p>{product.brand||'品牌未知'} · {product.category||'未分类'}</p><small>{product.canonical_key}</small></div>
-              <Button kind="tertiary" size="sm" onClick={()=>void loadProductHistory(product)}>查看价格历史</Button>
-            </Tile>)}</div>
-            <div className="card-actions"><Button kind="secondary" size="sm" disabled={productOffset===0||busy} onClick={()=>void loadProducts(Math.max(0,productOffset-25))}>上一页</Button><Tag type="blue">{productTotal?Math.floor(productOffset/25)+1:0} / {Math.max(1,Math.ceil(productTotal/25))}</Tag><Button kind="secondary" size="sm" disabled={productOffset+25>=productTotal||busy} onClick={()=>void loadProducts(productOffset+25)}>下一页</Button></div>
-            {selectedProduct&&<Tile className="history-tile"><div className="module-heading"><div><h2>{selectedProduct.title||'商品'} · 价格历史</h2><p>{selectedProduct.canonical_key}</p></div><Button kind="ghost" onClick={()=>{setSelectedProduct(null);setProductHistory([]);}}>关闭</Button></div>
-              {productHistory.length?<><div className="history-table-wrap"><table className="task-table"><thead><tr><th>采集时间</th><th>价格</th><th>币种</th><th>来源平台</th><th>平台商品 ID</th></tr></thead><tbody>{productHistory.map(item=><tr key={item.id}><td>{new Date(item.observed_at).toLocaleString()}</td><td>{Number(item.price).toLocaleString(undefined,{maximumFractionDigits:4})}</td><td>{item.currency}</td><td>{item.source?.platform_slug||'—'}</td><td>{item.source?.source_url?<Link href={item.source.source_url} target="_blank">{item.source.external_product_id}</Link>:item.source?.external_product_id||'—'}</td></tr>)}</tbody></table></div>
-              <div className="card-actions"><Button kind="secondary" size="sm" disabled={productHistoryOffset===0||busy} onClick={()=>void loadProductHistory(selectedProduct,Math.max(0,productHistoryOffset-50))}>上一页</Button><Tag>{productHistoryOffset+1}–{Math.min(productHistoryOffset+50,productHistoryTotal)} / {productHistoryTotal}</Tag><Button kind="secondary" size="sm" disabled={productHistoryOffset+50>=productHistoryTotal||busy} onClick={()=>void loadProductHistory(selectedProduct,productHistoryOffset+50)}>下一页</Button></div></>:<p>暂无价格快照。需要采集记录包含可识别的价格与币种。</p>}
-            </Tile>}
-            {!products.length&&<Tile><p>暂时没有标准化商品。完成采集任务并成功同步结果后，符合身份识别条件的商品会自动进入商品库。</p></Tile>}
-          </section>}
-        </div>
+          {page==='products' && <ProductLibrary
+            products={products} productTotal={productTotal} productOffset={productOffset}
+            productSearch={productSearch} setProductSearch={setProductSearch} busy={busy}
+            selectedProduct={selectedProduct} productHistory={productHistory}
+            productHistoryTotal={productHistoryTotal} productHistoryOffset={productHistoryOffset}
+            onLoadProducts={(offset,searchValue)=>void loadProducts(offset,searchValue)}
+            onLoadHistory={(product,offset)=>void loadProductHistory(product,offset)}
+            onSelectProduct={setSelectedProduct} onClearHistory={()=>setProductHistory([])}
+          />}
+          </div>
       </Content>
       {searchOpen && <Modal open modalHeading="全局搜索" primaryButtonText="完成" secondaryButtonText="清除" onRequestClose={()=>setSearchOpen(false)} onRequestSubmit={()=>setSearchOpen(false)} onSecondarySubmit={()=>setSearch('')}>
         <TextInput id="global-search" labelText="搜索平台、商品、项目与情报" placeholder="输入关键词" value={search} onChange={e=>setSearch(e.target.value)}/>
