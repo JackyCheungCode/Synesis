@@ -393,7 +393,7 @@ Carbon 官方依据：
 - 整理方式：删除旧版重复 Fluid intake 布局段；将需求页布局与断点收敛到一个连续区块；清理后续重复动作区定位覆盖；平台选择器及五步工作流样式保留在各自独立区块。
 - 响应式基线：桌面两列字段/三列价格范围；672px 以下字段单列、价格范围两列且币种整行、Checkbox/Radio 单列；平板使用 24px 内距，移动端使用 16px；底部动作保持 `position: static`，随文档自然滚动。
 - 自动化：新增 LAY-02 静态回归，检查 intake 区块、字段/价格布局声明数量、动作区不使用 sticky/fixed、国家选择与地图规则保留，并确认废弃 sticky footer 选择器已清除。
-- 证据边界：本次为源码整理与静态断言；CI 尚待执行。未取得真实浏览器截图，320/375/768/1024/1440px 的布局、长国家名称、多选 token、地图加载失败、键盘与读屏行为仍待实测。
+- 证据边界：本次为源码整理与静态断言；GitHub Actions run 41215930140 的构建、静态测试与部署成功。未取得真实浏览器截图，320/375/768/1024/1440px 的布局、长国家名称、多选 token、地图加载失败、键盘与读屏行为仍待实测。
 
 
 ### LAY-03 五步研究工作流布局统一（2026-10-31）
@@ -426,3 +426,24 @@ Carbon 官方依据：
 - 布局规则：模块使用 Carbon spacing token 控制纵向节奏；卡片/按钮/输入保持 0 圆角和无阴影；标题与正文采用 productive typography；移动端标题区允许换行。
 - 测试：增加五个主要功能页面文案密度和共享页面节奏的静态回归断言。
 - 验收状态：源码级整改已提交后仍需 CI 和部署；需在桌面/平板/手机实机检查折行、滚动、键盘操作和研究流程交互。真实浏览器验收未完成。
+
+
+## 全站页面与控件整改清单（2026-11-01）
+
+| 页面 / Shell | 页面标题与说明 | 信息层级 / 文案 | 布局 / 响应式 | Carbon 控件 / 状态 | 真实浏览器验收 |
+|---|---|---|---|---|---|
+| Workspace Shell | 已统一唯一 H1 与页面级短说明；项目详情由项目名称作为 H1 | 已删除重复宣传语与工作空间标签 | 已取消双重 max-width；统一 gutter | Header、导航、通知沿用 Carbon；待键盘实测 | 待测 |
+| Dashboard | 已保留全局 H1；移除重复说明 | KPI 优先，创建入口突出，流程说明精简 | 4/2/2 KPI 与响应式流程 | Carbon Tile/Button | 待测 |
+| Research | intake 与详情使用任务标题 | 已精简第一步说明、步骤说明、项目列表重复文案 | 五步进度条移动端横向滚动；表单/动作区既有断点 | Carbon ProgressIndicator、Tabs、Checkbox、Form | 待测；白屏项目需专项复测 |
+| Products | 使用全局 H1 | 商品数量与搜索优先；空状态精简 | 商品网格与历史表需多视口复测 | Carbon TextInput/Button/Tile | 待测 |
+| Collection settings | 使用全局 H1 | 删除重复页标题、冗长执行说明；保留参数帮助 | 单列设置卡片与移动端按钮需复测 | Carbon NumberInput/RadioButton/Button | 待测 |
+| Credential vault | 使用全局 H1 | BYOK 安全说明精简；提供商分组 | 双列密钥卡片需移动端复测 | Carbon PasswordInput/Select/Button | 待测 |
+
+### 本轮内容设计依据
+
+- Carbon 内容规范：标题采用 sentence-style capitalization，文案清晰、目的明确。https://www.carbondesignsystem.com/building-blocks/foundations/content
+- Carbon Productive typography：任务型产品界面优先使用 productive type styles，强调空间效率与信息扫描。https://www.carbondesignsystem.com/building-blocks/foundations/typography/style-strategies
+- Carbon spacing：使用 spacing tokens 建立分组、层级和留白，避免全页拥挤。https://www.carbondesignsystem.com/building-blocks/foundations/spacing/overview
+- Carbon forms：标签简洁、表单分组清晰、只保留帮助用户完成输入的说明。https://www.carbondesignsystem.com/building-blocks/core/patterns/forms
+
+**验收边界：** 本轮是源码级文案与共享样式整改。静态 CI 通过不等于真实浏览器通过；320/375/768/1024/1440px 截图、长内容溢出、键盘焦点、读屏、错误/加载/空状态与研究项目端到端交互仍需真实浏览器验收。

@@ -454,7 +454,7 @@ function ResearchWizardContent(props:Props) {
   </section>;
 
  return <section className="module-stack research-workspace research-fullwidth">
-  <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><h2>{project.name}</h2></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
+  <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><h1 className="cds--type-heading-04">{project.name}</h1></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
   <ResearchProgress activeStep={activeStep} maxUnlockedStep={maxUnlockedStep} stepReady={stepReady}/>
   {activeStep===0&&<Tile><div className="module-heading"><h3>研究需求</h3><Tag type="green">已保存</Tag></div><p>{savedProfile?.summary??project.objective}</p>{savedProfile?.dimensions.filter(item=>item.values.length).map(item=><div className="research-saved-row" key={item.key}><b>{item.label} <Tag type={statusType[item.status]}>{statusLabel[item.status]}</Tag></b><p>{item.values.join(' · ')}</p></div>)}{!savedProfile&&<p>{project.objective}</p>}</Tile>}
   {activeStep===1&&<Tile className="research-source-tile"><div className="module-heading"><div><h3>选择调研平台与数据类别</h3><p>选择需要覆盖的数据类别与平台。</p></div>{plan?<Tag type="green">平台方案已生成</Tag>:<Tag type="blue">待选择</Tag>}</div>
