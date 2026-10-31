@@ -30,7 +30,7 @@ export function Tab({children,selected,onClick}:AnyProps){return <button type="b
 export function TabPanels({children,activeIndex=0}:AnyProps){return <div>{React.Children.map(children,(child:any,index:number)=>React.isValidElement(child)?React.cloneElement(child as React.ReactElement<any>,{active:index===activeIndex}):child)}</div>}
 export function TabPanel({children,active=true}:AnyProps){return active?<section role="tabpanel">{children}</section>:null}
 export function Accordion({children}:AnyProps){return <div className="sn-accordion">{children}</div>}
-export function AccordionItem({title,children,open,onHeadingClick}:AnyProps){return <details open={open} onToggle={e=>onHeadingClick?.({isOpen:e.currentTarget.open})}><summary>{title}</summary><div>{children}</div></details>}
+export function AccordionItem({title,children,open=false,onHeadingClick}:AnyProps){return <details open={open}><summary onClick={e=>{e.preventDefault();onHeadingClick?.({isOpen:!open});}}>{title}</summary><div>{children}</div></details>}
 export function FluidForm({children,...p}:AnyProps){return <form {...p}>{children}</form>}
 export function FormGroup({children,legendText}:AnyProps){return <fieldset className="sn-form-group"><legend>{legendText}</legend>{children}</fieldset>}
 export function FluidTextInput(p:AnyProps){return <TextInput {...p}/>}
