@@ -92,7 +92,7 @@ function CountryOptionElement(value:unknown):React.ReactElement {
  return <span className="research-country-option"><img className="research-country-flag" src={item.flag} alt="" loading="lazy"/><span>{item.text}</span></span>;
 }
 const englishRegionNames=new Intl.DisplayNames(['en'],{type:'region'});
-const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson';
+const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_map_units.geojson';
 function CountryMapViewport({features}:{features:any[]}) {
  const map=useMap();
  React.useEffect(()=>{
@@ -106,7 +106,7 @@ function CountryMapViewport({features}:{features:any[]}) {
   if(!features.length){map.setView([20,0],2);return;}
   map.invalidateSize();
   const bounds=L.featureGroup(features.map(feature=>L.geoJSON(feature))).getBounds();
-  if(bounds.isValid())map.fitBounds(bounds.pad(.18),{maxZoom:8,animate:true});
+  if(bounds.isValid())map.fitBounds(bounds.pad(.18),{maxZoom:10,animate:true});
  },[map,features]);
  return null;
 }
