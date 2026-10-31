@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Header, HeaderMenuButton, HeaderName, SideNav, SideNavItems, SideNavLink, Content,
+  Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, SideNav, SideNavItems, SideNavLink, Content,
   Button, InlineNotification, Tag, TextInput, PasswordInput, Tile,
   Toggle, Select, SelectItem, TextArea, Modal, DataTable, Table, TableHead,
   TableRow, TableHeader, TableBody, TableCell, Search, Loading,
 } from '@carbon/react';
 import {
-  Dashboard, Globe, Ai, Folder, ChartLine, Add, Renew, Play,
+  Dashboard, Globe, Ai, Folder, ChartLine, Add, Renew, Play, Search as SearchIcon,
 } from '@carbon/icons-react';
 import { BrandIcon } from './components/BrandIcon';
 import { platforms, providers, apiIntegrations } from './data/catalog';
@@ -51,6 +51,7 @@ function App() {
   const [cloudflareAccountId, setCloudflareAccountId] = useState('');
   const [integrationMeta, setIntegrationMeta] = useState<Record<string,string>>({});
   const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const token = session?.access_token ?? '';
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_3zXUJ5hz_1cl9sFQqPVqCQ_Tu5KfaCu', 'Content-Type': 'application/json' }), [token]);
@@ -165,6 +166,10 @@ function App() {
       <Header aria-label="Synesis">
         <HeaderMenuButton aria-label="切换导航" isActive={navExpanded} onClick={() => setNavExpanded(v=>!v)} />
         <HeaderName prefix="" href="#" onClick={e=>e.preventDefault()}>SYNESIS</HeaderName>
+        <HeaderGlobalBar>
+          <HeaderGlobalAction aria-label="搜索" tooltipAlignment="end" onClick={()=>setSearchOpen(true)}><SearchIcon/></HeaderGlobalAction>
+          <Button kind="primary" size="sm" onClick={()=>void signOut()}>退出登录</Button>
+        </HeaderGlobalBar>
       </Header>
       <SideNav aria-label="Synesis 主导航" expanded={navExpanded} isPersistent={true} isFixedNav>
         <SideNavItems>
@@ -177,10 +182,6 @@ function App() {
         </SideNavItems>
       </SideNav>
       <Content className="synesis-content">
-        <div className="workspace-bar">
-          <Search size="lg" labelText="全局搜索" placeholder="搜索平台、商品、项目与情报" value={search} onChange={e=>setSearch(e.target.value)}/>
-          <div className="workspace-user"><span>{session?.user.email}</span><Button kind="ghost" size="sm" onClick={()=>void signOut()}>登出</Button></div>
-        </div>
         <div className="page-wrap">
           <div className="page-title-row"><div><p className="eyebrow">SYNESIS / WORKSPACE</p><h1>{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue">个人工作空间</Tag></div>
           {notice && <InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
@@ -230,6 +231,9 @@ function App() {
           {page==='reports' && <section className="module-stack"><Tile><h2>市场研究报告</h2><p>研究项目、采集证据与 AI 分析完成后，在此生成可追溯的市场报告。</p><Tag type="cool-gray">报告模块骨架</Tag></Tile></section>}
         </div>
       </Content>
+      {searchOpen && <Modal open modalHeading="全局搜索" primaryButtonText="完成" secondaryButtonText="清除" onRequestClose={()=>setSearchOpen(false)} onRequestSubmit={()=>setSearchOpen(false)} onSecondarySubmit={()=>setSearch('')}>
+        <TextInput id="global-search" labelText="搜索平台、商品、项目与情报" placeholder="输入关键词" value={search} onChange={e=>setSearch(e.target.value)}/>
+      </Modal>}
       {resultTask && <Modal open modalHeading={`采集结果 · ${resultTask.platform_slug}`} passiveModal primaryButtonText="关闭" onRequestClose={()=>setResultTask(null)}>
         <p>任务 ID：{resultTask.id} · 当前显示前 100 条结果。共接收 {resultTask.result_count ?? taskResults.length} 条。</p>
         <pre className="result-json">{JSON.stringify(taskResults,null,2)}</pre>
