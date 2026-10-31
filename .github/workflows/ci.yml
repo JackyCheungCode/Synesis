@@ -26,6 +26,8 @@ jobs:
         run: npm run test:product-identity
       - name: Test independent design system
         run: npm run test:design-system
+      - name: Test AI provider model actions
+        run: npm run test:provider-model-actions
       - name: Typecheck and build
         run: npm run build
       - name: Upload Vite build
