@@ -77,25 +77,26 @@ const fieldSpecs=[
 function flagEmoji(code:string) {
  return [...code.toUpperCase()].map(char=>String.fromCodePoint(127397+char.charCodeAt(0))).join('');
 }
+const ISO_3166_1_CODES='AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'.split(' ');
 function buildCountryOptions() {
  const names=new Intl.DisplayNames(['zh-Hant'],{type:'region'});
- const values=new Map<string,{id:string;text:string;flag:string}>();
- for(let first=65;first<=90;first++)for(let second=65;second<=90;second++){
-  const code=String.fromCharCode(first,second);
-  const name=names.of(code);
-  if(!name||name===code||name==='欧盟'||name==='欧洲联盟')continue;
+ return ISO_3166_1_CODES.map(code=>{
+  const name=names.of(code)??code;
   const text=code==='CN'?'中国大陆':code==='HK'?'中国香港':code==='MO'?'中国澳门':code==='TW'?'中国台湾':name;
-  values.set(code,{id:code,text,flag:flagEmoji(code)});
- }
- return [...values.values()].sort((a,b)=>a.text.localeCompare(b.text,'zh-Hant'));
+  return {id:code,text,flag:flagEmoji(code)};
+ }).sort((a,b)=>a.text.localeCompare(b.text,'zh-Hant'));
 }
 const countryOptions=buildCountryOptions();
+function CountryOptionElement(value:CountryOptionItem) {
+ return <span className="research-country-option"><span className="research-country-flag" aria-hidden="true">{value.flag}</span><span>{value.text}</span></span>;
+}
 const englishRegionNames=new Intl.DisplayNames(['en'],{type:'region'});
-const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+const WORLD_GEOJSON_URL='https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson';
 function CountryMapViewport({features}:{features:any[]}) {
  const map=useMap();
  React.useEffect(()=>{
   if(!features.length){map.setView([20,0],2);return;}
+  map.invalidateSize();
   const bounds=L.featureGroup(features.map(feature=>L.geoJSON(feature))).getBounds();
   if(bounds.isValid())map.fitBounds(bounds.pad(.18),{maxZoom:8,animate:true});
  },[map,features]);
@@ -116,9 +117,9 @@ function CountrySelectionMap({selectedCodes}:{selectedCodes:string[]}) {
   const selectedNames=new Set(selectedCodes.flatMap(code=>[englishRegionNames.of(code)??'',...(nameAliases[code]??[])].map(name=>name.trim().toLocaleLowerCase('en')).filter(Boolean)));
   return world.features.filter((feature:any)=>{
    const props=feature.properties??{};
-   const codes=[props['ISO3166-1-Alpha-2'],props.ISO_A2_EH,props.ISO_A2,props.iso_a2];
+   const codes=[props['ISO3166-1-Alpha-2'],props.ISO_A2_EH,props.ISO_A2,props.iso_a2,props.WB_A2,props.POSTAL];
    if(codes.some(code=>selectedCodes.includes(String(code??'').toUpperCase())))return true;
-   const names=[props.name,props.NAME,props.ADMIN,props.admin,props.NAME_EN].filter(Boolean).map((name:any)=>String(name).trim().toLocaleLowerCase('en'));
+   const names=[props.name,props.NAME,props.ADMIN,props.admin,props.NAME_EN,props.NAME_LONG,props.SOVEREIGNT,props.FORMAL_EN].filter(Boolean).map((name:any)=>String(name).trim().toLocaleLowerCase('en'));
    return names.some((name:string)=>selectedNames.has(name));
   });
  },[world,selectedCodes.join(',')]);
@@ -129,7 +130,7 @@ function CountrySelectionMap({selectedCodes}:{selectedCodes:string[]}) {
    {features.length>0&&<GeoJSON key={selectedCodes.join('-')} data={{type:'FeatureCollection',features} as any} style={()=>({color:'#0f62fe',weight:2,fillColor:'#0f62fe',fillOpacity:.28})}/>}
    <CountryMapViewport features={features}/>
   </MapContainer>
-  {loadError&&<p className="research-map-note">地图边界数据暂时无法载入，请检查网络连接后重试。</p>}{!loadError&&selectedCodes.length>0&&world&&!features.length&&<p className="research-map-note">暂未找到所选地区的边界数据（{selectedCodes.join(', ')}）。</p>}
+  {loadError&&<p className="research-map-note" role="status">地图边界数据暂时无法载入，请检查网络连接后重试。</p>}{!loadError&&!world&&<p className="research-map-note" role="status">正在载入国家边界数据…</p>}{!loadError&&selectedCodes.length>0&&world&&!features.length&&<p className="research-map-note" role="status">未匹配到所选地区的 GeoJSON 边界（{selectedCodes.join(', ')}）。</p>}{!loadError&&features.length>0&&<p className="research-map-note" role="status">已高亮 {features.length} 个地图区域。</p>}
  </div>;
 }
 const languageOptions=['英语','中文','德语','法语','西班牙语','意大利语','日语','韩语','荷兰语','阿拉伯语','多语言 / 自动识别'];
@@ -185,7 +186,7 @@ export function ResearchWizard(props:Props) {
  const [activeStep,setActiveStep]=React.useState(0);
  const [selectedSources,setSelectedSources]=React.useState<string[]>([]);
  const [openPanels,setOpenPanels]=React.useState([true,false,false,false]);
- const [attemptedNext,setAttemptedNext]=React.useState(false);
+ const [touchedRequired,setTouchedRequired]=React.useState({keywords:false,countries:false,languages:false});
  const project=projects.find(p=>p.id===projectId);
  const projectPlans=plans.filter(p=>p.project_id===projectId); const plan=projectPlans[0];
  const projectTasks=tasks.filter(t=>t.project_id===projectId); const projectReports=reports.filter(r=>r.project_id===projectId);
@@ -226,7 +227,7 @@ export function ResearchWizard(props:Props) {
   return {summary:'根据用户填写的结构化研究需求建立的研究画像。',dimensions,research_goals:splitValues(formValues.business_goals??''),assumptions:[],missing_information:[]};
  }
  function proceedToSources(){
-  setAttemptedNext(true);
+  setTouchedRequired({keywords:true,countries:true,languages:true});
   if(!requiredReady)return;
   const formBrief=fieldSpecs.map(([key,label])=>formValues[key]?.trim()?label+'：'+formValues[key].trim():'').filter(Boolean).join('\n');
   const combined=[formBrief,brief.trim()].filter(Boolean).join('\n\n补充说明：\n');
@@ -249,12 +250,12 @@ export function ResearchWizard(props:Props) {
     <Accordion align="start" className="research-intake-accordion">
      <AccordionItem title={<span className="research-accordion-title"><b>01</b> 核心研究目标 <small>研究范围、关键词与目标市场</small></span>} open={openPanels[0]} onHeadingClick={({isOpen}:any)=>setOpenPanels(v=>v.map((x,i)=>i===0?!isOpen:x))}>
       <div className="research-fluid-grid">
-       <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setAttemptedNext(true)}><FluidTextInput id="intake-keywords" labelText="核心关键词 *" value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" invalid={attemptedNext&&!formValues.keywords?.trim()} invalidText="请输入至少一个核心关键词。"  onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/><small className="cds--form__helper-text">必填。多个关键词请使用逗号分隔。</small></div>
-       <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setAttemptedNext(true)}><FluidMultiSelect id="intake-countries" titleText="目标国家 / 地区 *" label="搜索并选择国家或地区" items={countryOptions} itemToString={(item:any)=>item?.text??''} selectedItems={countryOptions.filter(item=>splitValues(formValues.countries??'').includes(item.text))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:selectedItems.map((x:any)=>x.text).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen" invalid={attemptedNext&&!formValues.countries?.trim()} invalidText="请至少选择一个目标国家或地区。" /></div>
+       <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setTouchedRequired(v=>({...v,keywords:true}))}><FluidTextInput id="intake-keywords" labelText="核心关键词 *" value={formValues.keywords??''} placeholder="例如：智能喂食器、自动猫砂盆、宠物饮水机" invalid={touchedRequired.keywords&&!formValues.keywords?.trim()} invalidText="请输入至少一个核心关键词。"  onChange={(e:any)=>{setFormValues(v=>({...v,keywords:e.target.value}));setProfile(null);}}/><small className="cds--form__helper-text">必填。多个关键词请使用逗号分隔。</small></div>
+       <div className="research-fluid-field research-fluid-span" onBlurCapture={()=>setTouchedRequired(v=>({...v,countries:true}))}><FluidMultiSelect id="intake-countries" titleText="目标国家 / 地区 *" label="搜索并选择国家或地区" items={countryOptions} itemToString={(item:any)=>item?.text??''} itemToElement={CountryOptionElement} selectedItems={countryOptions.filter(item=>splitValues(formValues.countries??'').includes(item.text))} onChange={({selectedItems}:any)=>{setFormValues(v=>({...v,countries:selectedItems.map((x:any)=>x.text).join(', ')}));setProfile(null);}} selectionFeedback="top-after-reopen" invalid={touchedRequired.countries&&!formValues.countries?.trim()} invalidText="请至少选择一个目标国家或地区。" /></div>
        <div className="research-fluid-field research-fluid-span"><div className="research-selected-countries" aria-label="已选择的国家和地区">{countryOptions.filter(item=>splitValues(formValues.countries??'').includes(item.text)).map(item=><span className="research-selected-country" key={item.id}><img src={`https://flagcdn.com/w40/${item.id.toLowerCase()}.png`} alt="" loading="lazy"/><span>{item.text}</span></span>)}</div></div>
         <div className="research-fluid-field research-fluid-span"><CountrySelectionMap selectedCodes={selectedCountryCodes}/></div>
        <div className="research-fluid-field"><FluidTextInput id="intake-regions" labelText="目标地区 / 城市" value={formValues.regions??''} placeholder="例如：加州、巴伐利亚州、伦敦" onChange={(e:any)=>{setFormValues(v=>({...v,regions:e.target.value}));setProfile(null);}}/></div>
-       <div className="research-fluid-field" onBlurCapture={()=>setAttemptedNext(true)}><FluidDropdown id="intake-languages" titleText="研究语言 *" label="选择研究语言" items={toItems(languageOptions)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(languageOptions).find(x=>x.id===formValues.languages)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,languages:selectedItem?.id??''}));setProfile(null);}} invalid={attemptedNext&&!formValues.languages?.trim()} invalidText="请选择研究语言。" /></div>
+       <div className="research-fluid-field" onBlurCapture={()=>setTouchedRequired(v=>({...v,languages:true}))}><FluidDropdown id="intake-languages" titleText="研究语言 *" label="选择研究语言" items={toItems(languageOptions)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(languageOptions).find(x=>x.id===formValues.languages)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,languages:selectedItem?.id??''}));setProfile(null);}} invalid={touchedRequired.languages&&!formValues.languages?.trim()} invalidText="请选择研究语言。" /></div>
        <div className="research-fluid-field"><FluidDropdown id="intake-time-range" titleText="研究时间范围" label="选择时间范围" items={toItems(dropdownOptions.time_range)} itemToString={(item:any)=>item?.text??''} selectedItem={toItems(dropdownOptions.time_range).find(x=>x.id===formValues.time_range)??null} onChange={({selectedItem}:any)=>{setFormValues(v=>({...v,time_range:selectedItem?.id??''}));setProfile(null);}}/></div>
       </div>
      </AccordionItem>
