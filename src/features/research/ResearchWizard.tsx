@@ -366,7 +366,7 @@ export function ResearchWizard(props:Props) {
      {selectedPlanSources.length>0?<div className="research-selected-tags">{Array.from(new Set(selectedPlanSources)).map(platform=><Tag key={platform} type="blue" filter onClose={()=>setSelectedSources(values=>values.filter(value=>value!==platform))}>{platform}</Tag>)}</div>:<p className="research-selected-empty">尚未选择平台。请在下方分类中勾选一个或多个数据来源。</p>}
     </section>
     <Tabs selectedIndex={activeSourceTab} onChange={({selectedIndex}:any)=>setActiveSourceTab(selectedIndex)} className="research-platform-tabs">
-     <TabList aria-label="调研平台分类" contained scrollable>
+     <TabList aria-label="调研平台分类" contained>
       {sourceGroups.map(group=><Tab key={group.id}>{group.title}</Tab>)}
      </TabList>
      <TabPanels>
