@@ -314,6 +314,84 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (action === 'tasks.analytics') {
+      const { taskId } = body;
+      const { data: task, error: taskError } = await admin.from('collection_tasks')
+        .select('id,platform_slug,status,result_count,result_synced_count')
+        .eq('id', taskId).eq('user_id', userId).maybeSingle();
+      if (taskError || !task) return json({ error: '采集任务不存在' }, 404);
+      const total = Number(task.result_synced_count ?? 0);
+      const analysisLimit = 25000;
+      const target = Math.min(total, analysisLimit);
+      const records: Record<string, unknown>[] = [];
+      for (let offset = 0; offset < target; offset += 1000) {
+        const { data, error } = await admin.from('collection_task_results')
+          .select('raw_data').eq('task_id', taskId).eq('user_id', userId)
+          .order('item_index', { ascending: true }).range(offset, Math.min(target - 1, offset + 999));
+        if (error) throw error;
+        records.push(...(data ?? []).map(row => row.raw_data as Record<string, unknown>));
+      }
+      const pick = (row: Record<string, unknown>, patterns: RegExp[]) => {
+        for (const [key, value] of Object.entries(row)) {
+          if (value !== null && value !== undefined && value !== '' && patterns.some(pattern => pattern.test(key))) return value;
+        }
+        return null;
+      };
+      const numeric = (value: unknown) => {
+        if (typeof value === 'number' && Number.isFinite(value)) return value;
+        if (typeof value !== 'string') return null;
+        const match = value.replace(/,/g, '').match(/-?\\d+(?:\\.\\d+)?/);
+        return match ? Number(match[0]) : null;
+      };
+      const priceValues: number[] = [];
+      const ratingValues: number[] = [];
+      const reviewValues: number[] = [];
+      const brands = new Map<string, number>();
+      const categories = new Map<string, number>();
+      const words = new Map<string, number>();
+      const funnel = { total: records.length, titled: 0, priced: 0, rated: 0, imaged: 0, linked: 0 };
+      const stop = new Set(['the','and','for','with','from','this','that','you','your','new','pack','set','inch','inches','of','to','a','an','on','by','is','are','（','）']);
+      for (const row of records) {
+        const title = pick(row, [/^(title|name|product.?name|item.?name)$/i]);
+        const price = numeric(pick(row, [/^(price|sale.?price|current.?price|amount|cost)$/i]));
+        const rating = numeric(pick(row, [/^(rating|stars|average.?rating)$/i]));
+        const reviews = numeric(pick(row, [/review.?count|ratings.?count|total.?reviews/i]));
+        const brand = pick(row, [/^brand(name)?$/i]);
+        const category = pick(row, [/category|department|product.?type/i]);
+        const image = pick(row, [/image|thumbnail|picture/i]);
+        const link = pick(row, [/^(url|link|product.?url|item.?url)$/i]);
+        if (title) funnel.titled++;
+        if (price !== null && price >= 0) { priceValues.push(price); funnel.priced++; }
+        if (rating !== null && rating >= 0) { ratingValues.push(rating); funnel.rated++; }
+        if (reviews !== null && reviews >= 0) reviewValues.push(reviews);
+        if (image) funnel.imaged++;
+        if (link) funnel.linked++;
+        if (brand) { const key=String(brand).trim(); brands.set(key,(brands.get(key)??0)+1); }
+        if (category) { const key=String(category).trim(); categories.set(key,(categories.get(key)??0)+1); }
+        const textValue = [title, category, brand].filter(Boolean).join(' ').toLowerCase();
+        for (const word of textValue.match(/[a-z0-9\\u4e00-\\u9fff]{2,}/g) ?? []) {
+          if (!stop.has(word) && !/^\\d+$/.test(word)) words.set(word,(words.get(word)??0)+1);
+        }
+      }
+      const sorted = [...priceValues].sort((a,b)=>a-b);
+      const percentile = (p:number) => sorted.length ? sorted[Math.min(sorted.length-1,Math.floor((sorted.length-1)*p))] : null;
+      const average = (values:number[]) => values.length ? values.reduce((sum,value)=>sum+value,0)/values.length : null;
+      const top = (map:Map<string,number>) => [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10).map(([label,count])=>({label,count}));
+      const bands = [
+        {label:'0–25',count:priceValues.filter(v=>v>=0&&v<25).length},
+        {label:'25–50',count:priceValues.filter(v=>v>=25&&v<50).length},
+        {label:'50–100',count:priceValues.filter(v=>v>=50&&v<100).length},
+        {label:'100–250',count:priceValues.filter(v=>v>=100&&v<250).length},
+        {label:'250+',count:priceValues.filter(v=>v>=250).length},
+      ];
+      return json({
+        task, coverage:{analyzed:records.length,available:total,complete:total<=analysisLimit},
+        metrics:{average_price:average(priceValues),median_price:percentile(0.5),p25_price:percentile(0.25),p75_price:percentile(0.75),average_rating:average(ratingValues),average_reviews:average(reviewValues),price_count:priceValues.length,rating_count:ratingValues.length},
+        distributions:{price_bands:bands,brands:top(brands),categories:top(categories),words:top(words)},
+        funnel, quality:{title_rate:records.length?funnel.titled/records.length:0,price_rate:records.length?funnel.priced/records.length:0,rating_rate:records.length?funnel.rated/records.length:0,image_rate:records.length?funnel.imaged/records.length:0,link_rate:records.length?funnel.linked/records.length:0}
+      });
+    }
+
     if (action === 'tasks.results') {
       const { taskId, limit = 100, offset = 0 } = body;
       const safeLimit = Math.min(250, Math.max(1, Number(limit) || 100));
