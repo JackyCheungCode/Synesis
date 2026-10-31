@@ -107,12 +107,12 @@ h3 { color:#161616; font-size:15px; margin:0 0 6px; font-weight:600; }
 .auth-security { border-top: 1px solid #d1d1d1; padding-top: 18px; color: #6f6f6f; font-size: 11px; line-height: 1.7; margin-top: 22px; }
 .auth-side-copy {
   display: flex; flex-direction: column; justify-content: flex-end; padding: clamp(48px, 7vw, 112px);
-  color: #fff; background: linear-gradient(145deg, #0b1f35 0%, #123b67 58%, #0f62fe 140%);
+  color: #161616; background: #e8f1ff; border-left: 1px solid #d0e2ff;
   min-height: 100vh;
 }
-.auth-side-copy > span { color: #a6c8ff; font-size: 11px; letter-spacing: 2px; font-weight: 700; margin-bottom: 22px; }
-.auth-side-copy strong { font-size: clamp(32px, 4.5vw, 60px); line-height: 1.12; font-weight: 500; letter-spacing: -1.4px; }
-.auth-side-copy p { color: #d0e2ff; font-size: 14px; margin-top: 24px; }
+.auth-side-copy > span { color: #0043ce; font-size: 11px; letter-spacing: 2px; font-weight: 700; margin-bottom: 22px; }
+.auth-side-copy strong { color: #161616; font-size: clamp(32px, 4.5vw, 60px); line-height: 1.12; font-weight: 500; letter-spacing: -1.4px; }
+.auth-side-copy p { color: #393939; font-size: 14px; margin-top: 24px; }
 
 .cds--inline-notification { max-width:none; }
 @media (max-width: 1055px) {
@@ -140,3 +140,22 @@ h3 { color:#161616; font-size:15px; margin:0 0 6px; font-weight:600; }
   .list-tile { align-items:flex-start; flex-direction:column; }
   .flow-steps { align-items:flex-start; }
 }
+
+/* Carbon-aligned light surfaces and accessible navigation labels/icons. */
+.synesis-app .cds--side-nav__link-text,
+.synesis-app .cds--side-nav__submenu-title { color:#393939; font-weight:500; }
+.synesis-app .cds--side-nav__icon { color:#525252; }
+.synesis-app .cds--side-nav__link[aria-current=page] .cds--side-nav__link-text { color:#0043ce; font-weight:600; }
+.synesis-app .cds--header__name:focus,
+.synesis-app .cds--side-nav__link:focus { outline:2px solid #0f62fe; outline-offset:-2px; }
+.synesis-app .cds--tile { color:#161616; }
+.synesis-app .cds--label,
+.synesis-app .cds--form-item label { color:#393939; }
+.synesis-app .cds--text-input,
+.synesis-app .cds--password-input input,
+.synesis-app .cds--text-area,
+.synesis-app .cds--select-input { color:#161616; background:#fff; }
+.synesis-app .cds--data-table th { color:#393939; background:#e0e0e0; }
+.synesis-app .cds--data-table td { color:#161616; background:#fff; }
+.synesis-app .cds--tag { color:#393939; }
+@media (min-width: 1600px) { .page-wrap { max-width:1600px; } }
