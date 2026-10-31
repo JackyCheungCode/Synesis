@@ -10,6 +10,32 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const b64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 const fromB64 = (value: string) => Uint8Array.from(atob(value), c => c.charCodeAt(0));
 
+type CompactInputSchema = { type?: string; properties?: Record<string,{type?:string|string[]}>; required?: string[] };
+function validateActorInput(input: unknown, schema: CompactInputSchema): string[] {
+  const errors:string[]=[];
+  if(!input || typeof input!=='object' || Array.isArray(input)) return ['采集参数必须是 JSON 对象'];
+  const value=input as Record<string,unknown>;
+  const properties=schema.properties??{};
+  for(const key of schema.required??[]) if(value[key]===undefined || value[key]===null || value[key]==='') errors.push(`缺少必填字段：${key}`);
+  for(const [key,entry] of Object.entries(value)) {
+    const definition=properties[key];
+    if(!definition?.type) continue;
+    const types=Array.isArray(definition.type)?definition.type:[definition.type];
+    const valid=types.some(type=>{
+      if(type==='null') return entry===null;
+      if(type==='string') return typeof entry==='string';
+      if(type==='number') return typeof entry==='number' && Number.isFinite(entry);
+      if(type==='integer') return typeof entry==='number' && Number.isInteger(entry);
+      if(type==='boolean') return typeof entry==='boolean';
+      if(type==='object') return typeof entry==='object' && entry!==null && !Array.isArray(entry);
+      if(type==='array') return Array.isArray(entry);
+      return true;
+    });
+    if(!valid) errors.push(`字段 ${key} 类型不符合 Actor 输入规范（${types.join('|')}）`);
+  }
+  return errors;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -176,8 +202,39 @@ Deno.serve(async (req: Request) => {
       const { data: project, error: projectError } = await admin.from('research_projects').select('*').eq('id',projectId).eq('user_id',userId).single();
       if (projectError || !project) throw new Error('研究项目不存在');
       const { clear } = await getCredential(provider,'provider');
-      const system = 'You are Synesis global trade research planner. Return valid JSON only with keys: executive_summary, research_questions (array), platform_tasks (array of objects {platform_slug, actor_id, input, purpose}), methodology, deliverables, estimated_cost_usd. Never invent exact Apify actor IDs; use null when unknown. Tasks must be proposed only, not executed.';
-      const prompt = JSON.stringify({project});
+
+      // Discover real Store Actors with compact input schemas; never ask the model to invent IDs.
+      const objective=String(project.objective??'').trim();
+      const knownPlatforms=[
+        ['amazon',/amazon|亚马逊/i],['ebay',/ebay/i],['walmart',/walmart/i],
+        ['alibaba',/alibaba|阿里巴巴/i],['aliexpress',/aliexpress|速卖通/i],
+        ['tiktok',/tiktok|抖音/i],['reddit',/reddit/i],['youtube',/youtube|油管/i],['google',/google|谷歌/i],
+      ] as const;
+      const mentioned=knownPlatforms.filter(([,pattern])=>pattern.test(objective)).map(([slug])=>slug);
+      const searchTerms=mentioned.length
+        ? mentioned.slice(0,3).map(slug=>slug+' product scraper')
+        : ['ecommerce product scraper','product reviews scraper','market research data scraper'];
+      const actorMap=new Map<string,Record<string,unknown>>();
+      for(const term of searchTerms) {
+        const query=new URLSearchParams({search:term,limit:'10',includeInputSchema:'true'});
+        const storeResponse=await fetch(`https://api.apify.com/v2/store?${query.toString()}`);
+        if(!storeResponse.ok) continue;
+        const storePayload=await storeResponse.json().catch(()=>({}));
+        for(const actor of (storePayload?.data?.items??[]) as Record<string,unknown>[]) {
+          const schema=actor.inputSchema as CompactInputSchema|undefined;
+          if(typeof actor.id!=='string' || !schema || schema.type!=='object' || !schema.properties || actor.notice==='UNDER_MAINTENANCE') continue;
+          actorMap.set(actor.id,{
+            id:actor.id,title:actor.title??actor.name,username:actor.username,name:actor.name,
+            description:actor.description,categories:actor.categories,
+            rating:(actor.stats as Record<string,unknown>|undefined)?.actorReviewRating,
+            pricing_model:(actor.currentPricingInfo as Record<string,unknown>|undefined)?.pricingModel,
+            input_schema:schema,
+          });
+        }
+      }
+      const actorCandidates=[...actorMap.values()].slice(0,20);
+      const system = 'You are Synesis global trade research planner. Return valid JSON only with keys: executive_summary, research_questions (array), platform_tasks (array of objects {platform_slug, actor_id, input, purpose, estimated_items, estimated_cost_usd}), methodology, deliverables, estimated_cost_usd. Select Actors ONLY from the supplied actor_candidates and copy the exact candidate id. Never invent an Actor ID. Construct input using only fields and types in that candidate input_schema, and include all required fields. If no candidate is genuinely suitable for a platform or the schema cannot be satisfied, omit that platform task and explain the gap in research_questions or methodology. Tasks are proposed only, not executed.';
+      const prompt = JSON.stringify({project,actor_candidates});
       let response: Response;
       if (provider==='openai'||provider==='deepseek'||provider==='mistral'||provider==='x') {
         const base=provider==='openai'?'https://api.openai.com/v1':provider==='deepseek'?'https://api.deepseek.com':provider==='mistral'?'https://api.mistral.ai/v1':'https://api.x.ai/v1';
@@ -194,11 +251,25 @@ Deno.serve(async (req: Request) => {
       const result=await response.json();
       if(!response.ok) throw new Error(result?.error?.message??'AI 计划生成失败');
       const raw=provider==='googlegemini'?result.candidates?.[0]?.content?.parts?.[0]?.text:provider==='anthropic'?result.content?.[0]?.text:provider==='cloudflare'?result.result?.response:result.choices?.[0]?.message?.content;
-      const plan=JSON.parse(String(raw).replace(/^\`\`\`json\s*/,'').replace(/\`\`\`$/,''));
+      const plan=JSON.parse(String(raw).replace(/^```json\s*/,'').replace(/```$/,''));
+      const candidateById=new Map(actorCandidates.map(actor=>[String(actor.id),actor]));
+      const platformTasks=Array.isArray(plan.platform_tasks)?plan.platform_tasks:[];
+      plan.platform_tasks=platformTasks.map((task:Record<string,unknown>)=>{
+        const candidate=typeof task.actor_id==='string'?candidateById.get(task.actor_id):undefined;
+        if(!candidate) return {...task,actor_id:null,schema_valid:false,validation_errors:['未从 Apify Store 的候选 Actor 中选择有效 Actor']};
+        const schema=candidate.input_schema as CompactInputSchema;
+        const validationErrors=validateActorInput(task.input,schema);
+        return {
+          ...task,actor_id:candidate.id,actor_title:candidate.title,actor_rating:candidate.rating,
+          pricing_model:candidate.pricing_model,input_schema:schema,
+          schema_valid:validationErrors.length===0,validation_errors:validationErrors,
+        };
+      });
+      plan.actor_candidates=actorCandidates.map(({input_schema,...actor})=>actor);
       const {error}=await admin.from('ai_research_plans').insert({user_id:userId,project_id:projectId,plan,status:'pending_approval',estimated_cost:plan.estimated_cost_usd??null});
       if(error) throw error;
       await admin.from('research_projects').update({status:'awaiting_approval'}).eq('id',projectId).eq('user_id',userId);
-      return json({ok:true,plan});
+      return json({ok:true,plan,actor_candidates:actorCandidates.length});
     }
 
     if (action === 'plans.approve') {
@@ -208,8 +279,12 @@ Deno.serve(async (req: Request) => {
       const approvedContent = plan.plan as Record<string,unknown>;
       if (!Array.isArray(approvedContent.platform_tasks) || approvedContent.platform_tasks.length===0) return json({error:'研究计划没有可执行的采集任务'},400);
       const items=approvedContent.platform_tasks as Array<{platform_slug?:string;actor_id?:string|null;input?:Record<string,unknown>}>;
-      if(items.some(item=>!item.platform_slug || typeof item.actor_id!=='string' || !item.actor_id.trim() || !item.input || typeof item.input!=='object' || Array.isArray(item.input))) {
-        return json({error:'研究计划缺少有效 Actor ID 或结构化采集参数。系统不会猜测 Actor，也不会允许未配置的任务执行。'},409);
+      if(items.some(item=>!item.platform_slug || typeof item.actor_id!=='string' || !item.actor_id.trim() || !item.input || typeof item.input!=='object' || Array.isArray(item.input) || item.schema_valid!==true || !item.input_schema)) {
+        return json({error:'研究计划缺少来自 Apify Store 的有效 Actor 或未通过输入 Schema 校验。系统不会执行未经验证的采集配置。'},409);
+      }
+      for(const item of items) {
+        const validationErrors=validateActorInput(item.input,item.input_schema as CompactInputSchema);
+        if(validationErrors.length) return json({error:`Actor 输入参数校验失败：${validationErrors.join('；')}`},422);
       }
       const {clear:apifyToken}=await getCredential('apify','integration');
       for(const item of items) {
