@@ -154,12 +154,12 @@ export function ResearchWizard(props:Props) {
    <div className="research-dimension-group"><h4>动态运行事件</h4>{taskEvents.length?taskEvents.map((event,index)=><div className="research-event-row" key={index}><time>{new Date(event.time).toLocaleString()}</time><b>{event.label}</b><span>{event.detail}</span></div>):<p className="research-profile-hint">尚无采集事件。完成第二步平台选择并批准后，运行状态将在这里显示。</p>}</div>
    {allSynced&&<Button kind="primary" onClick={()=>setActiveStep(3)}>数据已同步，进入统计分析 <ArrowRight size={16}/></Button>}
   </Tile>}
-  {activeStep===3&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 4 / BUSINESS INTELLIGENCE</p><h3>数据统计与多维可视化</h3><p>选择已完成同步的采集任务，生成价格、品牌、类目、评价字段和关键词统计。</p></div><Tag type={allSynced?'success':'warm-gray'}>{allSynced?'数据已就绪':'等待数据完整同步'}</Tag></div>
+  {activeStep===3&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 4 / BUSINESS INTELLIGENCE</p><h3>数据统计与多维可视化</h3><p>选择已完成同步的采集任务，生成价格、品牌、类目、评价字段和关键词统计。</p></div><Tag type={allSynced?'green':'warm-gray'}>{allSynced?'数据已就绪':'等待数据完整同步'}</Tag></div>
    {projectTasks.map(task=><div className="research-task-row" key={task.id}><div><b>{task.platform_slug}</b><p>{Number(task.result_synced_count??0).toLocaleString()} / {Number(task.result_count??0).toLocaleString()} 条已同步</p></div><Button size="sm" kind="tertiary" renderIcon={ChartLine} disabled={busy||task.status!=='succeeded'||Number(task.result_synced_count??0)<Number(task.result_count??0)} onClick={()=>onAnalyze(task)}>生成该数据源统计</Button></div>)}
    <p className="research-profile-hint">统计图表只展示数据源真实提供且可识别的字段。国家分布、评论情感与词云等指标会受 Actor 返回字段和语言覆盖影响；缺少字段时不会生成虚构数据。</p>
    {!projectTasks.length&&<p>尚无采集结果，请先完成第二、三步。</p>}
   </Tile>}
-  {activeStep===4&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 5 / AI STRATEGY & REPORT</p><h3>AI 深度分析与商业策略报告</h3><p>基于已同步数据和统计结果，形成可追溯的市场研究报告。</p></div><Tag type={projectReports.length?'success':'blue'}>{projectReports.length?'报告已保存':'等待分析'}</Tag></div>
+  {activeStep===4&&<Tile><div className="module-heading"><div><p className="eyebrow">STEP 5 / AI STRATEGY & REPORT</p><h3>AI 深度分析与商业策略报告</h3><p>基于已同步数据和统计结果，形成可追溯的市场研究报告。</p></div><Tag type={projectReports.length?'green':'blue'}>{projectReports.length?'报告已保存':'等待分析'}</Tag></div>
    <div className="research-report-topics"><span>产品开发策略</span><span>定价策略</span><span>目标市场策略</span><span>消费者人群策略</span><span>竞争策略</span><span>营销与渠道策略</span><span>风险与行动计划</span></div>
    {projectReports.map(report=><div className="report-row" key={report.id}><div><strong>{report.title}</strong><p>{new Date(report.created_at).toLocaleString()} · {report.status}</p></div><Tag type="green">已保存</Tag></div>)}
    {!projectReports.length&&<p>完成所有数据同步后，系统会自动执行 AI 分析并保存报告。报告内容必须区分数据事实、AI 推断和商业建议。</p>}
