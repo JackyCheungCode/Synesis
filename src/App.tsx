@@ -554,7 +554,7 @@ function App() {
         </HeaderGlobalBar>
       </Header>
       <WorkspaceNavigation page={page} open={navExpanded} onNavigate={(target)=>navigate(target)} onClose={()=>setNavExpanded(false)}/>
-      <Content className="synesis-content">
+      <Content id="main-content" tabIndex={-1} className="synesis-content">
         <div className="page-wrap">
           <div className="page-title-row"><div>{page==='projects'?<Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb>:<p className="eyebrow">SYNESIS / WORKSPACE</p>}<h1 className="cds--type-heading-04">{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue" className="synesis-workspace-tag">个人工作空间</Tag></div>
           {notice && <InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
