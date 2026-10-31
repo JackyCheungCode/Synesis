@@ -90,3 +90,12 @@ test('Apify plan generation extracts and repairs malformed Cloudflare JSON', () 
   assert.match(planBranch, /max_tokens:8000/);
   assert.match(planBranch, /缺少 research_questions、platform_tasks 或 deliverables 数组/);
 });
+
+
+test('Amazon Apify inputs normalize cutoff dates and product URLs', () => {
+  assert.match(backend, /cutoffPattern\.test\('1 year'\)/);
+  assert.match(backend, /已移除不符合 Actor URL 规范的 productUrls 条目/);
+  assert.match(backend, /Amazon 搜索入口补齐 URL/);
+  assert.match(backend, /definition\.items\.pattern/);
+  assert.match(backend, /reviewsCutoffDate/);
+});
