@@ -21,7 +21,8 @@ function App() {
   const [page, setPage] = useState<Page>('dashboard');
   const [expanded, setExpanded] = useState({ intelligence: true, ai: true });
   const [search, setSearch] = useState('');
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>(initialKeys);\n  const [integrationKeys, setIntegrationKeys] = useState<Record<string, string>>({});
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>(initialKeys);
+  const [integrationKeys, setIntegrationKeys] = useState<Record<string, string>>({});
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState('');
   const [mobileNav, setMobileNav] = useState(false);
