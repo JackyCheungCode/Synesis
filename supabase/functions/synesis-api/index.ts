@@ -55,7 +55,7 @@ function validateActorInput(input: unknown, schema: CompactInputSchema): string[
       if(typeof definition.minimum==='number' && entry<definition.minimum) errors.push(`字段 ${key} 不能小于 ${definition.minimum}`);
       if(typeof definition.maximum==='number' && entry>definition.maximum) errors.push(`字段 ${key} 不能大于 ${definition.maximum}`);
     }
-    if(Array.isArray(definition.enum) && !definition.enum.some(option=>Object.is(option,entry))) errors.push(`字段 ${key} 不在 Actor 允许的枚举值内`);
+    if(Array.isArray(definition.enum) && !(Array.isArray(entry)?entry.every(value=>definition.enum!.some(option=>Object.is(option,value))):definition.enum.some(option=>Object.is(option,entry)))) errors.push(`字段 ${key} 不在 Actor 允许的枚举值内`);
   }
   return errors;
 }
