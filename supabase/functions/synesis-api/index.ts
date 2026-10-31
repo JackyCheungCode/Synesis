@@ -53,7 +53,7 @@ function parseJsonObject(raw: string): Record<string, unknown> {
   throw new Error('AI 返回内容中没有可解析的 JSON 对象');
 }
 
-type CompactInputSchema = { type?: string; properties?: Record<string,{type?:string|string[];minItems?:number;maxItems?:number;minLength?:number;maxLength?:number;minimum?:number;maximum?:number;enum?:unknown[]}>; required?: string[] };
+type CompactInputSchema = { type?: string; properties?: Record<string,{type?:string|string[];minItems?:number;maxItems?:number;minLength?:number;maxLength?:number;minimum?:number;maximum?:number;pattern?:string;format?:string;items?:{type?:string;pattern?:string;format?:string};enum?:unknown[]}>; required?: string[] };
 function validateActorInput(input: unknown, schema: CompactInputSchema): string[] {
   const errors:string[]=[];
   if(!input || typeof input!=='object' || Array.isArray(input)) return ['采集参数必须是 JSON 对象'];
@@ -76,11 +76,13 @@ function validateActorInput(input: unknown, schema: CompactInputSchema): string[
     });
     if(!valid) errors.push(`字段 ${key} 类型不符合 Actor 输入规范（${types.join('|')}）`);
     if(Array.isArray(entry)) {
+      if(definition.items?.type==='string') for(const [index,item] of entry.entries()) if(typeof item!=='string' || (typeof definition.items.pattern==='string' && (()=>{try{return !new RegExp(definition.items!.pattern!).test(String(item));}catch{return false;}})())) errors.push(`字段 ${key}[${index}] 不符合 Actor 要求的格式`);
       if(typeof definition.minItems==='number' && entry.length<definition.minItems) errors.push(`字段 ${key} 至少需要 ${definition.minItems} 个元素`);
       if(typeof definition.maxItems==='number' && entry.length>definition.maxItems) errors.push(`字段 ${key} 最多允许 ${definition.maxItems} 个元素`);
       if((schema.required??[]).includes(key) && entry.length===0) errors.push(`必填数组字段 ${key} 至少需要 1 个元素`);
     }
     if(typeof entry==='string') {
+      if(typeof definition.pattern==='string') { try { if(!new RegExp(definition.pattern).test(entry)) errors.push(`字段 ${key} 不符合 Actor 要求的格式`); } catch { /* ignore invalid remote schema regex */ } }
       if(typeof definition.minLength==='number' && entry.length<definition.minLength) errors.push(`字段 ${key} 长度不能少于 ${definition.minLength}`);
       if(typeof definition.maxLength==='number' && entry.length>definition.maxLength) errors.push(`字段 ${key} 长度不能超过 ${definition.maxLength}`);
     }
@@ -549,6 +551,34 @@ Deno.serve(async (req: Request) => {
         const properties=schema.properties??{};
         const input=task.input&&typeof task.input==='object'&&!Array.isArray(task.input)?{...(task.input as Record<string,unknown>)}:{};
         const settingsWarnings:string[]=[];
+        if(String(task.platform_slug??'').toLowerCase()==='amazon') {
+          const cutoffDefinition=properties.reviewsCutoffDate;
+          if(cutoffDefinition && typeof input.reviewsCutoffDate==='string') {
+            const cutoffPattern=typeof cutoffDefinition.pattern==='string'?new RegExp(cutoffDefinition.pattern):/^(\\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])(T[0-2]\\d:[0-5]\\d(:[0-5]\\d)?(\\.\\d+)?Z?)?$|^(\\d+)\\s*(minute|hour|day|week|month|year)s?$/;
+            if(!cutoffPattern.test(input.reviewsCutoffDate)) {
+              input.reviewsCutoffDate=cutoffPattern.test('1 year')?'1 year':new Date().toISOString().slice(0,10);
+              settingsWarnings.push('reviewsCutoffDate 格式已自动规范为 Apify 支持的相对时间/日期格式。');
+            }
+          }
+          const productUrlsDefinition=properties.productUrls;
+          if(productUrlsDefinition && Array.isArray(input.productUrls)) {
+            const urlPattern=typeof productUrlsDefinition.items?.pattern==='string'?new RegExp(productUrlsDefinition.items.pattern):null;
+            const validProductUrls=(input.productUrls as unknown[]).filter((value):value is string=>{
+              if(typeof value!=='string') return false;
+              try { const parsed=new URL(value); return (parsed.protocol==='https:'||parsed.protocol==='http:')&&(!urlPattern||urlPattern.test(value)); } catch { return false; }
+            });
+            if(validProductUrls.length!==(input.productUrls as unknown[]).length) settingsWarnings.push('已移除不符合 Actor URL 规范的 productUrls 条目。');
+            input.productUrls=validProductUrls;
+            if(validProductUrls.length===0 && researchKeywords.length) {
+              const generated=researchKeywords.map(keyword=>`https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`);
+              const compatible=generated.filter(value=>{try{return !urlPattern||urlPattern.test(value);}catch{return false;}});
+              if(compatible.length) {
+                input.productUrls=compatible;
+                settingsWarnings.push('Actor 的 productUrls 为空或无效；已使用 Amazon 搜索入口补齐 URL。');
+              }
+            }
+          }
+        }
         if(String(task.platform_slug??'').toLowerCase()==='amazon'&&researchKeywords.length) {
           const amazonUrlField=['categoryOrProductUrls','startUrls','urls'].find(name=>{
             const fieldType=properties[name]?.type;
