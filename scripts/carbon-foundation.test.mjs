@@ -99,3 +99,16 @@ test('Carbon SideNav keeps Carbon stacking defaults and has no dead overlay laye
   assert.doesNotMatch(styles, /\.synesis-app \.cds--side-nav\s*\{[^}]*z-index/);
   assert.doesNotMatch(foundation, /\.synesis-carbon-side-nav\s*\{[^}]*z-index/);
 });
+
+test('Dashboard uses semantic metric descriptions and a responsive ordered workflow', () => {
+  const dashboard = read('../src/features/dashboard/WorkspaceDashboard.tsx');
+  assert.match(dashboard, /aria-label="工作空间关键指标"/);
+  assert.match(dashboard, /<dl>/);
+  assert.match(dashboard, /<dt className="dashboard-metric-label">/);
+  assert.match(dashboard, /<ol className="dashboard-workflow-steps">/);
+  assert.match(dashboard, /开始新研究/);
+  assert.doesNotMatch(dashboard, /<Tag/);
+  assert.match(foundation, /\.dashboard-metrics\s*\{[\s\S]*?grid-template-columns: repeat\(4,/);
+  assert.match(foundation, /\.dashboard-workflow-steps\s*\{[\s\S]*?grid-template-columns: repeat\(5,/);
+  assert.match(foundation, /dashboard-workflow-heading \.cds--btn/);
+});
