@@ -221,8 +221,8 @@ function downloadResearchReport(report:ResearchReport,format:'json'|'markdown'){
   mime='application/json;charset=utf-8';extension='json';
  }else{
   const labels:Record<string,string>={executive_summary:'执行摘要',research_scope:'研究范围与方法',market_overview:'市场概览',cross_platform_comparison:'跨平台对比',product_development_strategy:'产品开发策略',pricing_strategy:'定价策略',market_entry_strategy:'目标市场进入策略',customer_persona_strategy:'消费者画像与需求',competitive_strategy:'竞争策略',marketing_channel_strategy:'营销与销售渠道',opportunities:'商业机会',risks:'风险与约束',action_roadmap:'30 / 60 / 90 天行动路线图',data_quality_assessment:'数据质量评估',limitations:'数据局限',assumptions_to_validate:'待验证假设'};
-  const render=(value:unknown):string=>Array.isArray(value)?value.map(item=>'- '+(typeof item==='object'?JSON.stringify(item):String(item))).join('\\n'):value&&typeof value==='object'?'\\n'+JSON.stringify(value,null,2):String(value??'暂无数据');
-  body='# '+report.title+'\\n\\n生成时间：'+new Date(report.created_at).toLocaleString()+'\\n\\n'+Object.entries(labels).filter(([key])=>report.content?.[key]!==undefined).map(([key,label])=>'## '+label+'\\n\\n'+render(report.content[key])).join('\\n\\n')+'\\n\\n## 数据来源\\n\\n'+(report.evidence??[]).map(item=>'- '+(item.platform_slug??'未知平台')+' · 任务 '+(item.task_id??'')).join('\\n');
+  const render=(value:unknown):string=>Array.isArray(value)?value.map(item=>'- '+(typeof item==='object'?JSON.stringify(item):String(item))).join('\n'):value&&typeof value==='object'?'\n'+JSON.stringify(value,null,2):String(value??'暂无数据');
+  body='# '+report.title+'\n\n生成时间：'+new Date(report.created_at).toLocaleString()+'\n\n'+Object.entries(labels).filter(([key])=>report.content?.[key]!==undefined).map(([key,label])=>'## '+label+'\n\n'+render(report.content[key])).join('\n\n')+'\n\n## 数据来源\n\n'+(report.evidence??[]).map(item=>'- '+(item.platform_slug??'未知平台')+' · 任务 '+(item.task_id??'')).join('\n');
   mime='text/markdown;charset=utf-8';extension='md';
  }
  const blob=new Blob(['\\uFEFF',body],{type:mime});
