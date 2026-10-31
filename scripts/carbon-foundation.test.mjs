@@ -20,7 +20,7 @@ test('application styling uses Carbon semantic color tokens', () => {
   assert.doesNotMatch(research, /#[0-9a-fA-F]{3,8}\b/);
   assert.match(foundation, /var\(--cds-background\)/);
   assert.match(foundation, /var\(--cds-text-primary\)/);
-  assert.match(foundation, /var\(--cds-interactive\)/);
+  assert.match(foundation, /var\(--cds-border-interactive\)/);
 });
 
 test('application spacing declarations align to the 4px micro-grid', () => {
