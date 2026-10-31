@@ -253,7 +253,7 @@ function stageIndex(plan:ResearchPlan|undefined,tasks:ResearchTask[],reports:Res
 const splitValues=(value:string)=>value.split(/\n|,/).map(v=>v.trim()).filter(Boolean);
 const formatPriceRange=(min:string|undefined,max:string|undefined,currency:string|undefined)=>{const values=[min,max].filter((value):value is string=>Boolean(value?.trim()));return values.length?values.join(' - ')+' '+(currency||'USD'):'';};
 export function ResearchWizard(props:Props) {
- const {projects,plans,tasks,reports,projectId,busy,projectResultRows=[],projectResultTotal=0,projectResultOffset=0,onLoadProjectResults,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs,onSaveAnalytics,onGenerateReport,onSaveDraft}=props;
+ const {projects,plans,tasks,reports,projectId,busy,projectResultRows=[],projectResultTotal=0,projectResultOffset=0,onLoadProjectResults,onParse,onCreate,onOpen,onBack,onGeneratePlan,onApprove,onCancel,onRetry,onSync,onView,onAnalyze,analytics,analyticsTaskId,taskLogs={},onLoadLogs,onSaveAnalytics,onSaveProjectAnalytics,onGenerateReport,onSaveDraft}=props;
  const [brief,setBrief]=React.useState('');
  const [formValues,setFormValues]=React.useState<Record<string,string>>({});
  const [profile,setProfile]=React.useState<ResearchProfile|null>(null);
