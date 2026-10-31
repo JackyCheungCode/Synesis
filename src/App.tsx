@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, SideNav, SideNavItems, SideNavMenu, SideNavMenuItem, Content,
+  Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content,
   Button, InlineNotification, Tag, TextInput, PasswordInput, Tile,
   Toggle, Select, SelectItem, TextArea, Modal, Loading, Accordion, AccordionItem, Link,
 } from '@carbon/react';
@@ -32,8 +32,8 @@ const providerModels: Record<string, string> = {
 function App() {
   const { session, signOut } = useAuth();
   const [page, setPage] = useState<Page>('dashboard');
-  const navigate = (next: Page) => { setPage(next); if (window.matchMedia('(max-width: 1055px)').matches) setNavExpanded(false); };
-  const [navExpanded, setNavExpanded] = useState(() => window.matchMedia('(min-width: 66rem)').matches);
+  const navigate = (next: Page) => { setPage(next); setNavExpanded(false); };
+  const [navExpanded, setNavExpanded] = useState(false);
   const [notice, setNotice] = useState<{kind:'info'|'success'|'error'|'warning'; text:string}|null>(null);
   const [busy, setBusy] = useState(false);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -302,20 +302,31 @@ function App() {
           <HeaderGlobalAction aria-label="账户（点击退出登录）" tooltipAlignment="end" onClick={()=>void signOut()}><UserAvatar/></HeaderGlobalAction>
         </HeaderGlobalBar>
       </Header>
-      <SideNav aria-label="Synesis 主导航" expanded={navExpanded} isPersistent={true} isFixedNav>
-        <SideNavItems>
-          <SideNavMenu title="跨境市场分析" renderIcon={Globe} defaultExpanded>
-            <SideNavMenuItem isActive={page==='dashboard'} onClick={()=>navigate('dashboard')}>情报总览</SideNavMenuItem>
-            <SideNavMenuItem onClick={()=>navigate('dashboard')}>全球外贸情报</SideNavMenuItem>
-            <SideNavMenuItem isActive={page==='vault'} onClick={()=>navigate('vault')}>AI 模型与 Key Vault</SideNavMenuItem>
-            <SideNavMenuItem isActive={page==='projects'} onClick={()=>navigate('projects')}>研究项目中心</SideNavMenuItem>
-            <SideNavMenuItem isActive={page==='tasks'} onClick={()=>navigate('tasks')}>采集任务中心</SideNavMenuItem>
-            <SideNavMenuItem isActive={page==='reports'} onClick={()=>navigate('reports')}>市场监控与报告</SideNavMenuItem>
-            <SideNavMenuItem isActive={page==='products'} onClick={()=>{navigate('products');void loadProducts(0);}}>标准化商品库</SideNavMenuItem>
-          </SideNavMenu>
-        </SideNavItems>
-      </SideNav>
-      {navExpanded && <Button className="nav-dismiss-overlay" kind="ghost" hasIconOnly renderIcon={Close} iconDescription="关闭导航菜单" onClick={()=>setNavExpanded(false)} /> }
+      <button className={`synesis-nav-backdrop${navExpanded ? ' is-visible' : ''}`} type="button" aria-label="关闭导航菜单" tabIndex={navExpanded ? 0 : -1} onClick={()=>setNavExpanded(false)} />
+      <aside className={`synesis-nav-panel${navExpanded ? ' is-open' : ''}`} aria-label="Synesis 主导航" aria-hidden={!navExpanded}>
+        <div className="synesis-nav-heading"><Globe size={20}/><span>跨境市场分析</span></div>
+        <nav className="synesis-nav-tree" aria-label="跨境市场分析菜单">
+          <details className="synesis-nav-group" open>
+            <summary><Dashboard size={16}/><span>工作台</span></summary>
+            <button type="button" className={`synesis-nav-leaf${page==='dashboard' ? ' is-active' : ''}`} onClick={()=>navigate('dashboard')}>情报总览</button>
+          </details>
+          <details className="synesis-nav-group" open>
+            <summary><Globe size={16}/><span>情报与数据</span></summary>
+            <button type="button" className="synesis-nav-leaf" onClick={()=>navigate('dashboard')}>全球外贸情报</button>
+            <button type="button" className={`synesis-nav-leaf${page==='tasks' ? ' is-active' : ''}`} onClick={()=>navigate('tasks')}>采集任务中心</button>
+            <button type="button" className={`synesis-nav-leaf${page==='products' ? ' is-active' : ''}`} onClick={()=>{navigate('products');void loadProducts(0);}}>标准化商品库</button>
+          </details>
+          <details className="synesis-nav-group" open>
+            <summary><ChartLine size={16}/><span>研究与决策</span></summary>
+            <button type="button" className={`synesis-nav-leaf${page==='projects' ? ' is-active' : ''}`} onClick={()=>navigate('projects')}>研究项目中心</button>
+            <button type="button" className={`synesis-nav-leaf${page==='reports' ? ' is-active' : ''}`} onClick={()=>navigate('reports')}>市场监控与报告</button>
+          </details>
+          <details className="synesis-nav-group" open>
+            <summary><Ai size={16}/><span>平台管理</span></summary>
+            <button type="button" className={`synesis-nav-leaf${page==='vault' ? ' is-active' : ''}`} onClick={()=>navigate('vault')}>AI 模型与 Key Vault</button>
+          </details>
+        </nav>
+      </aside>
       <Content className="synesis-content">
         <div className="page-wrap">
           <div className="page-title-row"><div><p className="eyebrow">SYNESIS / WORKSPACE</p><h1>{title[page]}</h1><p className="subheading">全球商业数据 · 跨平台情报 · AI 驱动研究</p></div><Tag type="blue">个人工作空间</Tag></div>
