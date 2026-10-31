@@ -20,7 +20,7 @@ function cloudflareModelPath(value: string): string {
   return segments.map(segment => encodeURIComponent(segment).replace(/%40/gi, '@')).join('/');
 }
 
-type CompactInputSchema = { type?: string; properties?: Record<string,{type?:string|string[]}>; required?: string[] };
+type CompactInputSchema = { type?: string; properties?: Record<string,{type?:string|string[];minItems?:number;maxItems?:number;minLength?:number;maxLength?:number;minimum?:number;maximum?:number;enum?:unknown[]}>; required?: string[] };
 function validateActorInput(input: unknown, schema: CompactInputSchema): string[] {
   const errors:string[]=[];
   if(!input || typeof input!=='object' || Array.isArray(input)) return ['采集参数必须是 JSON 对象'];
@@ -42,6 +42,20 @@ function validateActorInput(input: unknown, schema: CompactInputSchema): string[
       return true;
     });
     if(!valid) errors.push(`字段 ${key} 类型不符合 Actor 输入规范（${types.join('|')}）`);
+    if(Array.isArray(entry)) {
+      if(typeof definition.minItems==='number' && entry.length<definition.minItems) errors.push(`字段 ${key} 至少需要 ${definition.minItems} 个元素`);
+      if(typeof definition.maxItems==='number' && entry.length>definition.maxItems) errors.push(`字段 ${key} 最多允许 ${definition.maxItems} 个元素`);
+      if((schema.required??[]).includes(key) && entry.length===0) errors.push(`必填数组字段 ${key} 至少需要 1 个元素`);
+    }
+    if(typeof entry==='string') {
+      if(typeof definition.minLength==='number' && entry.length<definition.minLength) errors.push(`字段 ${key} 长度不能少于 ${definition.minLength}`);
+      if(typeof definition.maxLength==='number' && entry.length>definition.maxLength) errors.push(`字段 ${key} 长度不能超过 ${definition.maxLength}`);
+    }
+    if(typeof entry==='number') {
+      if(typeof definition.minimum==='number' && entry<definition.minimum) errors.push(`字段 ${key} 不能小于 ${definition.minimum}`);
+      if(typeof definition.maximum==='number' && entry>definition.maximum) errors.push(`字段 ${key} 不能大于 ${definition.maximum}`);
+    }
+    if(Array.isArray(definition.enum) && !definition.enum.some(option=>Object.is(option,entry))) errors.push(`字段 ${key} 不在 Actor 允许的枚举值内`);
   }
   return errors;
 }
@@ -426,7 +440,16 @@ Deno.serve(async (req: Request) => {
       catch { throw new Error(`AI Provider（${provider}）返回的计划不是有效 JSON，请更换模型或重试`); }
       const candidateById=new Map(actorCandidates.map(actor=>[String(actor.id),actor]));
       const platformTasks=Array.isArray(plan.platform_tasks)?plan.platform_tasks:[];
-      const collectionSettings=(project.scope as Record<string,any>|null)?.collection_settings??{};
+      const projectScope=(project.scope as Record<string,any>|null)??{};
+      const collectionSettings=projectScope.collection_settings??{};
+      const dimensions=Array.isArray(projectScope.research_profile?.dimensions)?projectScope.research_profile.dimensions:[];
+      const keywordDimension=dimensions.find((dimension:Record<string,any>)=>String(dimension.key??'').toLowerCase()==='keywords');
+      const researchKeywords=(Array.isArray(keywordDimension?.values)?keywordDimension.values:[])
+        .filter((value:unknown)=>typeof value==='string'&&value.trim()).map((value:string)=>value.trim()).slice(0,10);
+      if(!researchKeywords.length) {
+        const keywordMatch=String(projectScope.original_brief??project.objective??'').match(/(?:核心关键词|关键词|keywords?)\s*[:：]\s*([^\n]+)/i);
+        if(keywordMatch) researchKeywords.push(...keywordMatch[1].split(/[，,;；]/).map((value:string)=>value.trim()).filter(Boolean).slice(0,10));
+      }
       const requestedItems=Math.min(5000,Math.max(10,Number(collectionSettings.itemsPerPlatform)||100));
       const requestedDepth=collectionSettings.depth==='light'||collectionSettings.depth==='deep'?collectionSettings.depth:'standard';
       const countFieldPriority=['maxItems','maxResults','maxResultsPerSearch','resultsLimit','limit','itemLimit','itemsLimit','maxRecords','recordLimit','numberOfResults','numResults','maxProducts','maxVideos','maxPosts','maxListings','count'];
@@ -436,10 +459,20 @@ Deno.serve(async (req: Request) => {
         const schema=candidate.input_schema as CompactInputSchema;
         const properties=schema.properties??{};
         const input=task.input&&typeof task.input==='object'&&!Array.isArray(task.input)?{...(task.input as Record<string,unknown>)}:{};
+        const settingsWarnings:string[]=[];
+        if(String(task.platform_slug??'').toLowerCase()==='amazon'&&researchKeywords.length) {
+          const amazonUrlField=['categoryOrProductUrls','startUrls','urls'].find(name=>{
+            const fieldType=properties[name]?.type;
+            return (Array.isArray(fieldType)?fieldType:[fieldType]).includes('array');
+          });
+          if(amazonUrlField&&(!Array.isArray(input[amazonUrlField])||(input[amazonUrlField] as unknown[]).length===0)) {
+            input[amazonUrlField]=researchKeywords.map(keyword=>`https://www.amazon.com/s?k=${encodeURIComponent(keyword)}`);
+            settingsWarnings.push('Actor 未收到商品或分类 URL；系统已根据核心关键词生成 Amazon.com 搜索入口。目标国家若无 Amazon 本地站点，结果可能不代表当地站点库存与价格。');
+          }
+        }
         const numericFields=Object.entries(properties).filter(([,definition])=>(Array.isArray(definition?.type)?definition.type:[definition?.type]).some(type=>type==='number'||type==='integer'));
         const countField=countFieldPriority.find(key=>numericFields.some(([name])=>name.toLowerCase()===key.toLowerCase()))
           ??numericFields.find(([name])=>/(limit|max(items|results|records|products|videos|posts|listings)|numberofresults|numresults|^count$)/i.test(name))?.[0];
-        const settingsWarnings:string[]=[];
         if(countField) input[countField]=requestedItems;
         else settingsWarnings.push('该 Actor Schema 未发现明确的记录数量参数，目标数量可能无法由 Actor 强制限制。');
         const depthFields=Object.entries(properties).filter(([name,definition])=>(Array.isArray(definition?.type)?definition.type:[definition?.type]).includes('boolean')&&/(include|enable|fetch|get|scrape|with).*(comments?|reviews?|replies|details?)|(comments?|reviews?|replies|details?).*(enabled|included)/i.test(name));
@@ -586,7 +619,11 @@ Deno.serve(async (req: Request) => {
         .select('id,user_id,project_id,platform_slug,external_run_id,status,result_dataset_id,result_synced_count,result_count')
         .eq('id', taskId).eq('user_id', userId).maybeSingle();
       if (taskError || !task) return json({ error: '采集任务不存在' }, 404);
-      if (!task.external_run_id) return json({ error: '任务尚未取得 Apify Run ID' }, 409);
+      if (!task.external_run_id) {
+        if(task.status==='queued') return json({error:'任务仍在排队，尚未启动 Apify Actor。请先启动采集，再同步运行结果。'},409);
+        if(task.status==='running') return json({error:'任务正在提交 Apify 启动请求，但 Run ID 尚未写入。请稍后刷新任务状态；若持续出现，请重新启动该任务。'},409);
+        return json({ error: '该任务没有 Apify Run ID，无法同步运行结果。请检查任务错误详情或重新创建任务。' }, 409);
+      }
 
       // Acquire a database-backed lease so concurrent sync requests cannot read
       // and advance the same result_synced_count cursor.
