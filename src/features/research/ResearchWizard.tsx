@@ -139,7 +139,7 @@ function CountrySelectionMap({selectedCodes}:{selectedCodes:string[]}) {
   <div className="research-country-map-heading"><b>目标市场地图</b><span>{selectedCodes.length?selectedCodes.length+' 个国家 / 地区已选':'选择国家后自动定位并高亮'}</span></div>
   <MapContainer center={[20,0]} zoom={2} scrollWheelZoom={false} className="research-country-map">
    <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
-   {features.length>0&&<GeoJSON key={selectedCodes.join('-')} data={{type:'FeatureCollection',features} as any} style={()=>({color:'#0f62fe',weight:2,fillColor:'#0f62fe',fillOpacity:.28})}/>}
+   {features.length>0&&<GeoJSON key={selectedCodes.join('-')} data={{type:'FeatureCollection',features} as any} style={()=>({color:'var(--cds-interactive)',weight:2,fillColor:'var(--cds-interactive)',fillOpacity:.28})}/>}
    <CountryMapViewport features={features}/>
   </MapContainer>
   {loadError&&<p className="research-map-note" role="status">地图边界数据暂时无法载入，请检查网络连接后重试。</p>}{!loadError&&!world&&<p className="research-map-note" role="status">正在载入国家边界数据…</p>}{!loadError&&selectedCodes.length>0&&world&&!features.length&&<p className="research-map-note" role="status">未匹配到所选地区的 GeoJSON 边界（{selectedCodes.join(', ')}）。</p>}{!loadError&&features.length>0&&<p className="research-map-note" role="status">已高亮 {features.length} 个地图区域。</p>}
