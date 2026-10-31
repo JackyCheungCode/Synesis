@@ -53,7 +53,7 @@ function App() {
   const [resultPage, setResultPage] = useState(0);
   const [resultTotal, setResultTotal] = useState(0);
   const [resultSynced, setResultSynced] = useState(0);
-  const [projectResultRows, setProjectResultRows] = useState<Array<{task_id:string;platform_slug:string;item_index:number;raw_data:unknown}>>([]);
+  const [projectResultRows, setProjectResultRows] = useState<Array<{task_id:string;platform_slug:string;item_index:number;raw_data:unknown;normalized?:{entity_type:string;canonical_key:string|null;normalized_data:Record<string,unknown>;field_sources:Record<string,string>;quality_score:number;warnings:string[];normalization_version:number}|null}>>([]);
   const [projectResultTotal, setProjectResultTotal] = useState(0);
   const [projectResultOffset, setProjectResultOffset] = useState(0);
   const [analyticsTaskId, setAnalyticsTaskId] = useState('');
