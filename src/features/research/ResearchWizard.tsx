@@ -127,9 +127,7 @@ export function ResearchWizard(props:Props) {
  </section>;
 
  const savedProfile=project.scope?.research_profile as ResearchProfile|undefined;
- const savedSources=Array.isArray(project.scope?.selected_data_sources)?project.scope!.selected_data_sources as string[]:[];
- const selectedPlanSources=selectedSources.length?selectedSources:savedSources;
- const selectedSourceLabels=sourceGroups.flatMap(group=>group.items.filter(item=>selectedPlanSources.includes(item)));
+ const selectedPlanSources=selectedSources;
  const completedCount=projectTasks.filter(t=>t.status==='succeeded'&&Number(t.result_synced_count??0)>=Number(t.result_count??0)).length;
  const taskEvents=projectTasks.flatMap(task=>[
   {time:task.created_at,label:task.platform_slug+' 任务已创建',detail:'等待执行'},
