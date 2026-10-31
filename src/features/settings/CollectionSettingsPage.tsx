@@ -42,7 +42,7 @@ export function CollectionSettingsPage({ settings, onChange, onSave, saving = fa
         }}
       />
       <div className="collection-count-presets" aria-label="常用返回数量">
-        {[50, 100, 300, 500, 1000].map(count => <Button key={count} kind={settings.itemsPerPlatform === count ? 'primary' : 'tertiary'} size="sm" onClick={() => onChange({ ...settings, itemsPerPlatform: count })}>{count.toLocaleString()} 条</Button>)}
+        {[50, 100, 300, 500, 1000].map(count => <Button key={count} kind={settings.itemsPerPlatform === count ? 'primary' : 'tertiary'} size="sm" aria-pressed={settings.itemsPerPlatform === count} disabled={saving} onClick={() => onChange({ ...settings, itemsPerPlatform: count })}>{count.toLocaleString()} 条</Button>)}
       </div>
     </Tile>
     <Tile className="collection-setting-card">
@@ -69,6 +69,6 @@ export function CollectionSettingsPage({ settings, onChange, onSave, saving = fa
         <li>多平台调研按“每个平台目标数量”分别分配；平台总量随所选平台数量增加。</li>
       </ul>
     </Tile>
-    <div className="collection-settings-actions"><span>设置将保存到当前账户，其他设备登录后也可使用。</span><Button kind="primary" renderIcon={Save} onClick={onSave} disabled={saving}>保存采集设置</Button></div>
+    <div className="collection-settings-actions"><span>设置将保存到当前账户，其他设备登录后也可使用。</span><Button kind="primary" renderIcon={Save} onClick={onSave} disabled={saving} aria-busy={saving}>保存采集设置</Button></div>
   </section>;
 }
