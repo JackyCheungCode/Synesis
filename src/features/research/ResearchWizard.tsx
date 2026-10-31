@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep, Breadcrumb, BreadcrumbItem } from '@carbon/react';
+import { Button, Tag, TextArea, TextInput, Tile, ProgressIndicator, ProgressStep } from '@carbon/react';
 import { Add, ArrowLeft, ArrowRight, Renew, ChartLine } from '@carbon/icons-react';
 
 export type ResearchDimension = { key:string; label:string; values:string[]; status:'provided'|'suggested'|'needs_confirmation'|'user_confirmed'; note?:string };
@@ -136,7 +136,6 @@ export function ResearchWizard(props:Props) {
  const suggestedCount=profile?.dimensions.filter(item=>item.status==='suggested').length??0;
  const missingCount=profile?.dimensions.filter(item=>item.status==='needs_confirmation').length??0;
  if(!project||project.scope?.workflow_state==='draft')return <section className="module-stack research-workspace research-fullwidth">
-  <div className="research-page-breadcrumb"><Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb></div>
   <ResearchProgress activeStep={0} maxUnlockedStep={0} stepReady={[true,false,false,false,false]}/>
   <Tile className="research-start-tile">
    <p className="eyebrow">STEP 1 / RESEARCH SCOPE</p><h2 className="cds--type-heading-03">建立你的市场研究需求</h2>
@@ -189,7 +188,6 @@ export function ResearchWizard(props:Props) {
  let maxUnlockedStep=0; for(let index=1;index<stepReady.length;index++){if(!stepReady[index])break;maxUnlockedStep=index;}
  return <section className="module-stack research-workspace research-fullwidth">
   <div className="research-detail-heading"><Button kind="ghost" renderIcon={ArrowLeft} onClick={onBack}>全部研究</Button><div><p className="eyebrow">RESEARCH PROJECT WORKSPACE</p><h2>{project.name}</h2><p>{savedProfile?.summary??project.objective}</p></div><Tag type={project.status==='completed'?'green':'blue'}>{project.status}</Tag></div>
-  <div className="research-page-breadcrumb"><Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb></div>
   <ResearchProgress activeStep={activeStep} maxUnlockedStep={maxUnlockedStep} stepReady={stepReady}/>
   {activeStep===0&&<Tile><div className="module-heading"><div><h3>第一步 · 已确认的研究需求</h3><p>查看第一步保存的结构化画像。修改需求时应重新评估后续采集计划。</p></div><Tag type="green">已保存</Tag></div><p>{savedProfile?.summary??project.objective}</p>{savedProfile?.dimensions.filter(item=>item.values.length).map(item=><div className="research-saved-row" key={item.key}><b>{item.label} <Tag type={statusType[item.status]}>{statusLabel[item.status]}</Tag></b><p>{item.values.join(' · ')}</p></div>)}{!savedProfile&&<p>{project.objective}</p>}</Tile>}
   {activeStep===1&&<Tile className="research-source-tile"><div className="module-heading"><div><p className="eyebrow">STEP 2 / DATA SOURCE MARKETPLACE</p><h3>选择调研平台与数据类别</h3><p>先选择需要覆盖的数据类别和具体平台。Synesis 将据此搜索 Apify Store 中真实存在且有输入 Schema 的 Actor。</p></div>{plan?<Tag type="green">平台方案已生成</Tag>:<Tag type="blue">待选择</Tag>}</div>
