@@ -13,6 +13,7 @@ Global Trade Intelligence Platform.
 - Existing Cloudflare Worker, Supabase project, GitHub repository, and workers.dev host are reused. No new domain, DNS zone, or project is created.
 
 ## Frontend
+- Unified Carbon Design Foundation: [grid, tokens, typography, themes, shell, controls, and accessibility](docs/carbon-design-foundation.md).
 - React + TypeScript + Vite.
 - IBM Carbon React and Carbon icons.
 - Responsive Carbon SideNav; mobile navigation opens from the Carbon Header menu button.
