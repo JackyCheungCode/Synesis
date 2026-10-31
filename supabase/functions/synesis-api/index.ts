@@ -25,19 +25,22 @@ Deno.serve(async (req: Request) => {
     const userId = authData.user.id;
     const body = await req.json();
     const action = String(body.action ?? '');
-    const encryptionKey = Deno.env.get('CREDENTIAL_ENCRYPTION_KEY') ?? '';
-
+    async function getEncryptionKey() {
+      const { data, error } = await admin.rpc('synesis_get_encryption_key');
+      if (error || typeof data !== 'string') throw new Error('服务端凭证加密密钥不可用');
+      const raw = fromB64(data);
+      if (raw.length !== 32) throw new Error('服务端凭证加密密钥格式错误');
+      return raw;
+    }
     async function encryptSecret(secret: string) {
-      if (!/^[A-Za-z0-9+/]{43}=$/.test(encryptionKey)) throw new Error('凭证加密密钥尚未配置；请先设置 CREDENTIAL_ENCRYPTION_KEY（32 字节 Base64）');
-      const raw = fromB64(encryptionKey);
-      if (raw.length !== 32) throw new Error('凭证加密密钥格式错误');
+      const raw = await getEncryptionKey();
       const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']);
       const nonce = crypto.getRandomValues(new Uint8Array(12));
       const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, new TextEncoder().encode(secret));
       return { ciphertext: b64(new Uint8Array(ciphertext)), nonce: b64(nonce), key_version: 'v1' };
     }
     async function decryptSecret(ciphertext: string, nonce: string) {
-      const raw = fromB64(encryptionKey);
+      const raw = await getEncryptionKey();
       const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
       const clear = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(nonce) }, key, fromB64(ciphertext));
       return new TextDecoder().decode(clear);
@@ -48,7 +51,8 @@ Deno.serve(async (req: Request) => {
       const idColumn = kind === 'provider' ? 'config_id' : 'connection_id';
       const { data: config, error } = await admin.from(table).select('*').eq('user_id', userId).eq(kind === 'provider' ? 'provider_slug' : 'service_slug', slug).maybeSingle();
       if (error || !config) throw new Error('找不到该凭证配置');
-      const { data: secret, error: secretError } = await admin.schema('private').from(secretTable).select('ciphertext,nonce').eq(idColumn, config.id).single();
+      const { data: secretRows, error: secretError } = await admin.rpc('synesis_get_credential', { p_kind: kind, p_config_id: config.id });
+      const secret = Array.isArray(secretRows) ? secretRows[0] : null;
       if (secretError || !secret) throw new Error('凭证密文不存在');
       const clear = await decryptSecret(secret.ciphertext, secret.nonce);
       return { config, clear };
@@ -80,8 +84,9 @@ Deno.serve(async (req: Request) => {
         connection_status:'configured', key_last4:apiKey.slice(-4), enabled:true, updated_at:new Date().toISOString(),
       },{onConflict:`user_id,${slugColumn}`}).select('id').single();
       if (error || !config) throw error ?? new Error('保存凭证配置失败');
-      const { error: secretError } = await admin.schema('private').from(secretTable).upsert({
-        [idColumn]:config.id, ciphertext:encrypted.ciphertext, nonce:encrypted.nonce, key_version:encrypted.key_version, updated_at:new Date().toISOString(),
+      const { error: secretError } = await admin.rpc('synesis_store_credential', {
+        p_kind: kind, p_config_id: config.id, p_ciphertext: encrypted.ciphertext,
+        p_nonce: encrypted.nonce, p_key_version: encrypted.key_version,
       });
       if (secretError) throw secretError;
       return json({ok:true});
