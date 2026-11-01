@@ -570,6 +570,94 @@ Deno.serve(async (req: Request) => {
       return json({run,items,task_id:task.id,stored_records:0,global_leads_touched:0});
     }
 
+    if (action === 'social.ai.analyze') {
+      const leadId=String(body.leadId??'').trim();
+      if(!/^[0-9a-f-]{36}$/i.test(leadId)) return json({error:'客户线索 ID 格式无效'},400);
+      const {data:lead,error:leadError}=await admin.from('global_leads')
+        .select('id,customer_type,display_name,country,industry,business_role,intent_type,intent_strength,lead_score,profile_url,website_url,attributes')
+        .eq('id',leadId).eq('user_id',userId).maybeSingle();
+      if(leadError||!lead) return json({error:'客户线索不存在或无权访问'},404);
+      const {data:evidence,error:evidenceError}=await admin.from('global_lead_evidence')
+        .select('id,evidence_type,content,evidence_url,observed_at')
+        .eq('lead_id',leadId).eq('user_id',userId).order('created_at',{ascending:false}).limit(8);
+      if(evidenceError) throw evidenceError;
+      if(!evidence?.length) return json({error:'该客户尚无可供 AI 分析的来源证据'},400);
+      const {data:providerConfigs,error:providerError}=await admin.from('ai_provider_configs')
+        .select('provider_slug,default_model,connection_status').eq('user_id',userId).eq('connection_status','validated')
+        .not('default_model','is',null).order('updated_at',{ascending:false}).limit(1);
+      if(providerError) throw providerError;
+      const selectedProvider=providerConfigs?.[0];
+      if(!selectedProvider?.default_model) return json({error:'请先在 API 与 AI 配置中验证至少一个 AI Provider，并设置默认模型'},400);
+      const provider=selectedProvider.provider_slug;
+      const model=selectedProvider.default_model;
+      const {config,clear}=await getCredential(provider,'provider');
+      const prompt=`你是跨境 B2B 客户研究分析助手。只能依据给定的公开资料和来源证据判断，不得臆造身份、公司、联系方式或采购事实。证据不足时必须使用 unknown / null，并降低评分。请只返回 JSON，不要 Markdown。
+输出字段：
+{
+ "customer_type":"company|person|unknown",
+ "business_role":"importer|wholesaler|retailer|distributor|agent|brand|manufacturer|ecommerce_seller|buyer|consumer|creator|other|null",
+ "industry":"string|null",
+ "intent_type":"direct_purchase|looking_for_supplier|looking_for_manufacturer|wholesale|distribution|oem_odm|partnership|product_interest|unknown",
+ "intent_strength":"explicit|strong|potential|interest|unknown",
+ "lead_score":0,
+ "score_details":{"purchase_intent":0,"product_fit":0,"identity_fit":0,"recency":0,"evidence_quality":0},
+ "reasoning":"简短中文说明",
+ "evidence_ids":["仅填写输入中提供的证据 ID"]
+}
+评分总分 100，五个维度分别最高 30、25、20、10、15。不要把社交互动量等同于采购意向。
+客户资料：${JSON.stringify({name:lead.display_name,country:lead.country,industry:lead.industry,business_role:lead.business_role,profile_url:lead.profile_url,website_url:lead.website_url,attributes:lead.attributes})}
+来源证据：${JSON.stringify(evidence)}`;
+      const messages=[{role:'user',content:prompt}];
+      let response:Response;
+      if(provider==='openai'||provider==='deepseek'||provider==='mistral'||provider==='x'){
+        const base=provider==='openai'?'https://api.openai.com/v1':provider==='deepseek'?'https://api.deepseek.com':provider==='mistral'?'https://api.mistral.ai/v1':'https://api.x.ai/v1';
+        response=await fetch(base+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+clear,'Content-Type':'application/json'},body:JSON.stringify({model,messages,temperature:0.1,response_format:{type:'json_object'}})});
+      }else if(provider==='googlegemini'){
+        response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(clear),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.1,responseMimeType:'application/json'}})});
+      }else if(provider==='anthropic'){
+        response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':clear,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model,max_tokens:2000,messages})});
+      }else if(provider==='cloudflare'){
+        if(!config.base_url) return json({error:'请先配置 Cloudflare Account ID'},400);
+        response=await fetch('https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(config.base_url)+'/ai/run/'+cloudflareModelPath(model),{method:'POST',headers:{Authorization:'Bearer '+clear,'Content-Type':'application/json'},body:JSON.stringify({messages})});
+      }else return json({error:'当前 AI Provider 暂不支持社媒客户分析'},400);
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok) return json({error:payload?.error?.message??payload?.message??'AI 客户分析失败（HTTP '+response.status+'）'},502);
+      let output='';
+      if(provider==='googlegemini') output=String(payload?.candidates?.[0]?.content?.parts?.map((part:any)=>part.text??'').join('')??'');
+      else if(provider==='anthropic') output=String(payload?.content?.map((part:any)=>part.text??'').join('')??'');
+      else if(provider==='cloudflare') output=String(payload?.result?.response??payload?.result?.output??'');
+      else output=String(payload?.choices?.[0]?.message?.content??'');
+      const jsonText=output.replace(/^\s*\x60{3}(?:json)?/i,'').replace(/\x60{3}\s*$/,'').trim();
+      let analysis:Record<string,any>;
+      try{analysis=JSON.parse(jsonText);}catch{return json({error:'AI 返回内容不是有效 JSON，请重试或更换模型'},502);}
+      const validTypes=['company','person','unknown'];
+      const validStrengths=['explicit','strong','potential','interest','unknown'];
+      const score=Math.max(0,Math.min(100,Math.round(Number(analysis.lead_score)||0)));
+      const normalized={
+        customer_type:validTypes.includes(analysis.customer_type)?analysis.customer_type:'unknown',
+        business_role:typeof analysis.business_role==='string'?analysis.business_role:null,
+        industry:typeof analysis.industry==='string'?analysis.industry:null,
+        intent_type:typeof analysis.intent_type==='string'?analysis.intent_type:'unknown',
+        intent_strength:validStrengths.includes(analysis.intent_strength)?analysis.intent_strength:'unknown',
+        lead_score:score,
+        score_details:analysis.score_details&&typeof analysis.score_details==='object'?analysis.score_details:{},
+        reasoning:String(analysis.reasoning??'模型未提供判断说明').slice(0,3000)
+      };
+      const {error:updateLeadError}=await admin.from('global_leads').update({
+        customer_type:normalized.customer_type,business_role:normalized.business_role,industry:normalized.industry,
+        intent_type:normalized.intent_type,intent_strength:normalized.intent_strength,lead_score:normalized.lead_score,
+        score_details:normalized.score_details,attributes:{...(lead.attributes??{}),ai_analysis:{provider,model,analyzed_at:new Date().toISOString(),reasoning:normalized.reasoning}}
+      }).eq('id',leadId).eq('user_id',userId);
+      if(updateLeadError) throw updateLeadError;
+      for(const item of evidence){
+        const {error:updateEvidenceError}=await admin.from('global_lead_evidence').update({
+          analysis:{status:'analyzed',provider,model,analyzed_at:new Date().toISOString(),reasoning:normalized.reasoning,score:normalized.lead_score}
+        }).eq('id',item.id).eq('user_id',userId);
+        if(updateEvidenceError) throw updateEvidenceError;
+      }
+      return json({lead_id:leadId,analysis:normalized,provider,model});
+    }
+
     if (action === 'social.tasks.list') {
       const {data:tasks,error}=await admin.from('social_collection_tasks')
         .select('id,project_id,platform_slug,actor_id,actor_title,status,external_run_id,result_count,error_message,created_at,started_at,finished_at')
