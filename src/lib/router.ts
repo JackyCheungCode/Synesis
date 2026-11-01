@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export type WorkspacePage = 'leads' | 'vault';
-export type WorkspaceRoute = { page: WorkspacePage; projectId?: string };
+export type WorkspaceRoute = { page: WorkspacePage };
 
 function parseHash(): WorkspaceRoute {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -30,8 +30,8 @@ export function useWorkspaceRoute() {
     };
   }, []);
 
-  const navigate = useCallback((page: WorkspacePage, projectId?: string) => {
-    const next = { page, projectId };
+  const navigate = useCallback((page: WorkspacePage) => {
+    const next = { page };
     const hash = routeHash(next);
     if (window.location.hash !== hash) window.history.pushState(null, '', hash);
     setRoute(next);
