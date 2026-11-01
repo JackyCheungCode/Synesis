@@ -61,6 +61,9 @@ export function ImportExportLeadsFinder({onApi}:Props){
  const [actors,setActors]=useState<Actor[]>([]);
  const [selected,setSelected]=useState<Actor|null>(null);
  const [actorInput,setActorInput]=useState('{}');
+ const [actorValues,setActorValues]=useState<Record<string,unknown>>({});
+ const [rawJsonMode,setRawJsonMode]=useState(false);
+ const [schemaLoading,setSchemaLoading]=useState(false);
  const [run,setRun]=useState<any>(null);
  const [results,setResults]=useState<any[]>([]);
  const [busy,setBusy]=useState(false);
@@ -68,6 +71,19 @@ export function ImportExportLeadsFinder({onApi}:Props){
  const [tab,setTab]=useState<'criteria'|'actor'|'results'>('criteria');
  const patch=(key:keyof Criteria,value:any)=>setCriteria(v=>({...v,[key]:value}));
  const ready=Boolean(criteria.productKeywords.trim()||criteria.hsCodes.trim());
+ async function loadActorSchema(actor:Actor){
+  setSelected(actor);setSchemaLoading(true);setError('');setRawJsonMode(false);
+  try{
+   const response=await onApi('leads.actor.schema',{actorId:actor.actor_id});
+   const refreshed={...actor,input_schema:response.schema,schema_hash:response.schema_hash,schema_fetched_at:response.fetched_at};
+   setSelected(refreshed);
+   const initialInput=toActorInput(refreshed,criteria);
+   setActorValues(initialInput);setActorInput(JSON.stringify(initialInput,null,2));
+  }catch(e){
+   setError(e instanceof Error?e.message:'无法读取所选 Actor 的最新 Input Schema');
+   setActorValues({});setActorInput('{}');
+  }finally{setSchemaLoading(false);}
+ }
  async function recommend(){
   setBusy(true);setError('');setRun(null);setResults([]);
   try{
@@ -75,17 +91,19 @@ export function ImportExportLeadsFinder({onApi}:Props){
    const list=(response.actors??[]) as Actor[];
    setActors(list);
    if(!list.length) throw new Error('没有找到可用 Actor。请检查 Apify API 配置或调整产品关键词。');
-   setSelected(list[0]);
-   setActorInput(JSON.stringify(toActorInput(list[0],criteria),null,2));
    setTab('actor');
+   await loadActorSchema(list[0]);
   }catch(e){setError(e instanceof Error?e.message:'Actor 推荐失败');}
   finally{setBusy(false);}
  }
- function choose(actor:Actor){setSelected(actor);setActorInput(JSON.stringify(toActorInput(actor,criteria),null,2));setTab('actor');}
+ function choose(actor:Actor){void loadActorSchema(actor);}
+ function updateActorValues(next:Record<string,unknown>){
+  setActorValues(next);setActorInput(JSON.stringify(next,null,2));
+ }
  async function startRun(){
   if(!selected)return;
-  let input:unknown;
-  try{input=JSON.parse(actorInput);}catch{setError('Actor Input 必须是有效 JSON 对象。');return;}
+  let input:unknown=actorValues;
+  if(rawJsonMode){try{input=JSON.parse(actorInput);}catch{setError('Actor Input 必须是有效 JSON 对象。');return;}}
   if(!input||typeof input!=='object'||Array.isArray(input)){setError('Actor Input 必须是 JSON 对象。');return;}
   setBusy(true);setError('');
   try{
