@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type WorkspacePage = 'leads' | 'social' | 'vault';
+export type WorkspacePage = 'leads' | 'social' | 'global-leads' | 'vault';
 export type WorkspaceRoute = { page: WorkspacePage };
 
 function parseHash(): WorkspaceRoute {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const page = parts[0];
-  if (page === 'leads' || page === 'social' || page === 'vault') return { page };
+  if (page === 'leads' || page === 'social' || page === 'global-leads' || page === 'vault') return { page };
   
   return { page: 'leads' };
 }
