@@ -96,7 +96,7 @@ export function DynamicActorForm({ schema, value, onChange }: Props) {
         onChange={event => update(key, splitList(event.target.value))} /> :
       type === 'array' ? <textarea {...common} rows={4} spellCheck={false}
         value={objectDrafts[key] ?? displayValue(current)}
-        placeholder="输入 JSON 数组，例如：[\\n  \"https://example.com\"\\n]"
+        placeholder={'输入 JSON 数组，例如：["https://example.com"]'}
         onChange={event => {
           setObjectDrafts(previous => ({ ...previous, [key]: event.target.value }));
           try { const parsed = JSON.parse(event.target.value); if (Array.isArray(parsed)) update(key, parsed); } catch { /* Keep the draft until valid JSON is entered. */ }
