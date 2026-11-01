@@ -172,12 +172,12 @@ export function ImportExportLeadsFinder({onApi}:Props){
     {selected?<><div className="leads-panel-head"><div><span>LIVE ACTOR INPUT SCHEMA</span><h3>{selected.title}</h3><p>{selected.description||selected.actor_id}</p></div></div>
      <div className="leads-schema-summary"><b>{fields.length} 个输入字段</b><span>{fields.filter(f=>f.required).length} 个必填字段</span><span>{schemaLoading?'正在刷新 Schema…':selected.schema_hash?'Schema 已刷新':'Schema 已加载'}</span></div>
      {schemaLoading?<div className="leads-empty">正在读取该 Actor 当前版本的参数定义…</div>:<>
-      <div className="leads-schema-warning">已确认映射：{selected.supported_fields?.join('、')||'暂无自动映射'}。未支持的通用条件：{selected.unsupported_fields?.join('、')||'无'}。自动映射仅使用已验证的 Actor 专属字段；其他参数请在下方填写。</div>
+      <div className="leads-schema-warning">可自动映射的通用条件：{selected.supported_fields?.join('、')||'暂无'}。未匹配到已验证参数的条件：{selected.unsupported_fields?.join('、')||'无'}。只有明确验证过的 Actor 专属字段才会自动填入；其他参数请在下方填写。</div>
       {!rawJsonMode&&<DynamicActorForm schema={selected.input_schema} value={actorValues} onChange={updateActorValues}/>}
-      <div className="actor-json-tools"><button type="button" className="leads-back-link" onClick={()=>{setRawJsonMode(mode=>!mode);setActorInput(JSON.stringify(actorValues,null,2));}}>{rawJsonMode?'返回动态表单':'高级模式：编辑原始 JSON'}</button><span>提交前将由服务端按最新 Schema 再次校验</span></div>
+      <div className="actor-json-tools"><button type="button" className="leads-back-link" onClick={()=>{if(rawJsonMode){try{const parsed=JSON.parse(actorInput);if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error();setActorValues(parsed as Record<string,unknown>);}catch{setError('JSON 格式无效，修正后才能返回动态表单。');return;}}else{setActorInput(JSON.stringify(actorValues,null,2));}setRawJsonMode(!rawJsonMode);}}>{rawJsonMode?'返回动态表单':'高级模式：编辑原始 JSON'}</button><span>提交前将由服务端按最新 Schema 再次校验</span></div>
       {rawJsonMode&&<label className="leads-field leads-json-field"><span>Actor Input JSON</span><textarea rows={14} spellCheck={false} value={actorInput} onChange={e=>setActorInput(e.target.value)}/></label>}
       <div className="leads-schema-warning">默认值会自动填入；必填项以 * 标记。数组支持逗号或换行输入，复杂对象可使用高级 JSON 模式。</div>
-      <button className="leads-primary" disabled={busy||schemaLoading||!selected.input_schema?.properties} onClick={()=>void startRun()}>{busy?'正在启动 Apify…':'确认参数并启动采集'} <span>→</span></button>
+      <button className="leads-primary" disabled={busy||schemaLoading||!selected.input_schema} onClick={()=>void startRun()}>{busy?'正在启动 Apify…':'确认参数并启动采集'} <span>→</span></button>
      </>}
     </>:<p>请先选择 Actor。</p>}
    </div>
