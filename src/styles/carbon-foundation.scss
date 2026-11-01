@@ -14,8 +14,12 @@
   @include carbon-theme.theme(carbon-themes.$g90);
 }
 
-:root {
+:root[data-carbon-theme='white'] {
   color-scheme: light;
+}
+
+:root[data-carbon-theme='g90'] {
+  color-scheme: dark;
 }
 
 .synesis-app {
