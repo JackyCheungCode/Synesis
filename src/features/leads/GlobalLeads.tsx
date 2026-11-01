@@ -12,10 +12,11 @@ export function GlobalLeads({onApi}:Props){
  const [search,setSearch]=useState('');
  const [busy,setBusy]=useState(false);
  const [analyzing,setAnalyzing]=useState('');
+ const [analysisNotice,setAnalysisNotice]=useState('');
  const [error,setError]=useState('');
  async function analyzeLead(leadId:string){
   setAnalyzing(leadId);setError('');
-  try{const result=await onApi('social.ai.analyze',{leadId});await load();window.alert('AI 分析完成：'+result.analysis.lead_score+'/100');}
+  try{const result=await onApi('social.ai.analyze',{leadId});setAnalysisNotice('AI 分析完成，客户评分 '+result.analysis.lead_score+'/100。');await load();}
   catch(e){setError(e instanceof Error?e.message:'AI 客户分析失败');}
   finally{setAnalyzing('');}
  }
@@ -42,6 +43,7 @@ export function GlobalLeads({onApi}:Props){
     <button className="leads-secondary" onClick={()=>void load()} disabled={busy}>{busy?'加载中…':'搜索 / 刷新'}</button>
    </div>
    {error&&<div className="leads-error" role="alert">{error}</div>}
+   {analysisNotice&&<div className="leads-schema-warning" role="status">{analysisNotice}</div>}
    {busy?<div className="leads-empty">正在加载全球客户线索…</div>:leads.length===0?<div className="leads-empty">暂无客户线索。完成社媒采集并同步结果后，客户会自动汇入这里。</div>:
     <div className="global-leads-table-wrap"><table className="global-leads-table"><thead><tr><th>客户</th><th>类型</th><th>国家 / 地区</th><th>行业 / 角色</th><th>商业意向</th><th>评分</th><th>状态</th><th>来源资料</th><th>AI 分析</th></tr></thead><tbody>
      {leads.map(lead=><tr key={lead.id}><td><strong>{lead.display_name}</strong><small>{lead.website_url||lead.profile_url||'尚无公开主页'}</small></td><td><span className={'global-lead-type '+lead.customer_type}>{typeLabel[lead.customer_type]}</span></td><td>{lead.country||'—'}</td><td>{[lead.industry,lead.business_role].filter(Boolean).join(' · ')||'—'}</td><td>{lead.intent_type||'待分析'}</td><td>{lead.lead_score===null||lead.lead_score===undefined?'—':lead.lead_score+'/100'}</td><td>{statusLabel[lead.lifecycle_status]||lead.lifecycle_status}</td><td>{lead.profile_url?<a href={lead.profile_url} target="_blank" rel="noreferrer">公开主页 ↗</a>:lead.website_url?<a href={lead.website_url} target="_blank" rel="noreferrer">企业官网 ↗</a>:'—'}</td><td><button className="leads-secondary" onClick={()=>void analyzeLead(lead.id)} disabled={Boolean(analyzing)||busy}>{analyzing===lead.id?'分析中…':lead.intent_type?'重新分析':'AI 分析'}</button></td></tr>)}
