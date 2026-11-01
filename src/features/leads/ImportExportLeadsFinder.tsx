@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { DynamicActorForm } from './DynamicActorForm';
 import { MultiSelect, countryOptions } from './MultiSelect';
+const companyTypeOptions = [
+ {value:'Importer',label:'进口商'},{value:'Distributor',label:'分销商'},{value:'Wholesaler',label:'批发商'},
+ {value:'Retailer',label:'零售商'},{value:'Brand owner',label:'品牌方'},{value:'Manufacturer',label:'制造商'},
+ {value:'Trading company',label:'贸易公司'},{value:'E-commerce seller',label:'电商卖家'},{value:'Sourcing agent',label:'采购代理'},
+ {value:'Buying office',label:'采购办事处'},{value:'Marketplace seller',label:'平台卖家'}
+];
 
 type Criteria = {
   productKeywords: string; hsCodes: string; targetCountries: string; originCountries: string;
@@ -158,9 +164,9 @@ export function ImportExportLeadsFinder({onApi}:Props){
     </section>
     <section className="leads-panel"><div className="leads-panel-head"><div><span>02 / COMPANY PROFILE</span><h3>企业画像与客户类型</h3><p>指定你希望触达的买家角色，而不是只寻找经营相关产品的公司。</p></div></div>
      <div className="leads-field-grid">
-      <label className="leads-field"><span>客户类型</span><input value={criteria.companyTypes} onChange={e=>patch('companyTypes',e.target.value)} placeholder="Importer, Distributor, Wholesaler"/></label>
+      <div className="leads-field"><MultiSelect label="客户类型" value={split(criteria.companyTypes)} options={companyTypeOptions} onChange={items=>patch('companyTypes',items.join(', '))} placeholder="搜索客户类型并多选…" /></div>
       <label className="leads-field"><span>行业 / 细分市场</span><input value={criteria.industries} onChange={e=>patch('industries',e.target.value)} placeholder="Retail, Foodservice, Industrial supply"/></label>
-      <label className="leads-field"><span>企业员工规模</span><input value={criteria.employeeRange} onChange={e=>patch('employeeRange',e.target.value)} placeholder="例如：50-200, 200-1000"/></label>
+      <label className="leads-field"><span>企业员工规模</span><select value={criteria.employeeRange} onChange={e=>patch('employeeRange',e.target.value)}><option value="">不限</option><option value="1-10">1–10 人</option><option value="11-50">11–50 人</option><option value="51-200">51–200 人</option><option value="201-500">201–500 人</option><option value="501-1000">501–1,000 人</option><option value="1001-5000">1,001–5,000 人</option><option value="5000+">5,000 人以上</option></select></label>
       <label className="leads-field"><span>排除关键词 / 公司</span><input value={criteria.excludeKeywords} onChange={e=>patch('excludeKeywords',e.target.value)} placeholder="例如：freight forwarder, logistics broker"/></label>
       <label className="leads-field wide"><span>采购 / 决策人职位关键词</span><input value={criteria.decisionMakerTitles} onChange={e=>patch('decisionMakerTitles',e.target.value)} placeholder="Purchasing Manager, Buyer, Sourcing Director"/></label>
       <label className="leads-field wide"><span>补充说明</span><textarea rows={2} value={criteria.notes} onChange={e=>patch('notes',e.target.value)} placeholder="例如：排除货运代理；优先持续采购且从东南亚采购的进口商。"/></label>
