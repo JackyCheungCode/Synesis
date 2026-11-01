@@ -18,7 +18,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  carbon-compliance:
+    name: Carbon compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+      - name: Run Carbon compliance gate
+        run: npm run test:carbon-compliance
+
   build:
+    needs: carbon-compliance
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,8 +45,6 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Test importer lead discovery
         run: npm run test:leads-finder
-      - name: Carbon compliance
-        run: npm run test:carbon-compliance
       - name: Test AI provider model actions
         run: npm run test:provider-model-actions
       - name: Typecheck and build
@@ -45,7 +57,7 @@ jobs:
           if-no-files-found: error
 
   deploy:
-    needs: build
+    needs: [build, carbon-compliance]
     if: github.event_name == 'workflow_dispatch' && inputs.deploy_production == true && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     environment: production
