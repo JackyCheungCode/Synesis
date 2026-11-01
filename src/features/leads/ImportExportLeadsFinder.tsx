@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 type Criteria = {
   productKeywords: string; hsCodes: string; targetCountries: string; originCountries: string;
@@ -90,7 +90,6 @@ export function ImportExportLeadsFinder({onApi}:Props){
  const [tab,setTab]=useState<'criteria'|'actor'|'results'>('criteria');
  const patch=(key:keyof Criteria,value:any)=>setCriteria(v=>({...v,[key]:value}));
  const ready=Boolean(criteria.productKeywords.trim()||criteria.hsCodes.trim());
- const mapped=useMemo(()=>selected?toActorInput(selected,criteria):{},[selected,criteria]);
  async function recommend(){
   setBusy(true);setError('');setRun(null);setResults([]);
   try{
