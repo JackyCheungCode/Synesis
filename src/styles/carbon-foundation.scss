@@ -1,11 +1,20 @@
 @use '@carbon/react/scss/theme' as carbon-theme;
+@use '@carbon/react/scss/themes' as carbon-themes;
 @use '@carbon/react/scss/spacing' as carbon-spacing;
 @use '@carbon/react/scss/breakpoint' as carbon-breakpoint;
 
 /*
- * Carbon is the source of truth for application-wide theme values.
- * GlobalTheme supplies white / g90 token values at runtime.
+ * GlobalTheme synchronizes React context; these selectors emit the actual
+ * Carbon CSS custom properties for each active application theme.
  */
+[data-carbon-theme='white'] {
+  @include carbon-theme.theme(carbon-themes.$white);
+}
+
+[data-carbon-theme='g90'] {
+  @include carbon-theme.theme(carbon-themes.$g90);
+}
+
 :root {
   color-scheme: light;
 }
