@@ -1,25 +1,26 @@
 import { useState } from 'react';
 import { DynamicActorForm } from './DynamicActorForm';
+import { MultiSelect, countryOptions, languageOptions } from './MultiSelect';
 
 type Props={onApi:(action:string,payload?:Record<string,unknown>)=>Promise<any>};
-type Platform={id:string;label:string;group:string};
+type Platform={id:string;label:string;group:string;logo:string;logoColor:string};
 type Actor={actor_id:string;title:string;description?:string;score?:number;platform:string;recommendation_reason?:string;input_schema?:any;stats?:any};
 const platforms:Platform[]=[
- {id:'instagram',label:'Instagram',group:'主流社交'},
- {id:'tiktok',label:'TikTok',group:'主流社交'},
- {id:'youtube',label:'YouTube',group:'主流社交'},
- {id:'facebook',label:'Facebook',group:'主流社交'},
- {id:'linkedin',label:'LinkedIn',group:'B2B 专业网络'},
- {id:'x',label:'X / Twitter',group:'主流社交'},
- {id:'reddit',label:'Reddit',group:'社区与讨论'},
- {id:'pinterest',label:'Pinterest',group:'视觉与灵感'},
- {id:'threads',label:'Threads',group:'主流社交'},
- {id:'telegram',label:'Telegram',group:'社群平台'},
- {id:'discord',label:'Discord',group:'社群平台'},
- {id:'twitch',label:'Twitch',group:'直播与创作者'},
- {id:'medium',label:'Medium',group:'内容社区'},
- {id:'quora',label:'Quora',group:'问答社区'},
- {id:'snapchat',label:'Snapchat',group:'视觉与社交'},
+ {id:'instagram',label:'Instagram',group:'主流社交',logo:'instagram',logoColor:'#E4405F'},
+ {id:'tiktok',label:'TikTok',group:'主流社交',logo:'tiktok',logoColor:'#111111'},
+ {id:'youtube',label:'YouTube',group:'主流社交',logo:'youtube',logoColor:'#FF0033'},
+ {id:'facebook',label:'Facebook',group:'主流社交',logo:'facebook',logoColor:'#0866FF'},
+ {id:'linkedin',label:'LinkedIn',group:'B2B 专业网络',logo:'linkedin',logoColor:'#0A66C2'},
+ {id:'x',label:'X / Twitter',group:'主流社交',logo:'x',logoColor:'#111111'},
+ {id:'reddit',label:'Reddit',group:'社区与讨论',logo:'reddit',logoColor:'#FF4500'},
+ {id:'pinterest',label:'Pinterest',group:'视觉与灵感',logo:'pinterest',logoColor:'#BD081C'},
+ {id:'threads',label:'Threads',group:'主流社交',logo:'threads',logoColor:'#111111'},
+ {id:'telegram',label:'Telegram',group:'社群平台',logo:'telegram',logoColor:'#26A5E4'},
+ {id:'discord',label:'Discord',group:'社群平台',logo:'discord',logoColor:'#5865F2'},
+ {id:'twitch',label:'Twitch',group:'直播与创作者',logo:'twitch',logoColor:'#9146FF'},
+ {id:'medium',label:'Medium',group:'内容社区',logo:'medium',logoColor:'#111111'},
+ {id:'quora',label:'Quora',group:'问答社区',logo:'quora',logoColor:'#B92B27'},
+ {id:'snapchat',label:'Snapchat',group:'视觉与社交',logo:'snapchat',logoColor:'#FFFC00'}
 ];
 const defaults:string[]=[];
 const intents=[
@@ -144,7 +145,6 @@ export function SocialLeadsFinder({onApi}:Props){
   catch(e){setError(e instanceof Error?e.message:'加载社媒采集任务失败');}
   finally{setBusy(false);}
  }
- const groups=[...new Set(platforms.map(item=>item.group))];
  return <section className="leads-finder social-leads-finder">
   <div className="leads-intro"><div><span className="leads-eyebrow">GLOBAL CUSTOMER DISCOVERY / SOCIAL INTELLIGENCE</span></div><div className="leads-intro-stat"><strong>{actors.length||'—'}</strong><span>匹配采集工具</span></div></div>
   <div className="leads-stepper" aria-label="社媒客户发现流程"><button className={tab==='criteria'?'active':''} onClick={()=>setTab('criteria')}>01 搜索策略</button><i/><button className={tab==='actors'?'active':''} onClick={()=>setTab('actors')} disabled={!actors.length}>02 Actor 与参数</button><i/><button className={tab==='results'?'active':''} onClick={()=>setTab('results')} disabled={!run}>03 采集结果</button><i/><button className={tab==='tasks'?'active':''} onClick={()=>void loadTasks()}>04 任务记录</button></div>
@@ -152,7 +152,7 @@ export function SocialLeadsFinder({onApi}:Props){
   {tab==='criteria'&&<div className="leads-layout">
    <div className="leads-form-main">
     <section className="leads-panel"><div className="leads-panel-head"><div><span>01 / PLATFORM COVERAGE</span><h3>选择社交平台</h3><p>请手动勾选本次要采集的平台。系统只检索你选中的平台，不会自动替你启动任何 Actor。</p></div></div>
-     {groups.map(group=><div className="social-platform-group" key={group}><b>{group}</b><div className="social-platform-grid">{platforms.filter(item=>item.group===group).map(platform=><label className="social-platform-option" key={platform.id}><input type="checkbox" checked={selectedPlatforms.includes(platform.id)} onChange={()=>togglePlatform(platform.id)}/><span>{platform.label}</span></label>)}</div></div>)}
+     <MultiSelect label="社交平台" value={selectedPlatforms} options={platforms.map(item=>({value:item.id,label:item.label,group:item.group,logo:item.logo,logoColor:item.logoColor}))} onChange={setSelectedPlatforms} placeholder="搜索并选择社交平台…" />
      <div className="leads-schema-warning">平台覆盖取决于 Apify Store 当前可用的公开 Actor。登录限制、地区限制、平台政策、Actor 维护状态及付费规则均可能影响采集能力；不会绕过私密内容或访问控制。</div>
     </section>
     <section className="leads-panel"><div className="leads-panel-head"><div><span>02 / BUYING SIGNALS</span><h3>潜在客户发现策略</h3><p>从用户公开表达的需求和商业行为识别购买意向，而不是只抓取热门账号。</p></div></div>
@@ -161,8 +161,8 @@ export function SocialLeadsFinder({onApi}:Props){
       <label className="leads-field"><span>客户范围</span><select value={customerScope} onChange={e=>setCustomerScope(e.target.value as 'both'|'company'|'person')}><option value="both">企业 + 个人，AI 自动识别</option><option value="company">只寻找企业客户</option><option value="person">只寻找个人客户</option></select></label>
       <label className="leads-field wide"><span>行业 / 客户 / 需求关键词 <b>*</b></span><textarea rows={3} value={keywords} onChange={e=>setKeywords(e.target.value)} placeholder="例如：importer, wholesale buyer, looking for supplier, bulk order, sourcing agent"/></label>
       <label className="leads-field wide"><span>产品或服务</span><input value={productOrService} onChange={e=>setProductOrService(e.target.value)} placeholder="例如：stainless steel bottles, packaging machinery, OEM cosmetics"/></label>
-      <label className="leads-field"><span>目标国家 / 地区</span><input value={targetCountries} onChange={e=>setTargetCountries(e.target.value)} placeholder="United States, Germany, Japan"/></label>
-      <label className="leads-field"><span>内容语言</span><input value={language} onChange={e=>setLanguage(e.target.value)} placeholder="English, Spanish, Chinese"/></label>
+      <div className="leads-field"><MultiSelect label="目标国家 / 地区" value={targetCountries?targetCountries.split(',').map(item=>item.trim()).filter(Boolean):[]} options={countryOptions} onChange={items=>setTargetCountries(items.join(', '))} placeholder="搜索国家并多选…" /></div>
+      <div className="leads-field"><MultiSelect label="内容语言" value={language?language.split(',').map(item=>item.trim()).filter(Boolean):[]} options={languageOptions} onChange={items=>setLanguage(items.join(', '))} placeholder="搜索语言并多选…" /></div>
       <label className="leads-field wide"><span>必须包含的词语</span><input value={includeTerms} onChange={e=>setIncludeTerms(e.target.value)} placeholder="looking for, recommend, supplier, wholesale"/></label>
       <label className="leads-field wide"><span>排除词语</span><input value={excludeTerms} onChange={e=>setExcludeTerms(e.target.value)} placeholder="job, giveaway, spam, free sample"/></label>
       <label className="leads-field"><span>每个 Actor 目标结果数</span><input type="number" min="1" max="1000" value={maxResults} onChange={e=>setMaxResults(e.target.value)}/></label>
