@@ -1424,7 +1424,7 @@ Deno.serve(async (req: Request) => {
       const schemaResponse=await fetch(`https://api.apify.com/v2/acts/${actorPath}/input-schema`,{headers:{Authorization:`Bearer ${apifyToken}`}});
       if(!schemaResponse.ok) return json({error:`无法读取 Actor Input Schema（HTTP ${schemaResponse.status}）`},502);
       const schemaPayload=await schemaResponse.json().catch(()=>({}));
-      const schema=(schemaPayload?.data??schemaPayload) as CompactInputSchema;
+      const schema=(schemaPayload?.data??schemaPayload??{}) as CompactInputSchema;
       const validation=validateActorInput(input,schema);
       if(validation.length) return json({error:'Actor 输入参数未通过 Schema 校验',validation},400);
       const response=await fetch(`https://api.apify.com/v2/acts/${actorPath}/runs?waitForFinish=0`,{
