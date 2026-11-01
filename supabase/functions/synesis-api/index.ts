@@ -334,8 +334,15 @@ Deno.serve(async (req: Request) => {
           ['企业员工规模',Boolean(criteria.employeeRange),/employee|staff|companySize/i],
           ['最大结果数',Boolean(criteria.maxResults),/maxResults|maxLeads|limit|count/i],
         ].filter(([,active])=>active);
-        const supportedFields=requestedFields.filter(([,active,pattern])=>active&&pattern.test(schemaText)).map(([label])=>label);
-        const unsupportedFields=requestedFields.filter(([,active,pattern])=>active&&!pattern.test(schemaText)).map(([label])=>label);
+        const explicitMappings:Record<string,Array<[string,string]>>={
+          'fortuitous_pirate/bill-of-lading-scraper':[['产品关键词','searchQuery'],['HS Code','searchQuery']],
+          'flamboyant_liner/shipment-monitor':[['HS Code','watchHsCodes'],['产品关键词','productKeywords'],['已知进口商','watchConsignees'],['已知供应商','watchShippers']],
+          'akash9078/import-export-leads-finder':[['目标进口国家','country'],['行业','sector'],['最大结果数','maxLeads']],
+        };
+        const mapped=explicitMappings[candidate.id]??[];
+        const schemaProperties=(schema as any)?.properties??{};
+        const supportedFields=mapped.filter(([label,property])=>requestedFields.some(([requested])=>requested===label)&&Object.prototype.hasOwnProperty.call(schemaProperties,property)).map(([label])=>label);
+        const unsupportedFields=requestedFields.map(([label])=>label).filter(label=>!supportedFields.includes(label));
         return {
           actor_id:candidate.id,title:String(meta.title??meta.name??candidate.id),description:String(meta.description??'').slice(0,700),
           score:Math.min(99,score+supportedFields.length*2),recommendation_reason:candidate.reason,
