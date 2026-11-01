@@ -51,7 +51,12 @@ export default function App(){
   setBusy(true);
   try{
    const result=await api('credentials.list');
-   setCredentials(result.credentials??[]);
+   const loaded=(result.credentials??[]) as Credential[];
+   setCredentials(loaded);
+   const integrations=loaded.filter(item=>item.kind==='integration');
+   const metadataValue=(slug:string,key:string)=>String(integrations.find(item=>item.slug===slug)?.metadata?.[key]??'');
+   setIntegrationMeta(current=>({...current,reddit:metadataValue('reddit','clientId'),tiktok:metadataValue('tiktok','clientKey'),brightdataZone:metadataValue('brightdata','zone'),phantombusterOrg:metadataValue('phantombuster','orgId')}));
+   const active=loaded.find((item:Credential)=>item.kind==='provider'&&item.status==='validated');
    const active=(result.credentials??[]).find((item:Credential)=>item.kind==='provider'&&item.status==='validated');
    if(active)setSelectedProvider(active.slug);
   }catch(e){setNotice({kind:'error',text:e instanceof Error?e.message:'加载凭证失败'});}
