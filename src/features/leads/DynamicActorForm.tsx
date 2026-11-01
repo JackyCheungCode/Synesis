@@ -57,7 +57,7 @@ export function DynamicActorForm({ schema, value, onChange }: Props) {
   const basic = fields.filter(({ key, definition, type }) =>
     !definition.readOnly && !definition.editor?.toLowerCase().includes('json') &&
     !['array', 'object'].includes(type) && !/proxy|cookie|session|debug|advanced|webhook/i.test(key));
-  const advanced = fields.filter(({ key, definition, type }) =>
+  const advanced = fields.filter(({ key, definition }) =>
     !definition.readOnly && !basic.some(item => item.key === key));
   const update = (key: string, next: unknown) => {
     const copy = { ...value };
