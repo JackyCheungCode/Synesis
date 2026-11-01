@@ -89,7 +89,7 @@ export function DynamicActorForm({ schema, value, onChange }: Props) {
         const selected = Array.from(event.target.selectedOptions).map(option => definition.items?.enum?.find(item => String(item) === option.value));
         update(key, selected);
       }}>
-        {definition.items.enum.map(option => <option key={String(option)} value={String(option)}>{String(option)}</option>)}
+        {definition.items?.enum?.map(option => <option key={String(option)} value={String(option)}>{String(option)}</option>)}
       </select> :
       type === 'array' && definition.items?.type === 'string' ? <textarea {...common} rows={3}
         value={displayValue(current)} placeholder="多个值请用逗号或换行分隔"
