@@ -132,9 +132,9 @@ export function ImportExportLeadsFinder({onApi}:Props){
  }
  const fields=schemaFields(selected?.input_schema);
  return <section className="leads-finder">
-  <div className="leads-intro"><div><span className="leads-eyebrow">GLOBAL CUSTOMER DISCOVERY</span><h2>Import Export Leads Finder</h2><p>基于进口记录、提单、产品关键词与企业画像发现真实潜在客户。先提交完整条件，再由系统推荐 Actor；你确认 Actor 和实际输入参数后才会启动采集。</p></div><div className="leads-intro-stat"><strong>{actors.length||'—'}</strong><span>可选 Actor</span></div></div>
+  <div className="leads-intro"><div><span className="leads-eyebrow">GLOBAL CUSTOMER DISCOVERY</span></div><div className="leads-intro-stat"><strong>{actors.length||'—'}</strong><span>可选 Actor</span></div></div>
   <div className="leads-stepper" aria-label="客户发现流程"><span className={tab==='criteria'?'active':''}>01 搜索条件</span><i/><span className={tab==='actor'?'active':''}>02 Actor 推荐与选择</span><i/><span className={tab==='results'?'active':''}>03 采集结果</span></div>
-  {error&&<div className="leads-error" role="alert">{error}</div>}
+  {error&&<div className="leads-error social-leads-error" role="alert"><span>{error}</span><button type="button" aria-label="关闭错误提示" onClick={()=>setError("")}>关闭</button></div>}
   {tab==='criteria'&&<div className="leads-layout">
    <div className="leads-form-main">
     <section className="leads-panel"><div className="leads-panel-head"><div><span>01 / TRADE SIGNALS</span><h3>产品与贸易行为</h3><p>尽可能提供产品描述和 HS Code，减少仅凭宽泛关键词产生的噪声。</p></div></div>
