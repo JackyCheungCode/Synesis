@@ -116,7 +116,7 @@ export function DynamicActorForm({ schema, value, onChange }: Props) {
         <small className="actor-field-hint">{definition.minimum !== undefined ? `最小值 ${definition.minimum} ` : ''}{definition.maximum !== undefined ? `最大值 ${definition.maximum} ` : ''}{definition.minLength !== undefined ? `最少 ${definition.minLength} 字符 ` : ''}{definition.maxLength !== undefined ? `最多 ${definition.maxLength} 字符` : ''}</small>}
     </label>;
   };
-  if (!schema || !schema.properties || !fields.length) return <div className="leads-empty">该 Actor 没有公开可读取的 Input Schema，无法生成表单。请确认 Actor 权限或使用高级 JSON 输入。</div>;
+  if (!schema || !schema.properties || !fields.length) return <div className="leads-empty">无法读取 Actor Input Schema（HTTP 404）。该 Actor 未提供可读取的输入定义，请检查 Actor 权限，或切换到高级 JSON 输入。</div>;
   return <div className="actor-dynamic-form">
     <div className="actor-form-section"><div className="actor-form-section-title"><b>基本参数</b><span>{basic.length} 个字段</span></div>
       <div className="leads-field-grid">{basic.map(renderField)}</div>
