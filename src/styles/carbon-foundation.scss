@@ -1,17 +1,16 @@
 @use '@carbon/styles/scss/theme' as carbon-theme;
 @use '@carbon/styles/scss/themes' as carbon-themes;
 @use '@carbon/styles/scss/spacing' as carbon-spacing;
-@use '@carbon/styles/scss/breakpoint' as carbon-breakpoint;
 
 /*
  * GlobalTheme synchronizes React context; these selectors emit the actual
  * Carbon CSS custom properties for each active application theme.
  */
-[data-carbon-theme='white'] {
+:root[data-carbon-theme='white'] {
   @include carbon-theme.theme(carbon-themes.$white);
 }
 
-[data-carbon-theme='g90'] {
+ :root[data-carbon-theme='g90'] {
   @include carbon-theme.theme(carbon-themes.$g90);
 }
 
