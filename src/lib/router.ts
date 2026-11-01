@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type WorkspacePage = 'leads' | 'vault' | 'dashboard' | 'projects' | 'products' | 'settings';
+export type WorkspacePage = 'leads' | 'vault';
 export type WorkspaceRoute = { page: WorkspacePage; projectId?: string };
 
 function parseHash(): WorkspaceRoute {
@@ -12,7 +12,6 @@ function parseHash(): WorkspaceRoute {
 }
 
 function routeHash(route: WorkspaceRoute): string {
-  if (route.page === 'projects' && route.projectId) return `#/research/${encodeURIComponent(route.projectId)}`;
   return `#/${route.page}`;
 }
 
