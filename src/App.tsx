@@ -4,6 +4,7 @@ import { WorkspaceNavigation } from './components/WorkspaceNavigation';
 import { CredentialVault } from './features/settings/CredentialVault';
 import { ImportExportLeadsFinder } from './features/leads/ImportExportLeadsFinder';
 import { SocialLeadsFinder } from './features/leads/SocialLeadsFinder';
+import { GlobalLeads } from './features/leads/GlobalLeads';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content, Grid, Column,
   InlineNotification, Loading,
@@ -98,8 +99,8 @@ export default function App(){
   catch(e){setNotice({kind:'error',text:e instanceof Error?e.message:'连接测试失败'});}
   finally{setBusy(false);}
  }
- const title=page==='vault'?'API 与 AI 配置':page==='social'?'Social Leads Finder':'Import Export Leads Finder';
- const description=page==='vault'?'安全管理 Apify API、其他数据连接及 AI Provider 凭证。':page==='social'?'通过 Instagram、TikTok、YouTube、Facebook、LinkedIn、X、Reddit 等社交平台发现潜在客户。':'通过贸易记录与企业画像发现真实进口商和潜在客户。';
+ const title=page==='vault'?'API 与 AI 配置':page==='social'?'Social Leads Finder':page==='global-leads'?'全球客户线索库':'Import Export Leads Finder';
+ const description=page==='vault'?'安全管理 Apify API、其他数据连接及 AI Provider 凭证。':page==='social'?'手动选择社交平台与 Apify Actor，发现买家和企业客户。':page==='global-leads'?'统一管理跨平台、跨需求、跨来源的企业与个人客户线索。':'通过贸易记录与企业画像发现真实进口商和潜在客户。';
 
  return <div className={`synesis-app synesis-theme-${theme}`}>
   <Header aria-label="Synesis">
@@ -119,6 +120,7 @@ export default function App(){
     {busy&&<Loading small withOverlay={false} description="处理中"/>}
     {page==='leads'&&<ImportExportLeadsFinder onApi={api}/>}
     {page==='social'&&<SocialLeadsFinder onApi={api}/>}
+    {page==='global-leads'&&<GlobalLeads onApi={api}/ >}
     {page==='vault'&&<CredentialVault
      credentials={credentials} keyValues={keyValues} setKeyValues={setKeyValues} busy={busy}
      cloudflareAccountId={cloudflareAccountId} setCloudflareAccountId={setCloudflareAccountId}
