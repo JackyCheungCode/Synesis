@@ -86,7 +86,7 @@ export default function App(){
   const value=keyValues[slug]?.trim();if(!value)return;
   setBusy(true);
   try{
-   await api('credentials.save',{slug,name,kind,apiKey:value,accountId:slug==='cloudflare'?cloudflareAccountId.trim():undefined,metadata:kind==='integration'?(slug==='reddit'?{clientId:integrationMeta.reddit??''}:slug==='tiktok'?{clientKey:integrationMeta.tiktok??''}:{ }):{}});
+   await api('credentials.save',{slug,name,kind,apiKey:value,accountId:slug==='cloudflare'?cloudflareAccountId.trim():undefined,metadata:kind==='integration'?(slug==='reddit'?{clientId:integrationMeta.reddit??''}:slug==='tiktok'?{clientKey:integrationMeta.tiktok??''}:slug==='brightdata'?{zone:integrationMeta.brightdataZone??''}:slug==='phantombuster'?{orgId:integrationMeta.phantombusterOrg??''}:{ }):{}});
    setKeyValues(v=>({...v,[slug]:''}));setNotice({kind:'success',text:`${name} 凭证已加密保存。`});
    await loadCredentials();
    if(kind==='provider')await loadProviderModels(slug,true);
