@@ -7,7 +7,7 @@ type Criteria = {
   requireEmail: boolean; requirePhone: boolean; requireWebsite: boolean; requireLinkedin: boolean;
   decisionMakerTitles: string; maxResults: string; notes: string;
 };
-type Actor = { actor_id: string; title: string; description?: string; score?: number; recommendation_reason?: string; input_schema?: any; stats?: any };
+type Actor = { actor_id: string; title: string; description?: string; score?: number; recommendation_reason?: string; input_schema?: any; stats?: any; supported_fields?: string[]; unsupported_fields?: string[] };
 type Props = { onApi: (action: string, payload?: Record<string, unknown>) => Promise<any> };
 const initial: Criteria = {
   productKeywords:'',hsCodes:'',targetCountries:'United States',originCountries:'',companyTypes:'Importer, Distributor, Wholesaler',
@@ -44,7 +44,7 @@ function toActorInput(actor:Actor, c:Criteria):Record<string,unknown>{
   if(match&&values[match]!==undefined&&values[match]!==''&&(!Array.isArray(values[match])||(values[match] as unknown[]).length)) {
    let candidate=values[match];
    const declared=Array.isArray(def?.type)?def.type[0]:def?.type;
-   if(declared==='string'&&Array.isArray(candidate)) candidate=candidate.join(', ');
+   if(declared==='string'&&Array.isArray(candidate)) candidate=candidate.join(', ');\n   if(declared==='string'&&typeof candidate==='number') candidate=String(candidate);\n   if((declared==='integer'||declared==='number')&&typeof candidate==='string'&&candidate.trim()!=='') candidate=Number(candidate);
    if(declared==='array'&&typeof candidate==='string') candidate=candidate.split(/[，,;；\\n]+/).map(x=>x.trim()).filter(Boolean);
    input[key]=candidate;
   }
@@ -150,7 +150,7 @@ export function ImportExportLeadsFinder({onApi}:Props){
   </div>}
   {tab==='actor'&&<div className="leads-actor-workspace">
    <div className="leads-actor-list"><div className="leads-panel-head"><div><span>RECOMMENDED ACTORS</span><h3>推荐的 Apify Actor</h3><p>按数据类型、输入字段覆盖度和用途匹配度排序。</p></div></div>
-    {actors.map(actor=><button key={actor.actor_id} className={'leads-actor-card'+(selected?.actor_id===actor.actor_id?' selected':'')} onClick={()=>choose(actor)}><span className="leads-actor-score">{Math.round(actor.score??0)}<small>匹配度</small></span><span className="leads-actor-copy"><b>{actor.title}</b><small>{actor.actor_id}</small><span>{actor.recommendation_reason||actor.description||'Apify 数据采集 Actor'}</span></span><span className="leads-radio">{selected?.actor_id===actor.actor_id?'✓':''}</span></button>)}
+    {actors.map(actor=><button key={actor.actor_id} className={'leads-actor-card'+(selected?.actor_id===actor.actor_id?' selected':'')} onClick={()=>choose(actor)}><span className="leads-actor-score">{Math.round(actor.score??0)}<small>匹配度</small></span><span className="leads-actor-copy"><b>{actor.title}</b><small>{actor.actor_id}</small><span>{actor.recommendation_reason||actor.description||'Apify 数据采集 Actor'}</span><small>已匹配 {actor.supported_fields?.length??0} 项条件；未支持 {actor.unsupported_fields?.length??0} 项</small></span><span className="leads-radio">{selected?.actor_id===actor.actor_id?'✓':''}</span></button>)}
     <button className="leads-back-link" onClick={()=>setTab('criteria')}>← 返回修改搜索条件</button>
    </div>
    <div className="leads-panel leads-schema-panel">
@@ -158,7 +158,7 @@ export function ImportExportLeadsFinder({onApi}:Props){
      <div className="leads-schema-summary"><b>{fields.length} 个输入字段</b><span>{fields.filter(f=>f.required).length} 个必填字段</span></div>
      <div className="leads-schema-fields">{fields.map(f=><div key={f.key}><b>{f.key}{f.required?' *':''}</b><span>{f.type}{f.default!==undefined?' · 默认 '+String(f.default):''}</span><small>{f.description||'Actor Schema 未提供字段说明'}</small>{f.enum.length>0&&<small>允许值：{f.enum.join(', ')}</small>}</div>)}</div>
      <label className="leads-field leads-json-field"><span>实际发送给 Actor 的 Input JSON（可编辑）</span><textarea rows={12} spellCheck={false} value={actorInput} onChange={e=>setActorInput(e.target.value)}/></label>
-     <div className="leads-schema-warning">系统仅自动映射 Schema 中可确认支持的字段。请检查必填项及 JSON；贸易筛选条件未被 Actor 支持时，不会被伪装成已生效的筛选。</div>
+     <div className="leads-schema-warning">系统仅自动映射 Schema 中可确认支持的字段。已支持：{selected.supported_fields?.join('、')||'尚未识别'}。未支持：{selected.unsupported_fields?.join('、')||'无'}。请检查必填项及 JSON；不支持的条件不会被伪装成已生效的筛选。</div>
      <button className="leads-primary" disabled={busy} onClick={()=>void startRun()}>{busy?'正在启动 Apify…':'确认 Actor 并启动采集'} <span>→</span></button>
     </>:<p>请先选择 Actor。</p>}
    </div>
