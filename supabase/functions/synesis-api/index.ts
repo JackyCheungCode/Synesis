@@ -308,10 +308,40 @@ Deno.serve(async (req: Request) => {
           response=await fetch('https://openapi.bazhuayu.com/cloudextraction/statuses/v2',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({taskIds:[taskId]})});
         }else return json({error:'Octoparse 支持 start、status、results 操作；仅管理用户已有云采集任务'},400);
       }else if(provider==='texau'){
-        if(operation!=='email_enrichment') return json({error:'TexAu 当前已接入邮箱 waterfall enrichment；其他 65+ 端点将按能力逐步注册'},501);
-        const firstName=String(input.first_name??'').trim(),lastName=String(input.last_name??'').trim(),domain=String(input.domain??'').trim();
-        if(!firstName||!lastName||!domain) return json({error:'TexAu 邮箱丰富需要 first_name、last_name 和 domain'},400);
-        response=await fetch('https://v3-api.texau.com/api/v1/email_finding_waterfall',{method:'POST',headers:{'x-api-key':clear,'Content-Type':'application/json'},body:JSON.stringify({first_name:firstName,last_name:lastName,domain})});
+        if(operation==='email_enrichment'){
+          const firstName=String(input.first_name??'').trim(),lastName=String(input.last_name??'').trim(),domain=String(input.domain??'').trim();
+          if(!firstName||!lastName||!domain) return json({error:'TexAu 邮箱丰富需要 first_name、last_name 和 domain'},400);
+          response=await fetch('https://v3-api.texau.com/api/v1/email_finding_waterfall',{method:'POST',headers:{'x-api-key':clear,'Content-Type':'application/json'},body:JSON.stringify({first_name:firstName,last_name:lastName,domain})});
+        }else if(operation==='mcp_tools'||operation==='mcp_call'){
+          const mcpRequest=async(sessionId:string|null,message:Record<string,unknown>)=>{
+            const headers:Record<string,string>={'x-api-key':clear,'Content-Type':'application/json',Accept:'application/json, text/event-stream'};
+            if(sessionId) headers['Mcp-Session-Id']=sessionId;
+            const upstream=await fetch('https://mcp.texau.com/mcp',{method:'POST',headers,body:JSON.stringify(message)});
+            const session=upstream.headers.get('Mcp-Session-Id')??sessionId;
+            const raw=await upstream.text();
+            let payload:any=null;
+            if(raw.trim()){
+              try{payload=JSON.parse(raw);}catch{
+                const dataLines=raw.split('\n').filter(line=>line.startsWith('data:')).map(line=>line.slice(5).trim()).filter(Boolean);
+                for(const line of dataLines){try{payload=JSON.parse(line);}catch{/* ignore non-JSON SSE frames */}}
+              }
+            }
+            if(!upstream.ok) throw new Error('TexAu MCP 请求失败（HTTP '+upstream.status+'）：'+String(payload?.error?.message??payload?.message??raw).slice(0,400));
+            if(payload?.error) throw new Error(String(payload.error.message??'TexAu MCP 返回错误'));
+            return {session,payload};
+          };
+          const initialized=await mcpRequest(null,{jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-03-26',capabilities:{},clientInfo:{name:'Synesis',version:'1.0.0'}}});
+          const sessionId=initialized.session;
+          await mcpRequest(sessionId,{jsonrpc:'2.0',method:'notifications/initialized',params:{}});
+          const listed=await mcpRequest(sessionId,{jsonrpc:'2.0',id:2,method:'tools/list',params:{}});
+          const tools=Array.isArray(listed.payload?.result?.tools)?listed.payload.result.tools:[];
+          if(operation==='mcp_tools') return json({ok:true,provider,operation,tools});
+          const toolName=String(input.toolName??'').trim();
+          if(!toolName||!tools.some((tool:Record<string,unknown>)=>tool.name===toolName)) return json({error:'请选择 TexAu MCP tools/list 返回的有效工具名称'},400);
+          const args=input.arguments&&typeof input.arguments==='object'&&!Array.isArray(input.arguments)?input.arguments:{};
+          const called=await mcpRequest(sessionId,{jsonrpc:'2.0',id:3,method:'tools/call',params:{name:toolName,arguments:args}});
+          return json({ok:true,provider,operation,tool_name:toolName,data:called.payload?.result??called.payload});
+        }else return json({error:'TexAu 支持 email_enrichment、mcp_tools、mcp_call 操作'},400);
       }else return json({error:'不支持的采集服务商'},400);
       const contentType=response.headers.get('content-type')??'';
       const payload=contentType.includes('application/json')?await response.json().catch(()=>({})):await response.text();
