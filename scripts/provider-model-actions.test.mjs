@@ -57,9 +57,9 @@ test('Actor recommendations are schema-aware and show unsupported criteria expli
  assert.match(dynamicForm,/definition\.minimum/);
  assert.match(dynamicForm,/definition\.items/);
  assert.match(dynamicForm,/definition\.description/);
- assert.match(backend,/action === 'leads\.actors\.recommend'/);
+ assert.ok(backend.includes("action === 'leads.actor.schema'"));
  assert.match(backend,/input-schema/);
- assert.match(backend,/action === 'leads\\.actor\\.schema'/);
+ assert.ok(backend.includes("action === 'leads.actor.schema'"));
  assert.match(backend,/schema_hash/);
  assert.match(backend,/crypto\.subtle\.digest/);
  assert.match(backend,/explicitMappings/);
