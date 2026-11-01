@@ -668,6 +668,19 @@ Deno.serve(async (req: Request) => {
       return json({tasks:tasks??[]});
     }
 
+    if (action === 'global.leads.detail') {
+      const leadId=String(body.leadId??'').trim();
+      if(!/^[0-9a-f-]{36}$/i.test(leadId)) return json({error:'客户线索 ID 格式无效'},400);
+      const {data:lead,error:leadError}=await admin.from('global_leads').select('*').eq('id',leadId).eq('user_id',userId).maybeSingle();
+      if(leadError||!lead) return json({error:'客户线索不存在或无权访问'},404);
+      const [sourcesResult,evidenceResult]=await Promise.all([
+        admin.from('global_lead_sources').select('id,source_system,source_platform,source_record_key,source_url,source_content,observed_at,created_at').eq('lead_id',leadId).eq('user_id',userId).order('created_at',{ascending:false}).limit(100),
+        admin.from('global_lead_evidence').select('id,source_id,evidence_type,content,evidence_url,observed_at,analysis,created_at').eq('lead_id',leadId).eq('user_id',userId).order('created_at',{ascending:false}).limit(100)
+      ]);
+      if(sourcesResult.error||evidenceResult.error) throw sourcesResult.error??evidenceResult.error;
+      return json({lead,sources:sourcesResult.data??[],evidence:evidenceResult.data??[]});
+    }
+
     if (action === 'global.leads.list') {
       const customerType=String(body.customerType??'all');
       const search=String(body.search??'').trim();
