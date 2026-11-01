@@ -3,6 +3,7 @@ import { useWorkspaceRoute, type WorkspacePage } from './lib/router';
 import { WorkspaceNavigation } from './components/WorkspaceNavigation';
 import { CredentialVault } from './features/settings/CredentialVault';
 import { ImportExportLeadsFinder } from './features/leads/ImportExportLeadsFinder';
+import { SocialLeadsFinder } from './features/leads/SocialLeadsFinder';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content, Grid, Column,
   InlineNotification, Loading,
@@ -97,8 +98,8 @@ export default function App(){
   catch(e){setNotice({kind:'error',text:e instanceof Error?e.message:'连接测试失败'});}
   finally{setBusy(false);}
  }
- const title=page==='vault'?'API 与 AI 配置':'Import Export Leads Finder';
- const description=page==='vault'?'安全管理 Apify API、其他数据连接及 AI Provider 凭证。':'通过贸易记录与企业画像发现真实进口商和潜在客户。';
+ const title=page==='vault'?'API 与 AI 配置':page==='social'?'Social Leads Finder':'Import Export Leads Finder';
+ const description=page==='vault'?'安全管理 Apify API、其他数据连接及 AI Provider 凭证。':page==='social'?'通过 Instagram、TikTok、YouTube、Facebook、LinkedIn、X、Reddit 等社交平台发现潜在客户。':'通过贸易记录与企业画像发现真实进口商和潜在客户。';
 
  return <div className={`synesis-app synesis-theme-${theme}`}>
   <Header aria-label="Synesis">
@@ -117,6 +118,7 @@ export default function App(){
     {notice&&<InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
     {busy&&<Loading small withOverlay={false} description="处理中"/>}
     {page==='leads'&&<ImportExportLeadsFinder onApi={api}/>}
+    {page==='social'&&<SocialLeadsFinder onApi={api}/>}
     {page==='vault'&&<CredentialVault
      credentials={credentials} keyValues={keyValues} setKeyValues={setKeyValues} busy={busy}
      cloudflareAccountId={cloudflareAccountId} setCloudflareAccountId={setCloudflareAccountId}
