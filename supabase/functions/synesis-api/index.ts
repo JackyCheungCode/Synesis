@@ -229,6 +229,21 @@ Deno.serve(async (req: Request) => {
       return json({ok:true,slug,selected_model:model});
     }
 
+    if (action === 'scraping.capabilities') {
+      const registry = [
+        {id:'apify',name:'Apify',capabilities:['actor_marketplace','actor_schema','actor_run','dataset_results'],input_mode:'dynamic_schema',async:true,cancel:true},
+        {id:'brightdata',name:'Bright Data',capabilities:['web_scraper','serp','web_unlocker','browser'],input_mode:'endpoint_parameters',async:true,cancel:false},
+        {id:'octoparse',name:'Octoparse',capabilities:['cloud_tasks','task_status','data_export'],input_mode:'existing_task',async:true,cancel:true},
+        {id:'firecrawl',name:'Firecrawl',capabilities:['search','scrape','crawl','extract'],input_mode:'url_and_options',async:true,cancel:true},
+        {id:'phantombuster',name:'PhantomBuster',capabilities:['agent_discovery','agent_launch','agent_status','agent_output'],input_mode:'agent_argument',async:true,cancel:true},
+        {id:'texau',name:'TexAu',capabilities:['people_enrichment','company_enrichment','email_finding','phone_enrichment','verification','web_scraping'],input_mode:'endpoint_payload',async:true,cancel:false},
+      ];
+      const {data,error}=await admin.from('integration_connections').select('service_slug,connection_status,enabled,last_validated_at,key_last4').eq('user_id',userId).in('service_slug',registry.map(item=>item.id));
+      if(error) throw error;
+      const configured=new Map((data??[]).map(item=>[item.service_slug,item]));
+      return json({providers:registry.map(item=>({...item,connection:configured.get(item.id)??null,ready:Boolean(configured.get(item.id)?.enabled&&configured.get(item.id)?.connection_status==='validated')}))});
+    }
+
     if (action === 'connection.test') {
       const { slug, kind, model } = body;
       const { config, clear } = await getCredential(slug,kind);
