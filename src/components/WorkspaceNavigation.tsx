@@ -1,21 +1,64 @@
-import { Search, Key } from './icons';
+import {
+  Key,
+  Search,
+  SideNav,
+  SideNavItems,
+  SideNavLink,
+  SideNavMenu,
+  SideNavMenuItem,
+} from './carbon';
 import type { WorkspacePage } from '../lib/router';
-type Props={page:WorkspacePage;open:boolean;onNavigate:(page:WorkspacePage)=>void;onClose:()=>void};
-export function WorkspaceNavigation({page,open,onNavigate,onClose}:Props){
- const link=(target:WorkspacePage,label:string,Icon:typeof Search)=><a href={'#/'+target} className={page===target?'is-active':''} aria-current={page===target?'page':undefined} tabIndex={open?0:-1} onClick={e=>{e.preventDefault();onNavigate(target);onClose();window.requestAnimationFrame(()=>document.getElementById('main-content')?.focus());}}><Icon size={18}/><span>{label}</span></a>;
- return <>
-  <button className={'sn-nav-backdrop'+(open?' is-visible':'')} aria-label="关闭导航" tabIndex={open?0:-1} onClick={onClose}/>
-  <aside id="synesis-navigation" className={'sn-nav-panel'+(open?' is-open':'')} aria-label="主导航" aria-hidden={!open}>
-   <div className="sn-nav-heading"><span>GLOBAL CUSTOMER DISCOVERY</span><b>全球客户发现</b><small>进口商 · 贸易线索 · 企业联系人</small></div>
-   <nav>
-    <span className="sn-nav-section">客户发现</span>
-    {link('leads','Import Export Leads Finder',Search)}
-    {link('social','Social Leads Finder',Search)}
-    {link('global-leads','全球客户线索库',Search)}
-    <span className="sn-nav-section">平台配置</span>
-    {link('vault','API 与 AI 配置',Key)}
-   </nav>
-   <div className="sn-nav-footer">SYNESIS · GLOBAL LEADS</div>
-  </aside>
- </>;
+
+type Props = {
+  page: WorkspacePage;
+  open: boolean;
+  onNavigate: (page: WorkspacePage) => void;
+  onClose: () => void;
+};
+
+export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) {
+  const navigate = (target: WorkspacePage) => (event: React.MouseEvent) => {
+    event.preventDefault();
+    onNavigate(target);
+    onClose();
+    window.requestAnimationFrame(() => document.getElementById('main-content')?.focus());
+  };
+
+  return (
+    <SideNav
+      id="synesis-navigation"
+      aria-label="主导航"
+      aria-hidden={!open}
+      expanded={open}
+      isChildOfHeader
+      isFixedNav={false}
+      onOverlayClick={onClose}
+    >
+      <SideNavItems>
+        <SideNavMenu
+          title="全球客户发现"
+          renderIcon={Search}
+          defaultExpanded
+        >
+          <SideNavMenuItem href="#/leads" isActive={page === 'leads'} onClick={navigate('leads')}>
+            Import Export Leads Finder
+          </SideNavMenuItem>
+          <SideNavMenuItem href="#/social" isActive={page === 'social'} onClick={navigate('social')}>
+            Social Leads Finder
+          </SideNavMenuItem>
+          <SideNavMenuItem href="#/global-leads" isActive={page === 'global-leads'} onClick={navigate('global-leads')}>
+            全球客户线索库
+          </SideNavMenuItem>
+        </SideNavMenu>
+        <SideNavLink
+          href="#/vault"
+          renderIcon={Key}
+          isActive={page === 'vault'}
+          onClick={navigate('vault')}
+        >
+          API 与 AI 配置
+        </SideNavLink>
+      </SideNavItems>
+    </SideNav>
+  );
 }
