@@ -41,7 +41,7 @@ test('Global Customer Discovery exposes only the leads finder and configuration 
 });
 
 test('lead intake captures trade, geography, company, shipment, contact, and buyer filters',()=>{
- for(const field of ['productKeywords','hsCodes','targetCountries','originCountries','shipmentDateFrom','shipmentDateTo','minShipments','minImportValue','maxImportValue','companyTypes','industries','requireEmail','requirePhone','requireWebsite','requireLinkedin','decisionMakerTitles','maxResults']) assert.ok(finder.includes(field),`missing criteria field ${field}`);
+ for(const field of ['productKeywords','hsCodes','targetCountries','originCountries','shipmentDateFrom','shipmentDateTo','minShipments','minImportValue','maxImportValue','companyTypes','industries','knownImporters','knownSuppliers','destinationPorts','originPorts','excludeKeywords','employeeRange','requireEmail','requirePhone','requireWebsite','requireLinkedin','decisionMakerTitles','maxResults']) assert.ok(finder.includes(field),`missing criteria field ${field}`);
 });
 
 test('Actor recommendations are schema-aware and show unsupported criteria explicitly',()=>{
