@@ -530,7 +530,9 @@ Deno.serve(async (req: Request) => {
           const canonicalKey=identity.slice(0,500);
           const {data:lead,error:leadError}=await admin.from('global_leads').upsert({
             user_id:userId,customer_type:customerType,canonical_key:canonicalKey,display_name:name,country:country||null,
-            profile_url:profileUrl||null,website_url:website||null,last_seen_at:new Date().toISOString(),
+            profile_url:profileUrl||null,website_url:website||null,
+            contact_channels:publicEmail?[{type:'email',value:publicEmail,source:'public_social_profile'}]:[],
+            last_seen_at:new Date().toISOString(),
             attributes:{last_social_platform:task.platform_slug,identity_resolution:'deterministic_source_identity'}
           },{onConflict:'user_id,canonical_key'}).select('id').single();
           if(leadError) throw leadError;
