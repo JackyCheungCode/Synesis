@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react';
 import {
   Key,
-  Search,
+  SearchIcon,
   SideNav,
   SideNavItems,
   SideNavLink,
@@ -38,7 +38,7 @@ export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) 
       <SideNavItems>
         <SideNavMenu
           title="全球客户发现"
-          renderIcon={Search}
+          renderIcon={SearchIcon}
           defaultExpanded
         >
           <SideNavMenuItem href="#/leads" isActive={page === 'leads'} onClick={navigate('leads')}>
