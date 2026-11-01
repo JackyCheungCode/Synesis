@@ -1367,6 +1367,93 @@ Deno.serve(async (req: Request) => {
       return json({product,history:(history??[]).map(item=>({...item,source:sourceMap[item.source_record_id]??null})),total:count??0,limit,offset});
     }
 
+    if (action === 'leads.actors.recommend') {
+      const criteria=(body.criteria&&typeof body.criteria==='object'?body.criteria:{}) as Record<string,unknown>;
+      const keywords=String(criteria.productKeywords??'').trim();
+      const hsCodes=String(criteria.hsCodes??'').trim();
+      if(!keywords&&!hsCodes) return json({error:'请至少填写产品关键词或 HS Code'},400);
+      const candidates=[
+        {id:'rich_minds/us-importer-finder-ai',reason:'面向美国进口商发现，支持产品关键词、HS Code 与进口来源条件；优先用于美国市场真实进口商线索。',base:98},
+        {id:'fortuitous_pirate/bill-of-lading-scraper',reason:'基于提单数据按收货人（consignee）、发货人或货物描述搜索；适合验证进口行为与贸易关系。',base:94},
+        {id:'automation-lab/importyeti-us-import-records',reason:'提取 ImportYeti 美国进口商、海外供应商、提单及 HS Code 相关记录。',base:91},
+        {id:'akash9078/import-export-leads-finder',reason:'按国家与行业获取企业名录型线索；适合作为贸易记录之外的企业覆盖补充，不等同于真实进口记录。',base:72},
+        {id:'flamboyant_liner/shipment-monitor',reason:'按进口商、HS Code 和货物关键词监控新提单；更适合持续监控已知客户，而非首次批量发现。',base:66},
+        {id:'samstorm/lead-enrichment-actor',reason:'使用 Google Maps 业务类别与地点补充企业网站、邮箱及社交资料；属于联系方式补全，不是贸易记录来源。',base:55},
+      ];
+      const targetCountries=String(criteria.targetCountries??'').toLowerCase();
+      const actors=await Promise.all(candidates.map(async candidate=>{
+        const actorPath=candidate.id.replace('/','~');
+        const headers:Record<string,string>={Accept:'application/json'};
+        let token='';
+        try { const credential=await getCredential('apify','integration'); token=credential.clear; headers.Authorization=`Bearer ${token}`; } catch { /* Recommendation metadata may be public; running still requires a configured token. */ }
+        const [metaResponse,schemaResponse]=await Promise.all([
+          fetch(`https://api.apify.com/v2/acts/${encodeURIComponent(actorPath)}?fields=id,name,title,username,description,stats,isDeprecated`,{headers}),
+          fetch(`https://api.apify.com/v2/acts/${encodeURIComponent(actorPath)}/input-schema`,{headers}),
+        ]);
+        if(!metaResponse.ok) return null;
+        const metaPayload=await metaResponse.json().catch(()=>({}));
+        const meta=metaPayload?.data??metaPayload;
+        if(!meta?.id||meta.isDeprecated) return null;
+        const schemaPayload=schemaResponse.ok?await schemaResponse.json().catch(()=>({})):null;
+        const schema=schemaPayload?.data??schemaPayload;
+        const schemaText=JSON.stringify(schema??{}).toLowerCase();
+        let score=candidate.base;
+        if(candidate.id.includes('us-importer')||candidate.id.includes('bill-of-lading')||candidate.id.includes('importyeti')) {
+          if(/united states|usa|u\.s\./.test(targetCountries)) score+=2;
+          if(/china|vietnam|india|thailand|taiwan/.test(String(criteria.originCountries??'').toLowerCase())) score+=1;
+        }
+        const requestedFields=[keywords?'keyword|product|cargo|searchquery':'',hsCodes?'hs.?code|hsCodes|watchHsCodes':'',criteria.targetCountries?'country|consignee|targetCountries':'',criteria.originCountries?'origin|shipper|source':''].filter(Boolean);
+        const supported=requestedFields.filter(pattern=>new RegExp(pattern,'i').test(schemaText)).length;
+        return {
+          actor_id:candidate.id,title:String(meta.title??meta.name??candidate.id),description:String(meta.description??'').slice(0,700),
+          score:Math.min(99,score+supported*2),recommendation_reason:candidate.reason,
+          input_schema:schema&&typeof schema==='object'?schema:null,
+          stats:meta.stats??null,
+        };
+      }));
+      const available=actors.filter(Boolean).sort((a:any,b:any)=>b.score-a.score);
+      return json({actors:available,criteria_received:{product_keywords:Boolean(keywords),hs_codes:Boolean(hsCodes),target_countries:Boolean(targetCountries)},apify_configured:Boolean((await admin.from('integration_connections').select('id').eq('user_id',userId).eq('service_slug','apify').maybeSingle()).data)});
+    }
+
+    if (action === 'leads.run') {
+      const actorId=String(body.actorId??'').trim();
+      const input=body.input;
+      if(!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(actorId)) return json({error:'Actor ID 格式无效'},400);
+      const {clear:apifyToken}=await getCredential('apify','integration');
+      const actorPath=encodeURIComponent(actorId.replace('/','~'));
+      const schemaResponse=await fetch(`https://api.apify.com/v2/acts/${actorPath}/input-schema`,{headers:{Authorization:`Bearer ${apifyToken}`}});
+      if(!schemaResponse.ok) return json({error:`无法读取 Actor Input Schema（HTTP ${schemaResponse.status}）`},502);
+      const schemaPayload=await schemaResponse.json().catch(()=>({}));
+      const schema=(schemaPayload?.data??schemaPayload) as CompactInputSchema;
+      const validation=validateActorInput(input,schema);
+      if(validation.length) return json({error:'Actor 输入参数未通过 Schema 校验',validation},400);
+      const response=await fetch(`https://api.apify.com/v2/acts/${actorPath}/runs?waitForFinish=0`,{
+        method:'POST',headers:{Authorization:`Bearer ${apifyToken}`,'Content-Type':'application/json'},
+        body:JSON.stringify(input),
+      });
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok||!payload?.data?.id) return json({error:payload?.error?.message??payload?.message??`Apify Actor 启动失败（HTTP ${response.status}）`},502);
+      return json({run:payload.data,items:[],actor_id:actorId});
+    }
+
+    if (action === 'leads.results') {
+      const runId=String(body.runId??'').trim();
+      if(!/^[a-zA-Z0-9_-]{5,100}$/.test(runId)) return json({error:'Apify Run ID 格式无效'},400);
+      const {clear:apifyToken}=await getCredential('apify','integration');
+      const runResponse=await fetch(`https://api.apify.com/v2/actor-runs/${encodeURIComponent(runId)}`,{headers:{Authorization:`Bearer ${apifyToken}`}});
+      const runPayload=await runResponse.json().catch(()=>({}));
+      if(!runResponse.ok||!runPayload?.data) return json({error:`读取 Apify Run 失败（HTTP ${runResponse.status}）`},502);
+      const run=runPayload.data;
+      let items:unknown[]=[];
+      if(run.status==='SUCCEEDED'&&run.defaultDatasetId){
+        const resultResponse=await fetch(`https://api.apify.com/v2/datasets/${encodeURIComponent(run.defaultDatasetId)}/items?clean=true&format=json&limit=1000`,{headers:{Authorization:`Bearer ${apifyToken}`}});
+        if(!resultResponse.ok) return json({error:`读取 Actor 结果集失败（HTTP ${resultResponse.status}）`},502);
+        const resultPayload=await resultResponse.json().catch(()=>[]);
+        items=Array.isArray(resultPayload)?resultPayload:[];
+      }
+      return json({run,items});
+    }
+
     return json({error:'未知操作'},404);
   } catch (error) {
     return json({error:error instanceof Error?error.message:'服务器内部错误'},500);
