@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 
 export type SelectOption = { value: string; label: string; group?: string; flag?: string; logo?: string; logoColor?: string };
 type MultiSelectProps = {
@@ -22,7 +22,7 @@ export function MultiSelect({ label, value, options, onChange, placeholder = 'æ
   const renderMark = (option: SelectOption) => option.flag
     ? <span className="sn-select-flag" aria-hidden="true">{option.flag}</span>
     : option.logo
-      ? <span className="sn-select-logo" style={{ '--logo-color': option.logoColor || '#64748b' } as React.CSSProperties} aria-hidden="true"><img src={`https://cdn.simpleicons.org/${option.logo}/ffffff`} alt="" onError={event => { event.currentTarget.style.display = 'none'; }} /><span>{option.label.slice(0, 1)}</span></span>
+      ? <span className="sn-select-logo" style={{ '--logo-color': option.logoColor || '#64748b' } as CSSProperties} aria-hidden="true"><img src={`https://cdn.simpleicons.org/${option.logo}/ffffff`} alt="" onError={event => { event.currentTarget.style.display = 'none'; const fallback = event.currentTarget.nextElementSibling as HTMLElement | null; if (fallback) fallback.style.opacity = '1'; }} /><span>{option.label.slice(0, 1)}</span></span>
       : null;
   return <div className="sn-multi-select">
     <span className="sn-multi-label">{label}</span>
