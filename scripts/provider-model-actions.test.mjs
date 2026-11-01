@@ -2,113 +2,77 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const frontend = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
-const backend = readFileSync(new URL('../supabase/functions/synesis-api/index.ts', import.meta.url), 'utf8');
+const frontend=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+const finder=readFileSync(new URL('../src/features/leads/ImportExportLeadsFinder.tsx',import.meta.url),'utf8');
+const router=readFileSync(new URL('../src/lib/router.ts',import.meta.url),'utf8');
+const backend=readFileSync(new URL('../supabase/functions/synesis-api/index.ts',import.meta.url),'utf8');
+const nav=readFileSync(new URL('../src/components/WorkspaceNavigation.tsx',import.meta.url),'utf8');
 
-test('frontend model discovery and selection actions have backend handlers', () => {
-  assert.match(frontend, /api\('models\.list',\s*\{\s*slug\s*\}\)/);
-  assert.match(frontend, /api\('models\.select',\s*\{\s*slug,\s*model\s*\}\)/);
-  assert.match(backend, /action === 'models\.list'/);
-  assert.match(backend, /action === 'models\.select'/);
+test('API and AI credential configuration remains connected to encrypted backend actions',()=>{
+ assert.match(frontend,/api\('credentials\.list'\)/);
+ assert.match(frontend,/api\('credentials\.save'/);
+ assert.match(frontend,/api\('models\.list'/);
+ assert.match(frontend,/api\('models\.select'/);
+ assert.match(frontend,/api\('connection\.test'/);
+ assert.match(backend,/crypto\.subtle\.importKey\('raw', raw, 'AES-GCM'/);
+ assert.match(backend,/synesis_store_credential/);
+ assert.match(backend,/synesis_get_credential/);
 });
 
-test('model discovery uses the encrypted BYOK credential retrieval path', () => {
-  assert.match(backend, /getCredential\(slug,'provider'\)/);
-  assert.match(backend, /decryptSecret\(secret\.ciphertext, secret\.nonce\)/);
-  assert.match(backend, /crypto\.subtle\.importKey\('raw', raw, 'AES-GCM'/);
-  assert.match(backend, /key_last4:apiKey\.slice\(-4\)/);
+test('all supported AI providers retain model catalogue adapters',()=>{
+ for(const slug of ['openai','googlegemini','deepseek','anthropic','cloudflare','mistral','x']) assert.ok(backend.includes(`slug === '${slug}'`),`missing ${slug}`);
+ assert.match(backend,/default_model:model/);
+ assert.match(backend,/selected_model:config\.default_model/);
 });
 
-test('all configured providers have model catalogue adapters', () => {
-  for (const slug of ['openai','googlegemini','deepseek','anthropic','cloudflare','mistral','x']) {
-    assert.ok(backend.includes(`slug === '${slug}'`), `missing adapter for ${slug}`);
-  }
-  assert.match(backend, /default_model:model/);
-  assert.match(backend, /selected_model:config\.default_model/);
+test('Apify integration credentials remain testable and server-side only',()=>{
+ assert.match(backend,/kind === 'integration' && slug === 'apify'/);
+ assert.match(backend,/https:\/\/api\.apify\.com\/v2\/users\/me/);
+ assert.match(backend,/getCredential\('apify','integration'\)/);
 });
 
-test('model catalogue errors do not return provider secrets', () => {
-  const branch = backend.slice(backend.indexOf("if (action === 'models.list')"), backend.indexOf("if (action === 'models.select')"));
-  assert.doesNotMatch(branch, /return json\(\{[^}]*clear/);
-  assert.doesNotMatch(branch, /return json\(\{[^}]*apiKey/);
+test('Global Customer Discovery exposes only the leads finder and configuration routes',()=>{
+ assert.match(router,/WorkspacePage = 'leads' \| 'vault'/);
+ assert.match(router,/return \{ page: 'leads' \}/);
+ assert.match(nav,/全球客户发现/);
+ assert.match(nav,/Import Export Leads Finder/);
+ assert.match(nav,/API 与 AI 配置/);
+ assert.doesNotMatch(frontend,/ResearchWizard|WorkspaceDashboard|ProductLibrary|CollectionSettingsPage/);
 });
 
-test('Cloudflare Workers AI model namespaces remain path segments', () => {
-  assert.match(backend, /function cloudflareModelPath\(value: string\)/);
-  assert.match(backend, /segments\.map\(segment => encodeURIComponent\(segment\).*join\('\/'\)/);
-  assert.equal((backend.match(/cloudflareModelPath\(model \|\| config\.default_model/g) ?? []).length, 2);
-  assert.doesNotMatch(backend, /encodeURIComponent\(config\.default_model \|\| '@cf\/meta\/llama-3\.3-70b-instruct-fp8-fast'\)/);
+test('lead intake captures trade, geography, company, shipment, contact, and buyer filters',()=>{
+ for(const field of ['productKeywords','hsCodes','targetCountries','originCountries','shipmentDateFrom','shipmentDateTo','minShipments','minImportValue','maxImportValue','companyTypes','industries','requireEmail','requirePhone','requireWebsite','requireLinkedin','decisionMakerTitles','maxResults']) assert.ok(finder.includes(field),`missing criteria field ${field}`);
 });
 
-
-test('research plan prompt passes discovered Apify candidates using the declared variable', () => {
-  const planBranch = backend.slice(backend.indexOf("if (action === 'plans.generate')"), backend.indexOf("if (action === 'plans.approve')"));
-  assert.match(planBranch, /const actorCandidates\s*=\[\.\.\.actorMap\.values\(\)\]/);
-  assert.match(planBranch, /JSON\.stringify\(\{project,\s*actor_candidates:\s*actorCandidates\}\)/);
-  assert.doesNotMatch(planBranch, /JSON\.stringify\(\{project,\s*actor_candidates\s*\}\)/);
+test('Actor recommendations are schema-aware and show unsupported criteria explicitly',()=>{
+ assert.match(finder,/leads\.actors\.recommend/);
+ assert.match(finder,/input_schema/);
+ assert.match(finder,/supported_fields/);
+ assert.match(finder,/unsupported_fields/);
+ assert.match(finder,/Actor Input JSON/);
+ assert.match(backend,/action === 'leads\.actors\.recommend'/);
+ assert.match(backend,/input-schema/);
+ assert.match(backend,/supportedFields/);
+ assert.match(backend,/unsupportedFields/);
 });
 
-
-test('Amazon plans populate required product URL arrays from research keywords', () => {
-  const planBranch = backend.slice(backend.indexOf("if (action === 'plans.generate')"), backend.indexOf("if (action === 'plans.approve')"));
-  assert.match(planBranch, /researchKeywords/);
-  assert.match(planBranch, /https:\/\/www\.amazon\.com\/s\?k=/);
-  assert.match(backend, /必填数组字段/);
-  assert.match(planBranch, /categoryOrProductUrls/);
+test('Actor execution validates real input schema before starting a run',()=>{
+ assert.match(backend,/function validateActorInput/);
+ assert.match(backend,/缺少必填字段/);
+ assert.match(backend,/不在 Actor 允许的枚举值内/);
+ assert.match(backend,/action === 'leads\.run'/);
+ assert.match(backend,/validateActorInput\(input,schema\)/);
+ assert.match(backend,/\/runs\?waitForFinish=0/);
 });
 
-test('queued collection tasks start Apify before result synchronization', () => {
-  assert.match(frontend, /task\.status==='queued'&&!task\.external_run_id/);
-  assert.match(frontend, /api\('tasks\.execute',\{taskId:task\.id\}\)/);
-  assert.match(frontend, /task\.status==='running'&&Boolean\(task\.external_run_id\)/);
+test('lead results retrieve run status and dataset items',()=>{
+ assert.match(finder,/leads\.results/);
+ assert.match(backend,/action === 'leads\.results'/);
+ assert.match(backend,/actor-runs/);
+ assert.match(backend,/datasets/);
+ assert.match(backend,/run\.status==='SUCCEEDED'/);
 });
 
-
-test('research intake extracts JSON from fenced or prose-wrapped model output', () => {
-  assert.match(backend, /function parseJsonObject\(raw: string\)/);
-  assert.match(backend, /Find the first balanced JSON object/);
-  assert.match(backend, /parseJsonObject\(first\.raw\)/);
-});
-
-test('research intake retries malformed JSON through the selected provider', () => {
-  const branch = backend.slice(backend.indexOf("if (action === 'research.parse')"), backend.indexOf("if (action === 'plans.generate')"));
-  assert.match(branch, /async function requestResearchText/);
-  assert.match(branch, /const repaired=await requestResearchText\(repairPrompt\)/);
-  assert.match(branch, /max_tokens:8000/);
-  assert.match(branch, /generationConfig:\{responseMimeType:'application\/json',maxOutputTokens:8000\}/);
-  assert.match(branch, /selectedModel=model/);
-  assert.match(branch, /缺少 dimensions 数组/);
-});
-
-
-test('Apify plan generation extracts and repairs malformed Cloudflare JSON', () => {
-  const planBranch = backend.slice(backend.indexOf("if (action === 'plans.generate')"), backend.indexOf("if (action === 'plans.approve')"));
-  assert.match(planBranch, /parseJsonObject\(raw\)/);
-  assert.match(planBranch, /Repair the model output into one complete valid JSON object/);
-  assert.match(planBranch, /repairResponse=await fetch/);
-  assert.match(planBranch, /cloudflareModelPath\(cloudflareModel\)/);
-  assert.match(planBranch, /max_tokens:8000/);
-  assert.match(planBranch, /缺少 research_questions、platform_tasks 或 deliverables 数组/);
-});
-
-
-test('Amazon Apify inputs normalize cutoff dates and product URLs', () => {
-  assert.match(backend, /cutoffPattern\.test\('1 year'\)/);
-  assert.match(backend, /已移除不符合 Actor URL 规范的 productUrls 条目/);
-  assert.match(backend, /Amazon 搜索入口补齐 URL/);
-  assert.match(backend, /definition\.items\.pattern/);
-  assert.match(backend, /reviewsCutoffDate/);
-});
-
-
-
-
-
-test('Amazon Actor input normalization wraps URL objects and repairs enum values on all entry paths', () => {
-  assert.match(backend, /normalizeAmazonActorInput/);
-  assert.match(backend, /toUrlObjects\('categoryOrProductUrls'\)/);
-  assert.match(backend, /toUrlObjects\('productUrls'\)/);
-  assert.match(backend, /input\.sort='helpful'/);
-  assert.match(backend, /const retryInput=String\(task\.platform_slug/);
-  assert.match(backend, /normalizeAmazonActorInput\(task\.actor_id,task\.input\)/);
+test('legacy market research, collection task, and product API actions are retired',()=>{
+ for(const action of ['research.parse','plans.generate','plans.approve','tasks.execute','tasks.sync','tasks.results','products.list','products.history']) assert.doesNotMatch(backend,new RegExp(`action === '${action.replace('.','\\.')}'`));
 });
