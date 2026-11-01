@@ -1,0 +1,63 @@
+@use '@carbon/react/scss/theme' as carbon-theme;
+@use '@carbon/react/scss/spacing' as carbon-spacing;
+@use '@carbon/react/scss/breakpoint' as carbon-breakpoint;
+
+/*
+ * Carbon is the source of truth for application-wide theme values.
+ * GlobalTheme supplies white / g90 token values at runtime.
+ */
+:root {
+  color-scheme: light;
+}
+
+.synesis-app {
+  min-height: 100vh;
+  background: carbon-theme.$background;
+  color: carbon-theme.$text-primary;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.synesis-content {
+  width: 100%;
+  min-height: calc(100vh - 3rem);
+  padding: carbon-spacing.$spacing-07 carbon-spacing.$spacing-05 carbon-spacing.$spacing-09;
+}
+
+.synesis-page-grid {
+  width: 100%;
+  max-width: 100%;
+}
+
+.page-wrap {
+  width: 100%;
+  max-width: none;
+  margin-inline: auto;
+}
+
+.page-title {
+  color: carbon-theme.$text-primary;
+}
+
+.subheading {
+  color: carbon-theme.$text-secondary;
+}
+
+.synesis-skip-link {
+  position: absolute;
+  z-index: 10000;
+  inset-block-start: -4rem;
+  inset-inline-start: carbon-spacing.$spacing-05;
+  padding: carbon-spacing.$spacing-03 carbon-spacing.$spacing-05;
+  background: carbon-theme.$background;
+  color: carbon-theme.$text-primary;
+}
+
+.synesis-skip-link:focus {
+  inset-block-start: carbon-spacing.$spacing-03;
+}
+
+@media (max-width: 42rem) {
+  .synesis-content {
+    padding: carbon-spacing.$spacing-05 carbon-spacing.$spacing-04 carbon-spacing.$spacing-07;
+  }
+}
