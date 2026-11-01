@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: 22.14.0
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Test importer lead discovery
         run: npm run test:leads-finder
       - name: Test AI provider model actions
@@ -72,7 +72,7 @@ jobs:
         with:
           node-version: 22.14.0
       - name: Install Wrangler
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Download Vite build
         uses: actions/download-artifact@v4
         with:
