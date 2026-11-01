@@ -141,7 +141,7 @@ export function ImportExportLeadsFinder({onApi}:Props){
  const fields=schemaFields(selected?.input_schema);
  return <section className="leads-finder">
   <div className="leads-intro"><div><span className="leads-eyebrow">GLOBAL CUSTOMER DISCOVERY</span></div><div className="leads-intro-stat"><strong>{actors.length||'—'}</strong><span>可选 Actor</span></div></div>
-  <ScrapingProviderPanel onApi={onApi} query={[criteria.productKeywords,criteria.hsCodes].filter(Boolean).join(' ')} context="trade"/>
+  <ScrapingProviderPanel onApi={onApi} query={[criteria.productKeywords,criteria.hsCodes].filter(Boolean).join(' ')}/>
   <div className="leads-stepper" aria-label="客户发现流程"><span className={tab==='criteria'?'active':''}>01 搜索条件</span><i/><span className={tab==='actor'?'active':''}>02 Actor 推荐与选择</span><i/><span className={tab==='results'?'active':''}>03 采集结果</span></div>
   {error&&<div className="leads-error social-leads-error" role="alert"><span>{error}</span><button type="button" aria-label="关闭错误提示" onClick={()=>setError("")}>关闭</button></div>}
   {tab==='criteria'&&<div className="leads-layout">
