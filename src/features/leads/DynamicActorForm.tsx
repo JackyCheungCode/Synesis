@@ -24,6 +24,7 @@ type Props = {
   schema: InputSchema | null | undefined;
   value: Record<string, unknown>;
   onChange: (next: Record<string, unknown>) => void;
+  schemaError?: string;
 };
 const labels: Record<string, string> = {
   searchType: '搜索类型', searchQuery: '搜索内容', startUrls: '起始页面 URL',
@@ -46,7 +47,7 @@ function displayValue(value: unknown): string {
   if (value && typeof value === 'object') return JSON.stringify(value, null, 2);
   return value === undefined || value === null ? '' : String(value);
 }
-export function DynamicActorForm({ schema, value, onChange }: Props) {
+export function DynamicActorForm({ schema, schemaError, value, onChange }: Props) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [objectDrafts, setObjectDrafts] = useState<Record<string, string>>({});
   const properties = schema?.properties ?? {};
@@ -116,7 +117,7 @@ export function DynamicActorForm({ schema, value, onChange }: Props) {
         <small className="actor-field-hint">{definition.minimum !== undefined ? `最小值 ${definition.minimum} ` : ''}{definition.maximum !== undefined ? `最大值 ${definition.maximum} ` : ''}{definition.minLength !== undefined ? `最少 ${definition.minLength} 字符 ` : ''}{definition.maxLength !== undefined ? `最多 ${definition.maxLength} 字符` : ''}</small>}
     </label>;
   };
-  if (!schema || !schema.properties || !fields.length) return <div className="leads-empty">无法读取 Actor Input Schema（HTTP 404）。该 Actor 未提供可读取的输入定义，请检查 Actor 权限，或切换到高级 JSON 输入。</div>;
+  if (!schema || !schema.properties || !fields.length) return <div className="leads-empty">{schemaError || '该 Actor 没有公开可读取的 Input Schema。你仍可切换到高级 JSON 输入，并由 Apify 在启动时验证参数。'}</div>;
   return <div className="actor-dynamic-form">
     <div className="actor-form-section"><div className="actor-form-section-title"><b>基本参数</b><span>{basic.length} 个字段</span></div>
       <div className="leads-field-grid">{basic.map(renderField)}</div>
