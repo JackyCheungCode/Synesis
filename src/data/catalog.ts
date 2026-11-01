@@ -23,7 +23,12 @@ export const providers: CatalogItem[] = [
 ];
 
 export const apiIntegrations = [
-  { name: 'Apify', slug: 'apify', fallback: 'A', credentialLabel: 'Apify API Token', placeholder: '填写 Apify API Token' },
+  { name: 'Apify', slug: 'apify', fallback: 'A', credentialLabel: 'Apify API Token', placeholder: '填写 Apify API Token', description: 'Actor 市场、动态 Input Schema、运行与 Dataset' },
+  { name: 'Bright Data', slug: 'brightdata', fallback: 'BD', credentialLabel: 'Bright Data API Key', placeholder: '填写 Bright Data API Key', description: 'Web Scraper、SERP、Web Unlocker、Browser' },
+  { name: 'Octoparse', slug: 'octoparse', fallback: 'O', credentialLabel: 'Octoparse 登录凭证（JSON）', placeholder: '{ "username": "...", "password": "..." }', description: '云端任务管理、运行状态与数据导出' },
+  { name: 'Firecrawl', slug: 'firecrawl', fallback: 'F', credentialLabel: 'Firecrawl API Key', placeholder: '填写 Firecrawl API Key', description: 'Search、Scrape、Crawl、Extract' },
+  { name: 'PhantomBuster', slug: 'phantombuster', fallback: 'PB', credentialLabel: 'PhantomBuster API Key', placeholder: '填写 Workspace API Key', description: 'Agent 发现、启动、监控与结果读取' },
+  { name: 'TexAu', slug: 'texau', fallback: 'T', credentialLabel: 'TexAu V3 API Key', placeholder: '填写 TexAu API Key', description: '潜客搜索、资料丰富、联系方式验证' },
   { name: 'Amazon Selling Partner API', slug: 'amazon', fallback: 'a', credentialLabel: 'LWA Credential Bundle (JSON)', placeholder: '{ clientId, clientSecret, refreshToken }' },
   { name: 'eBay Developer API', slug: 'ebay', fallback: 'e', credentialLabel: 'OAuth Credential Bundle (JSON)', placeholder: '{ clientId, clientSecret }' },
   { name: 'Walmart Marketplace API', slug: 'walmart', fallback: 'W', credentialLabel: 'OAuth Credential Bundle (JSON)', placeholder: '{ clientId, clientSecret }' },
