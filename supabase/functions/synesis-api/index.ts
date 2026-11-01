@@ -301,7 +301,6 @@ Deno.serve(async (req: Request) => {
         if(!meta?.id||meta.isDeprecated) return null;
         const schemaPayload=schemaResponse.ok?await schemaResponse.json().catch(()=>({})):null;
         const schema=schemaPayload?.data??schemaPayload;
-        const schemaText=JSON.stringify(schema??{}).toLowerCase();
         let score=candidate.base;
         const isUSMarket=/united states|usa|u\.s\.|(^|[,; ])us($|[,; ])/.test(targetCountries);
         const isOtherMarket=Boolean(targetCountries)&&!isUSMarket;
@@ -360,8 +359,8 @@ Deno.serve(async (req: Request) => {
       if(!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(actorId)) return json({error:'Actor ID 格式无效'},400);
       const {clear:apifyToken}=await getCredential('apify','integration');
       const actorPath=encodeURIComponent(actorId.replace('/','~'));
-      const response=await fetch(\`https://api.apify.com/v2/acts/\${actorPath}/input-schema\`,{headers:{Authorization:\`Bearer \${apifyToken}\`,Accept:'application/json'}});
-      if(!response.ok) return json({error:\`无法读取 Actor Input Schema（HTTP \${response.status}）\`},502);
+      const response=await fetch(`https://api.apify.com/v2/acts/${actorPath}/input-schema`,{headers:{Authorization:`Bearer ${apifyToken}`,Accept:'application/json'}});
+      if(!response.ok) return json({error:`无法读取 Actor Input Schema（HTTP ${response.status}）`},502);
       const payload=await response.json().catch(()=>({}));
       const schema=(payload?.data??payload) as Record<string,unknown>;
       if(!schema||typeof schema!=='object'||Array.isArray(schema)) return json({error:'Actor 返回的 Input Schema 格式无效'},502);
