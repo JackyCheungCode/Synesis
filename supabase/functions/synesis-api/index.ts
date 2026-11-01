@@ -303,10 +303,14 @@ Deno.serve(async (req: Request) => {
         const schema=schemaPayload?.data??schemaPayload;
         const schemaText=JSON.stringify(schema??{}).toLowerCase();
         let score=candidate.base;
-        if(candidate.id.includes('us-importer')||candidate.id.includes('bill-of-lading')||candidate.id.includes('importyeti')) {
-          if(/united states|usa|u\.s\./.test(targetCountries)) score+=2;
+        const isUSMarket=/united states|usa|u\.s\.|(^|[,; ])us($|[,; ])/.test(targetCountries);
+        const isOtherMarket=Boolean(targetCountries)&&!isUSMarket;
+        if(candidate.id.includes('us-importer')||candidate.id.includes('bill-of-lading')||candidate.id.includes('importyeti')||candidate.id.includes('shipment-monitor')) {
+          score+=isUSMarket?14:isOtherMarket?-28:0;
           if(/china|vietnam|india|thailand|taiwan/.test(String(criteria.originCountries??'').toLowerCase())) score+=1;
         }
+        if(candidate.id.includes('import-export-leads-finder')&&isOtherMarket) score+=16;
+        if(candidate.id.includes('lead-enrichment')&&(criteria.requireEmail||criteria.requirePhone||criteria.requireLinkedin)) score+=8;
         const requestedFields:Array<[string,boolean,RegExp]>=[
           ['产品关键词',Boolean(keywords),/keyword|product|cargo|searchquery/i],
           ['HS Code',Boolean(hsCodes),/hs.?code|watchHsCodes/i],
@@ -322,6 +326,12 @@ Deno.serve(async (req: Request) => {
           ['网站要求',Boolean(criteria.requireWebsite),/website|domain|url/i],
           ['LinkedIn 要求',Boolean(criteria.requireLinkedin),/linkedin|social/i],
           ['采购决策人职位',Boolean(criteria.decisionMakerTitles),/title|job.?title|decision.?maker/i],
+          ['已知进口商',Boolean(criteria.knownImporters),/consignee|importer|watchConsignees/i],
+          ['已知供应商',Boolean(criteria.knownSuppliers),/shipper|supplier|watchShippers/i],
+          ['目的港',Boolean(criteria.destinationPorts),/destination|arrival|discharge|port/i],
+          ['起运港',Boolean(criteria.originPorts),/origin|loading|port/i],
+          ['排除关键词',Boolean(criteria.excludeKeywords),/exclude|excludeTerms|negative/i],
+          ['企业员工规模',Boolean(criteria.employeeRange),/employee|staff|companySize/i],
           ['最大结果数',Boolean(criteria.maxResults),/maxResults|maxLeads|limit|count/i],
         ].filter(([,active])=>active);
         const supportedFields=requestedFields.filter(([,active,pattern])=>active&&pattern.test(schemaText)).map(([label])=>label);
