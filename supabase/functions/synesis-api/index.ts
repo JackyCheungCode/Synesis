@@ -514,7 +514,7 @@ Deno.serve(async (req: Request) => {
           const profileUrl=String(item.profileUrl??item.authorUrl??item.ownerUrl??item.userUrl??item.channelUrl??author.url??author.profileUrl??'').trim();
           const sourceUrl=String(item.url??item.postUrl??item.webUrl??item.link??item.permalink??profileUrl).trim();
           const content=String(item.text??item.postText??item.caption??item.description??item.title??item.content??item.message??item.body??'').trim();
-          const externalKey=String(item.id??item.postId??item.videoId??item.tweetId??item.commentId??sourceUrl??(task.id+':'+index));
+          const externalKey=String(item.id||item.postId||item.videoId||item.tweetId||item.commentId||sourceUrl||('record-'+index));
           const {data:record,error:recordError}=await admin.from('social_collection_records').upsert({
             user_id:userId,task_id:task.id,item_index:index,external_record_key:externalKey,source_url:sourceUrl||null,raw_data:item
           },{onConflict:'task_id,item_index'}).select('id').single();
@@ -524,7 +524,9 @@ Deno.serve(async (req: Request) => {
           const country=String(item.country??item.location?.country??author.country??'').trim();
           const isCompany=Boolean(item.isCompany||item.companyName||author.isCompany||String(author.type??item.accountType??'').toLowerCase().includes('company'));
           const customerType=isCompany?'company':(profileUrl||item.username||item.handle||author.username?'person':'unknown');
-          const identity=profileUrl?'profile:'+profileUrl.toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,''):website?'website:'+website.toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0]:'name:'+name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim()+'|'+country.toLowerCase();
+          const publicEmail=String(item.email??author.email??'').trim().toLowerCase();
+          const websiteDomain=website.toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+          const identity=publicEmail?'email:'+publicEmail:websiteDomain?'website:'+websiteDomain+':'+name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim():profileUrl?'profile:'+profileUrl.toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,''):'name:'+name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim()+'|'+country.toLowerCase();
           const canonicalKey=identity.slice(0,500);
           const {data:lead,error:leadError}=await admin.from('global_leads').upsert({
             user_id:userId,customer_type:customerType,canonical_key:canonicalKey,display_name:name,country:country||null,
@@ -532,12 +534,12 @@ Deno.serve(async (req: Request) => {
             attributes:{last_social_platform:task.platform_slug,identity_resolution:'deterministic_source_identity'}
           },{onConflict:'user_id,canonical_key'}).select('id').single();
           if(leadError) throw leadError;
-          const sourceKey=externalKey||task.id+':'+index;
+          const sourceKey=task.id+':'+externalKey;
           const {data:source,error:sourceError}=await admin.from('global_lead_sources').upsert({
             user_id:userId,lead_id:lead.id,source_system:'social',source_platform:task.platform_slug,
             source_project_id:task.project_id,social_task_id:task.id,social_record_id:record.id,
             source_record_key:sourceKey,source_url:sourceUrl||null,source_content:content||null,raw_data:item,
-            observed_at:item.createdAt??item.publishedAt??item.timestamp??null
+            observed_at:(()=>{const value=item.createdAt??item.publishedAt??item.timestamp;return typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString():null;})()
           },{onConflict:'user_id,source_system,source_platform,source_record_key'}).select('id').single();
           if(sourceError) throw sourceError;
           if(content){
