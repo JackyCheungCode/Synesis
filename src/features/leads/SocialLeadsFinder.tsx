@@ -146,9 +146,9 @@ export function SocialLeadsFinder({onApi}:Props){
  }
  const groups=[...new Set(platforms.map(item=>item.group))];
  return <section className="leads-finder social-leads-finder">
-  <div className="leads-intro"><div><span className="leads-eyebrow">GLOBAL CUSTOMER DISCOVERY / SOCIAL INTELLIGENCE</span><h2>Social Leads Finder</h2><p>手动选择社交平台与 Apify Actor，从公开内容和商业信号中发现买家及企业客户。采集结果保留原始来源，并汇入统一全球客户线索库。</p></div><div className="leads-intro-stat"><strong>{actors.length||'—'}</strong><span>匹配采集工具</span></div></div>
+  <div className="leads-intro"><div><span className="leads-eyebrow">GLOBAL CUSTOMER DISCOVERY / SOCIAL INTELLIGENCE</span></div><div className="leads-intro-stat"><strong>{actors.length||'—'}</strong><span>匹配采集工具</span></div></div>
   <div className="leads-stepper" aria-label="社媒客户发现流程"><button className={tab==='criteria'?'active':''} onClick={()=>setTab('criteria')}>01 搜索策略</button><i/><button className={tab==='actors'?'active':''} onClick={()=>setTab('actors')} disabled={!actors.length}>02 Actor 与参数</button><i/><button className={tab==='results'?'active':''} onClick={()=>setTab('results')} disabled={!run}>03 采集结果</button><i/><button className={tab==='tasks'?'active':''} onClick={()=>void loadTasks()}>04 任务记录</button></div>
-  {error&&<div className="leads-error" role="alert">{error}</div>}
+  {error&&<div className="leads-error social-leads-error" role="alert"><span>{error}</span><button type="button" aria-label="关闭错误提示" onClick={()=>setError("")}>关闭</button></div>}
   {tab==='criteria'&&<div className="leads-layout">
    <div className="leads-form-main">
     <section className="leads-panel"><div className="leads-panel-head"><div><span>01 / PLATFORM COVERAGE</span><h3>选择社交平台</h3><p>请手动勾选本次要采集的平台。系统只检索你选中的平台，不会自动替你启动任何 Actor。</p></div></div>
