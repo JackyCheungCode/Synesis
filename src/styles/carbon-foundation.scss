@@ -1,7 +1,7 @@
-@use '@carbon/react/scss/theme' as carbon-theme;
-@use '@carbon/react/scss/themes' as carbon-themes;
-@use '@carbon/react/scss/spacing' as carbon-spacing;
-@use '@carbon/react/scss/breakpoint' as carbon-breakpoint;
+@use '@carbon/styles/scss/theme' as carbon-theme;
+@use '@carbon/styles/scss/themes' as carbon-themes;
+@use '@carbon/styles/scss/spacing' as carbon-spacing;
+@use '@carbon/styles/scss/breakpoint' as carbon-breakpoint;
 
 /*
  * GlobalTheme synchronizes React context; these selectors emit the actual
