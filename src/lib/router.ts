@@ -6,7 +6,6 @@ export type WorkspaceRoute = { page: WorkspacePage; projectId?: string };
 function parseHash(): WorkspaceRoute {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const page = parts[0];
-  if (page === 'research' && parts[1]) return { page: 'projects', projectId: decodeURIComponent(parts[1]) };
   if (page === 'leads' || page === 'vault') return { page };
   
   return { page: 'leads' };
