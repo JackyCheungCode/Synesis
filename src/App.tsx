@@ -6,10 +6,10 @@ import { ImportExportLeadsFinder } from './features/leads/ImportExportLeadsFinde
 import { SocialLeadsFinder } from './features/leads/SocialLeadsFinder';
 import { GlobalLeads } from './features/leads/GlobalLeads';
 import {
-  Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content, Grid, Column,
-  InlineNotification, Loading,
-} from './components/ui';
-import { UserAvatar } from './components/icons';
+  Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction,
+  Content, Grid, Column, InlineNotification, Loading, GlobalTheme,
+} from './components/carbon';
+import { Asleep, UserAvatar } from './components/carbon';
 import { useAuth } from './auth/AuthProvider';
 
 type Credential = { slug:string; name:string; kind:'provider'|'integration'; status:string; key_last4?:string; last_validated_at?:string; account_id?:string; metadata?:Record<string,string> };
@@ -106,13 +106,14 @@ export default function App(){
  const title=page==='vault'?'API 与 AI 配置':page==='social'?'Social Leads Finder':page==='global-leads'?'全球客户线索库':'Import Export Leads Finder';
  const description=page==='vault'?'安全管理 Apify API、其他数据连接及 AI Provider 凭证。':page==='social'?'手动选择社交平台与 Apify Actor，发现买家和企业客户。':page==='global-leads'?'统一管理跨平台、跨需求、跨来源的企业与个人客户线索。':'通过贸易记录与企业画像发现真实进口商和潜在客户。';
 
- return <div className={`synesis-app synesis-theme-${theme}`}>
+ return <GlobalTheme theme={theme === 'light' ? 'white' : 'g90'}>
+ <div className={`synesis-app synesis-theme-${theme}`} data-carbon-theme={theme === 'light' ? 'white' : 'g90'}>
   <Header aria-label="Synesis">
    <a className="synesis-skip-link" href="#main-content" onClick={event=>{event.preventDefault();document.getElementById('main-content')?.focus();}}>跳至主要内容</a>
    <HeaderMenuButton aria-label="切换导航" aria-expanded={navExpanded} aria-controls="synesis-navigation" isActive={navExpanded} onClick={()=>setNavExpanded(v=>!v)}/>
    <HeaderName prefix="" href="#/leads">SYNESIS</HeaderName>
    <HeaderGlobalBar>
-    <HeaderGlobalAction aria-label={theme==='light'?'切换到深色主题':'切换到浅色主题'} tooltipAlignment="end" onClick={()=>setTheme(current=>current==='light'?'dark':'light')}><span aria-hidden="true">◐</span></HeaderGlobalAction>
+    <HeaderGlobalAction aria-label={theme==='light'?'切换到深色主题':'切换到浅色主题'} tooltipAlignment="end" onClick={()=>setTheme(current=>current==='light'?'dark':'light')}>{theme==='light'?<Asleep size={20}/>:<span aria-hidden="true">◐</span>}</HeaderGlobalAction>
     <HeaderGlobalAction aria-label="账户（点击退出登录）" tooltipAlignment="end" onClick={()=>void signOut()}><UserAvatar/></HeaderGlobalAction>
    </HeaderGlobalBar>
   </Header>
@@ -135,5 +136,6 @@ export default function App(){
     />}
    </div></Column></Grid>
   </Content>
- </div>;
+ </div>
+ </GlobalTheme>;
 }
