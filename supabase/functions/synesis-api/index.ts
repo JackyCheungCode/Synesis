@@ -440,22 +440,143 @@ Deno.serve(async (req: Request) => {
       return json({actors,platforms_checked:selected,platforms_without_results:searches.filter(item=>!item.actors.length).map(item=>item.platform),search_errors:searches.flatMap(item=>item.errors.map(error=>({platform:item.platform,...error}))),apify_store_source:'https://apify.com/store'});
     }
 
+    if (action === 'social.project.create') {
+      const criteria=(body.criteria&&typeof body.criteria==='object'?body.criteria:{}) as Record<string,unknown>;
+      const platforms=Array.isArray(body.platforms)?body.platforms.map((value:unknown)=>String(value).toLowerCase()).filter(Boolean):[];
+      if(!platforms.length) return json({error:'请至少选择一个社交平台'},400);
+      const title=String(body.title??criteria.productOrService??criteria.keywords??'社媒客户发现').trim().slice(0,160);
+      const {data:project,error}=await admin.from('social_discovery_projects').insert({
+        user_id:userId,title,objective:'buyer_and_business_discovery',criteria,platform_slugs:platforms,status:'active'
+      }).select('id,title,platform_slugs,status,created_at').single();
+      if(error) throw error;
+      return json({project});
+    }
+
     if (action === 'social.run') {
       const actorId=String(body.actorId??'').trim();
+      const platform=String(body.platform??'').toLowerCase();
+      const projectId=String(body.projectId??'').trim();
       const input=body.input;
       if(!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(actorId)) return json({error:'Actor ID 格式无效'},400);
+      if(!/^[0-9a-f-]{36}$/i.test(projectId)) return json({error:'请先保存社媒发现需求'},400);
       if(!input||typeof input!=='object'||Array.isArray(input)) return json({error:'Actor Input 必须是 JSON 对象'},400);
-      const {clear:apifyToken}=await getCredential('apify','integration');
-      const lookup=await readActorInputSchema(actorId,apifyToken);
-      if(!lookup.schema&&lookup.status!==422) return json({error:lookup.error??'无法读取 Actor Input Schema',code:'ACTOR_INPUT_SCHEMA_UNAVAILABLE',upstream_status:lookup.status},lookup.status);
-      const validation=validateActorInput(input,(lookup.schema??{}) as CompactInputSchema);
-      if(validation.length) return json({error:'Actor 输入参数未通过 Schema 校验',validation},400);
-      const actorPath=encodeURIComponent(actorId.replace('/','~'));
-      const response=await fetch('https://api.apify.com/v2/actors/'+actorPath+'/runs?waitForFinish=0',{method:'POST',headers:{Authorization:'Bearer '+apifyToken,'Content-Type':'application/json'},body:JSON.stringify(input)});
-      const payload=await response.json().catch(()=>({}));
-      if(!response.ok||!payload?.data?.id) return json({error:payload?.error?.message??payload?.message??'Apify Actor 启动失败（HTTP '+response.status+'）',upstream_status:response.status},502);
-      return json({run:payload.data,items:[],actor_id:actorId,platform:body.platform??null});
+      const {data:project,error:projectError}=await admin.from('social_discovery_projects').select('id,platform_slugs').eq('id',projectId).eq('user_id',userId).maybeSingle();
+      if(projectError||!project) return json({error:'社媒发现需求不存在或无权访问'},404);
+      if(!project.platform_slugs.includes(platform)) return json({error:'所选平台不属于当前发现需求'},400);
+      const {data:task,error:taskError}=await admin.from('social_collection_tasks').insert({
+        user_id:userId,project_id:projectId,platform_slug:platform,actor_id:actorId,
+        actor_title:String(body.actorTitle??actorId).slice(0,200),input,status:'queued'
+      }).select('id').single();
+      if(taskError) throw taskError;
+      try {
+        const {clear:apifyToken}=await getCredential('apify','integration');
+        const lookup=await readActorInputSchema(actorId,apifyToken);
+        if(!lookup.schema&&lookup.status!==422) throw new Error(lookup.error??'无法读取 Actor Input Schema');
+        const validation=validateActorInput(input,(lookup.schema??{}) as CompactInputSchema);
+        if(validation.length) throw new Error('Actor 输入参数未通过 Schema 校验：'+validation.join('；'));
+        const actorPath=encodeURIComponent(actorId.replace('/','~'));
+        const response=await fetch('https://api.apify.com/v2/actors/'+actorPath+'/runs?waitForFinish=0',{method:'POST',headers:{Authorization:'Bearer '+apifyToken,'Content-Type':'application/json'},body:JSON.stringify(input)});
+        const payload=await response.json().catch(()=>({}));
+        if(!response.ok||!payload?.data?.id) throw new Error(payload?.error?.message??payload?.message??'Apify Actor 启动失败（HTTP '+response.status+'）');
+        const {error:updateError}=await admin.from('social_collection_tasks').update({
+          status:'running',external_run_id:payload.data.id,dataset_id:payload.data.defaultDatasetId??null,started_at:new Date().toISOString()
+        }).eq('id',task.id).eq('user_id',userId);
+        if(updateError) throw updateError;
+        return json({run:payload.data,task_id:task.id,project_id:projectId,actor_id:actorId,platform});
+      } catch(error) {
+        await admin.from('social_collection_tasks').update({status:'failed',error_message:error instanceof Error?error.message:'Actor 启动失败',finished_at:new Date().toISOString()}).eq('id',task.id).eq('user_id',userId);
+        throw error;
+      }
     }
+
+    if (action === 'social.results') {
+      const taskId=String(body.taskId??'').trim();
+      const runId=String(body.runId??'').trim();
+      if(!/^[0-9a-f-]{36}$/i.test(taskId)||!/^[a-zA-Z0-9_-]{5,100}$/.test(runId)) return json({error:'采集任务或 Run ID 格式无效'},400);
+      const {data:task,error:taskError}=await admin.from('social_collection_tasks').select('*,social_discovery_projects!inner(id)').eq('id',taskId).eq('user_id',userId).eq('external_run_id',runId).maybeSingle();
+      if(taskError||!task) return json({error:'社媒采集任务不存在或无权访问'},404);
+      const {clear:apifyToken}=await getCredential('apify','integration');
+      const runResponse=await fetch('https://api.apify.com/v2/actor-runs/'+encodeURIComponent(runId),{headers:{Authorization:'Bearer '+apifyToken}});
+      const runPayload=await runResponse.json().catch(()=>({}));
+      if(!runResponse.ok||!runPayload?.data) return json({error:'读取 Apify Run 失败（HTTP '+runResponse.status+'）'},502);
+      const run=runPayload.data;
+      let items:Record<string,any>[]=[];
+      if(run.status==='SUCCEEDED'&&run.defaultDatasetId){
+        const resultResponse=await fetch('https://api.apify.com/v2/datasets/'+encodeURIComponent(run.defaultDatasetId)+'/items?clean=true&format=json&limit=1000',{headers:{Authorization:'Bearer '+apifyToken}});
+        if(!resultResponse.ok) return json({error:'读取 Actor Dataset 失败（HTTP '+resultResponse.status+'）'},502);
+        const resultPayload=await resultResponse.json().catch(()=>[]);
+        items=Array.isArray(resultPayload)?resultPayload.filter((item:unknown)=>item&&typeof item==='object'&&!Array.isArray(item)) as Record<string,any>[]:[];
+        let leadCount=0;
+        for(let index=0;index<items.length;index++){
+          const item=items[index];
+          const author=item.author??item.owner??item.user??item.channel??item.profile??{};
+          const name=String(item.authorName??item.ownerName??item.companyName??item.username??item.handle??author.name??author.username??author.handle??author.title??'').trim();
+          const profileUrl=String(item.profileUrl??item.authorUrl??item.ownerUrl??item.userUrl??item.channelUrl??author.url??author.profileUrl??'').trim();
+          const sourceUrl=String(item.url??item.postUrl??item.webUrl??item.link??item.permalink??profileUrl).trim();
+          const content=String(item.text??item.postText??item.caption??item.description??item.title??item.content??item.message??item.body??'').trim();
+          const externalKey=String(item.id??item.postId??item.videoId??item.tweetId??item.commentId??sourceUrl??(task.id+':'+index));
+          const {data:record,error:recordError}=await admin.from('social_collection_records').upsert({
+            user_id:userId,task_id:task.id,item_index:index,external_record_key:externalKey,source_url:sourceUrl||null,raw_data:item
+          },{onConflict:'task_id,item_index'}).select('id').single();
+          if(recordError) throw recordError;
+          if(!name||name.toLowerCase()==='unknown') continue;
+          const website=String(item.companyWebsite??item.websiteUrl??item.website??author.website??'').trim();
+          const country=String(item.country??item.location?.country??author.country??'').trim();
+          const isCompany=Boolean(item.isCompany||item.companyName||author.isCompany||String(author.type??item.accountType??'').toLowerCase().includes('company'));
+          const customerType=isCompany?'company':(profileUrl||item.username||item.handle||author.username?'person':'unknown');
+          const identity=profileUrl?'profile:'+profileUrl.toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,''):website?'website:'+website.toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0]:'name:'+name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim()+'|'+country.toLowerCase();
+          const canonicalKey=identity.slice(0,500);
+          const {data:lead,error:leadError}=await admin.from('global_leads').upsert({
+            user_id:userId,customer_type:customerType,canonical_key:canonicalKey,display_name:name,country:country||null,
+            profile_url:profileUrl||null,website_url:website||null,last_seen_at:new Date().toISOString(),
+            attributes:{last_social_platform:task.platform_slug,identity_resolution:'deterministic_source_identity'}
+          },{onConflict:'user_id,canonical_key'}).select('id').single();
+          if(leadError) throw leadError;
+          const sourceKey=externalKey||task.id+':'+index;
+          const {data:source,error:sourceError}=await admin.from('global_lead_sources').upsert({
+            user_id:userId,lead_id:lead.id,source_system:'social',source_platform:task.platform_slug,
+            source_project_id:task.project_id,social_task_id:task.id,social_record_id:record.id,
+            source_record_key:sourceKey,source_url:sourceUrl||null,source_content:content||null,raw_data:item,
+            observed_at:item.createdAt??item.publishedAt??item.timestamp??null
+          },{onConflict:'user_id,source_system,source_platform,source_record_key'}).select('id').single();
+          if(sourceError) throw sourceError;
+          if(content){
+            const {data:existingEvidence}=await admin.from('global_lead_evidence').select('id').eq('user_id',userId).eq('source_id',source.id).maybeSingle();
+            if(!existingEvidence) {
+              const {error:evidenceError}=await admin.from('global_lead_evidence').insert({
+                user_id:userId,lead_id:lead.id,source_id:source.id,evidence_type:'social_post_or_comment',
+                content:content.slice(0,12000),evidence_url:sourceUrl||null,
+                observed_at:item.createdAt??item.publishedAt??item.timestamp??null,
+                analysis:{status:'pending_ai_analysis'}
+              });
+              if(evidenceError) throw evidenceError;
+            }
+          }
+          leadCount++;
+        }
+        const {error:updateError}=await admin.from('social_collection_tasks').update({
+          status:'succeeded',dataset_id:run.defaultDatasetId,result_count:items.length,finished_at:new Date().toISOString(),error_message:null
+        }).eq('id',task.id).eq('user_id',userId);
+        if(updateError) throw updateError;
+        return json({run,items,task_id:task.id,stored_records:items.length,global_leads_touched:leadCount});
+      }
+      if(['FAILED','ABORTED','TIMED-OUT'].includes(String(run.status))){
+        await admin.from('social_collection_tasks').update({status:'failed',error_message:String(run.statusMessage??run.status),finished_at:new Date().toISOString()}).eq('id',task.id).eq('user_id',userId);
+      }
+      return json({run,items,task_id:task.id,stored_records:0,global_leads_touched:0});
+    }
+
+    if (action === 'global.leads.list') {
+      const customerType=String(body.customerType??'all');
+      const search=String(body.search??'').trim();
+      let query=admin.from('global_leads').select('id,customer_type,display_name,country,industry,business_role,intent_type,intent_strength,lead_score,profile_url,website_url,lifecycle_status,first_seen_at,last_seen_at').eq('user_id',userId).order('last_seen_at',{ascending:false}).limit(250);
+      if(customerType==='company'||customerType==='person'||customerType==='unknown') query=query.eq('customer_type',customerType);
+      if(search) query=query.ilike('display_name','%'+search.replace(/[%_]/g,'')+'%');
+      const {data,error}=await query;
+      if(error) throw error;
+      return json({leads:data??[]});
+    }
+
     if (action === 'leads.actor.schema') {
       const actorId=String(body.actorId??'').trim();
       if(!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(actorId)) return json({error:'Actor ID 格式无效'},400);
