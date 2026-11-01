@@ -568,6 +568,14 @@ Deno.serve(async (req: Request) => {
       return json({run,items,task_id:task.id,stored_records:0,global_leads_touched:0});
     }
 
+    if (action === 'social.tasks.list') {
+      const {data:tasks,error}=await admin.from('social_collection_tasks')
+        .select('id,project_id,platform_slug,actor_id,actor_title,status,external_run_id,result_count,error_message,created_at,started_at,finished_at')
+        .eq('user_id',userId).order('created_at',{ascending:false}).limit(100);
+      if(error) throw error;
+      return json({tasks:tasks??[]});
+    }
+
     if (action === 'global.leads.list') {
       const customerType=String(body.customerType??'all');
       const search=String(body.search??'').trim();
