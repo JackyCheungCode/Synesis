@@ -493,7 +493,7 @@ Deno.serve(async (req: Request) => {
       const taskId=String(body.taskId??'').trim();
       const runId=String(body.runId??'').trim();
       if(!/^[0-9a-f-]{36}$/i.test(taskId)||!/^[a-zA-Z0-9_-]{5,100}$/.test(runId)) return json({error:'采集任务或 Run ID 格式无效'},400);
-      const {data:task,error:taskError}=await admin.from('social_collection_tasks').select('*,social_discovery_projects!inner(id)').eq('id',taskId).eq('user_id',userId).eq('external_run_id',runId).maybeSingle();
+      const {data:task,error:taskError}=await admin.from('social_collection_tasks').select('*').eq('id',taskId).eq('user_id',userId).eq('external_run_id',runId).maybeSingle();
       if(taskError||!task) return json({error:'社媒采集任务不存在或无权访问'},404);
       const {clear:apifyToken}=await getCredential('apify','integration');
       const runResponse=await fetch('https://api.apify.com/v2/actor-runs/'+encodeURIComponent(runId),{headers:{Authorization:'Bearer '+apifyToken}});
@@ -531,12 +531,17 @@ Deno.serve(async (req: Request) => {
           const normalizedName=name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
           const identity=publicEmail?'email:'+publicEmail:customerType==='company'&&websiteDomain?'website:'+websiteDomain:profileUrl?'profile:'+profileUrl.toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,''):customerType==='company'?'company:'+normalizedName+'|'+country.toLowerCase():username?'handle:'+task.platform_slug+':'+username:'source:'+task.id+':'+index;
           const canonicalKey=identity.slice(0,500);
+          const {data:existingLead,error:existingLeadError}=await admin.from('global_leads').select('customer_type,country,profile_url,website_url,contact_channels,attributes').eq('user_id',userId).eq('canonical_key',canonicalKey).maybeSingle();
+          if(existingLeadError) throw existingLeadError;
+          const mergedContacts=[...((existingLead?.contact_channels??[]) as Record<string,unknown>[]),...(publicEmail?[{type:'email',value:publicEmail,source:'public_social_profile'}]:[])];
+          const uniqueContacts=mergedContacts.filter((channel,index,all)=>all.findIndex(other=>other.type===channel.type&&other.value===channel.value)===index);
+          const mergedAttributes={...(existingLead?.attributes??{}),last_social_platform:task.platform_slug,identity_resolution:'deterministic_source_identity'};
+          const resolvedCustomerType=customerType==='unknown'&&existingLead?.customer_type?existingLead.customer_type:customerType;
           const {data:lead,error:leadError}=await admin.from('global_leads').upsert({
-            user_id:userId,customer_type:customerType,canonical_key:canonicalKey,display_name:name,country:country||null,
-            profile_url:profileUrl||null,website_url:website||null,
-            contact_channels:publicEmail?[{type:'email',value:publicEmail,source:'public_social_profile'}]:[],
-            last_seen_at:new Date().toISOString(),
-            attributes:{last_social_platform:task.platform_slug,identity_resolution:'deterministic_source_identity'}
+            user_id:userId,customer_type:resolvedCustomerType,canonical_key:canonicalKey,display_name:name,
+            country:country||existingLead?.country||null,profile_url:profileUrl||existingLead?.profile_url||null,
+            website_url:website||existingLead?.website_url||null,contact_channels:uniqueContacts,
+            last_seen_at:new Date().toISOString(),attributes:mergedAttributes
           },{onConflict:'user_id,canonical_key'}).select('id').single();
           if(leadError) throw leadError;
           const sourceKey=task.id+':'+externalKey;
