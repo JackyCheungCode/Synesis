@@ -148,11 +148,11 @@ Deno.serve(async (req: Request) => {
     if (action === 'credentials.list') {
       const [p, i] = await Promise.all([
         admin.from('ai_provider_configs').select('provider_slug,display_name,connection_status,key_last4,last_validated_at').eq('user_id',userId),
-        admin.from('integration_connections').select('service_slug,display_name,connection_status,key_last4,last_validated_at').eq('user_id',userId),
+        admin.from('integration_connections').select('service_slug,display_name,connection_status,key_last4,last_validated_at,metadata').eq('user_id',userId),
       ]);
       if (p.error || i.error) throw p.error ?? i.error;
       const credentials = [
-        ...(p.data ?? []).map(x=>({slug:x.provider_slug,name:x.display_name,kind:'provider',status:x.connection_status,key_last4:x.key_last4,last_validated_at:x.last_validated_at})),
+        ...(p.data ?? []).map(x=>({slug:x.provider_slug,name:x.display_name,kind:'provider',status:x.connection_status,key_last4:x.key_last4,last_validated_at:x.last_validated_at,metadata:x.metadata??{}})),
         ...(i.data ?? []).map(x=>({slug:x.service_slug,name:x.display_name,kind:'integration',status:x.connection_status,key_last4:x.key_last4,last_validated_at:x.last_validated_at})),
       ];
       return json({ credentials });
