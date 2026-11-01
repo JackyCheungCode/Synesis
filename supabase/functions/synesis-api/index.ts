@@ -348,6 +348,22 @@ Deno.serve(async (req: Request) => {
       return json({actors:available,criteria_received:{product_keywords:Boolean(keywords),hs_codes:Boolean(hsCodes),target_countries:Boolean(targetCountries)},apify_configured:Boolean((await admin.from('integration_connections').select('id').eq('user_id',userId).eq('service_slug','apify').maybeSingle()).data)});
     }
 
+    if (action === 'leads.actor.schema') {
+      const actorId=String(body.actorId??'').trim();
+      if(!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(actorId)) return json({error:'Actor ID 格式无效'},400);
+      const {clear:apifyToken}=await getCredential('apify','integration');
+      const actorPath=encodeURIComponent(actorId.replace('/','~'));
+      const response=await fetch(\`https://api.apify.com/v2/acts/\${actorPath}/input-schema\`,{headers:{Authorization:\`Bearer \${apifyToken}\`,Accept:'application/json'}});
+      if(!response.ok) return json({error:\`无法读取 Actor Input Schema（HTTP \${response.status}）\`},502);
+      const payload=await response.json().catch(()=>({}));
+      const schema=(payload?.data??payload) as Record<string,unknown>;
+      if(!schema||typeof schema!=='object'||Array.isArray(schema)) return json({error:'Actor 返回的 Input Schema 格式无效'},502);
+      const serialized=JSON.stringify(schema);
+      const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(serialized));
+      const schemaHash=Array.from(new Uint8Array(digest)).map(byte=>byte.toString(16).padStart(2,'0')).join('');
+      return json({actor_id:actorId,schema,schema_hash:schemaHash,fetched_at:new Date().toISOString()});
+    }
+
     if (action === 'leads.run') {
       const actorId=String(body.actorId??'').trim();
       const input=body.input;
