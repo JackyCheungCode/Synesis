@@ -526,7 +526,7 @@ Deno.serve(async (req: Request) => {
           const customerType=isCompany?'company':(profileUrl||item.username||item.handle||author.username?'person':'unknown');
           const publicEmail=String(item.email??author.email??'').trim().toLowerCase();
           const websiteDomain=website.toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
-          const identity=publicEmail?'email:'+publicEmail:websiteDomain?'website:'+websiteDomain+':'+name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim():profileUrl?'profile:'+profileUrl.toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,''):'name:'+name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim()+'|'+country.toLowerCase();
+          const identity=publicEmail?'email:'+publicEmail:websiteDomain?'website:'+websiteDomain:profileUrl?'profile:'+profileUrl.toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,''):'name:'+name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim()+'|'+country.toLowerCase();
           const canonicalKey=identity.slice(0,500);
           const {data:lead,error:leadError}=await admin.from('global_leads').upsert({
             user_id:userId,customer_type:customerType,canonical_key:canonicalKey,display_name:name,country:country||null,
@@ -550,7 +550,7 @@ Deno.serve(async (req: Request) => {
               const {error:evidenceError}=await admin.from('global_lead_evidence').insert({
                 user_id:userId,lead_id:lead.id,source_id:source.id,evidence_type:'social_post_or_comment',
                 content:content.slice(0,12000),evidence_url:sourceUrl||null,
-                observed_at:item.createdAt??item.publishedAt??item.timestamp??null,
+                observed_at:(()=>{const value=item.createdAt??item.publishedAt??item.timestamp;return typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString():null;})(),
                 analysis:{status:'pending_ai_analysis'}
               });
               if(evidenceError) throw evidenceError;
