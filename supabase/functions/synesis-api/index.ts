@@ -314,7 +314,8 @@ Deno.serve(async (req: Request) => {
           response=await fetch('https://v3-api.texau.com/api/v1/email_finding_waterfall',{method:'POST',headers:{'x-api-key':clear,'Content-Type':'application/json'},body:JSON.stringify({first_name:firstName,last_name:lastName,domain})});
         }else if(operation==='mcp_tools'||operation==='mcp_call'){
           const mcpRequest=async(sessionId:string|null,message:Record<string,unknown>)=>{
-            const headers:Record<string,string>={'x-api-key':clear,'Content-Type':'application/json',Accept:'application/json, text/event-stream'};\n            if(sessionId) headers['MCP-Protocol-Version']='2025-03-26';
+            const headers:Record<string,string>={'x-api-key':clear,'Content-Type':'application/json',Accept:'application/json, text/event-stream'};
+            if(sessionId) headers['MCP-Protocol-Version']='2025-03-26';
             if(sessionId) headers['Mcp-Session-Id']=sessionId;
             const upstream=await fetch('https://mcp.texau.com/mcp',{method:'POST',headers,body:JSON.stringify(message)});
             const session=upstream.headers.get('Mcp-Session-Id')??sessionId;
