@@ -120,7 +120,7 @@ export default function App(){
     {busy&&<Loading small withOverlay={false} description="处理中"/>}
     {page==='leads'&&<ImportExportLeadsFinder onApi={api}/>}
     {page==='social'&&<SocialLeadsFinder onApi={api}/>}
-    {page==='global-leads'&&<GlobalLeads onApi={api}/ >}
+    {page==='global-leads'&&<GlobalLeads onApi={api}/>}
     {page==='vault'&&<CredentialVault
      credentials={credentials} keyValues={keyValues} setKeyValues={setKeyValues} busy={busy}
      cloudflareAccountId={cloudflareAccountId} setCloudflareAccountId={setCloudflareAccountId}
