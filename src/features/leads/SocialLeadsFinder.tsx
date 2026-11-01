@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DynamicActorForm } from './DynamicActorForm';
 import { MultiSelect, countryOptions, languageOptions } from './MultiSelect';
+import { ScrapingProviderPanel } from './ScrapingProviderPanel';
 
 type Props={onApi:(action:string,payload?:Record<string,unknown>)=>Promise<any>};
 type Platform={id:string;label:string;group:string;logo:string;logoColor:string};
@@ -146,6 +147,7 @@ export function SocialLeadsFinder({onApi}:Props){
  }
  return <section className="leads-finder social-leads-finder">
   <div className="leads-intro"><div><span className="leads-eyebrow">GLOBAL CUSTOMER DISCOVERY / SOCIAL INTELLIGENCE</span></div><div className="leads-intro-stat"><strong>{actors.length||'—'}</strong><span>匹配采集工具</span></div></div>
+  <ScrapingProviderPanel onApi={onApi} query={[keywords,productOrService].filter(Boolean).join(' ')} context="social"/>
   <div className="leads-stepper" aria-label="社媒客户发现流程"><button className={tab==='criteria'?'active':''} onClick={()=>setTab('criteria')}>01 搜索策略</button><i/><button className={tab==='actors'?'active':''} onClick={()=>setTab('actors')} disabled={!actors.length}>02 Actor 与参数</button><i/><button className={tab==='results'?'active':''} onClick={()=>setTab('results')} disabled={!run}>03 采集结果</button><i/><button className={tab==='tasks'?'active':''} onClick={()=>void loadTasks()}>04 任务记录</button></div>
   {error&&<div className="leads-error social-leads-error" role="alert"><span>{error}</span><button type="button" aria-label="关闭错误提示" onClick={()=>setError("")}>关闭</button></div>}
   {tab==='criteria'&&<div className="leads-layout">
