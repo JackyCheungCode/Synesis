@@ -64,6 +64,9 @@ export default function App(){
  useEffect(()=>{void loadCredentials();},[]);
  useEffect(()=>{window.localStorage.setItem('synesis-theme',theme);},[theme]);
  useEffect(()=>{
+  document.documentElement.dataset.carbonTheme=theme==='light'?'white':'g90';
+ },[theme]);
+ useEffect(()=>{
   if(page==='vault') credentials.filter(item=>item.kind==='provider').forEach(item=>void loadProviderModels(item.slug));
  },[page,credentials]);
 
@@ -107,7 +110,7 @@ export default function App(){
  const description=page==='vault'?'安全管理 Apify API、其他数据连接及 AI Provider 凭证。':page==='social'?'手动选择社交平台与 Apify Actor，发现买家和企业客户。':page==='global-leads'?'统一管理跨平台、跨需求、跨来源的企业与个人客户线索。':'通过贸易记录与企业画像发现真实进口商和潜在客户。';
 
  return <GlobalTheme theme={theme === 'light' ? 'white' : 'g90'}>
- <div className={`synesis-app synesis-theme-${theme}`} data-carbon-theme={theme === 'light' ? 'white' : 'g90'}>
+ <div className={`synesis-app synesis-theme-${theme}`}>
   <Header aria-label="Synesis">
    <a className="synesis-skip-link" href="#main-content" onClick={event=>{event.preventDefault();document.getElementById('main-content')?.focus();}}>跳至主要内容</a>
    <HeaderMenuButton aria-label="切换导航" aria-expanded={navExpanded} aria-controls="synesis-navigation" isActive={navExpanded} onClick={()=>setNavExpanded(v=>!v)}/>
