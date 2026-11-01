@@ -6,6 +6,7 @@ import { WorkspaceDashboard } from './features/dashboard/WorkspaceDashboard';
 import { CredentialVault } from './features/settings/CredentialVault';
 import { CollectionSettingsPage, type CollectionSettings } from './features/settings/CollectionSettingsPage';
 import { ProductLibrary } from './features/products/ProductLibrary';
+import { ImportExportLeadsFinder } from './features/leads/ImportExportLeadsFinder';
 import {
   Header, HeaderMenuButton, HeaderName, HeaderGlobalBar, HeaderGlobalAction, Content, Grid, Column,
   Breadcrumb, BreadcrumbItem, Button, InlineNotification, Tag, TextInput, Tile,
@@ -90,15 +91,12 @@ function App() {
   async function loadAll() {
     setBusy(true);
     try {
-      const [p, pl, t, c, r] = await Promise.all([
-        supabase.from('research_projects').select('id,name,objective,status,target_regions,platform_slugs,scope').order('updated_at',{ascending:false}),
-        supabase.from('ai_research_plans').select('id,project_id,status,plan,estimated_cost,created_at').order('created_at',{ascending:false}),
-        supabase.from('collection_tasks').select('id,project_id,platform_slug,status,actor_id,created_at,started_at,updated_at,progress,result_count,result_synced_count,run_status,external_run_id,error_message,finished_at').order('created_at',{ascending:false}),
-        api('credentials.list'),
-        supabase.from('market_reports').select('id,title,status,created_at,project_id,report_type,evidence,content').order('created_at',{ascending:false}),
-      ]);
-      if (p.error) throw p.error; if (pl.error) throw pl.error; if (t.error) throw t.error; if (r.error) throw r.error;
-      setProjects(p.data ?? []); setPlans(pl.data ?? []); setTasks(t.data ?? []); setCredentials(c.credentials ?? []); const cloudflareCredential=(c.credentials??[]).find((item:Credential)=>item.slug==='cloudflare'&&item.kind==='provider'); if(cloudflareCredential?.account_id) setCloudflareAccountId(cloudflareCredential.account_id); setReports(r.data ?? []); const activeProvider=(c.credentials??[]).find((item:Credential)=>item.kind==='provider'&&item.status==='validated'); if(activeProvider) setSelectedProvider(activeProvider.slug);
+      const c = await api('credentials.list');
+      setCredentials(c.credentials ?? []);
+      const cloudflareCredential=(c.credentials??[]).find((item:Credential)=>item.slug==='cloudflare'&&item.kind==='provider');
+      if(cloudflareCredential?.account_id) setCloudflareAccountId(cloudflareCredential.account_id);
+      const activeProvider=(c.credentials??[]).find((item:Credential)=>item.kind==='provider'&&item.status==='validated');
+      if(activeProvider) setSelectedProvider(activeProvider.slug);
     } catch (e) { setNotice({kind:'error',text: message(e)}); }
     finally { setBusy(false); }
   }
@@ -570,8 +568,8 @@ function App() {
     finally { setBusy(false); }
   }
 
-  const title: Record<Page,string> = {dashboard:'情报总览',vault:'AI 模型与 Key Vault',settings:'调研采集设置',projects:projectId?'研究项目详情':'研究项目中心',products:'标准化商品库'};
-  const pageDescription: Record<Page,string> = {dashboard:'查看研究进展与关键指标。',vault:'安全管理 AI 与数据连接凭证。',settings:'配置新研究任务的数据采集默认值。',projects:'创建研究项目并管理调研流程。',products:'统一查看和检索跨平台标准化商品。'};
+  const title: Record<Page,string> = {dashboard:'情报总览',vault:'API 与 AI 配置',settings:'调研采集设置',projects:projectId?'研究项目详情':'研究项目中心',products:'标准化商品库',leads:'Import Export Leads Finder'};
+  const pageDescription: Record<Page,string> = {dashboard:'查看研究进展与关键指标。',vault:'安全管理 Apify API、其他数据连接及 AI Provider 凭证。',settings:'配置新研究任务的数据采集默认值。',projects:'创建研究项目并管理调研流程。',products:'统一查看和检索跨平台标准化商品。',leads:'通过贸易记录与企业画像发现真实进口商和潜在客户。'};
   const pendingPlans = plans.filter(p => p.status === 'pending_approval');
   const searchTerm = search.trim().toLocaleLowerCase();
   const projectSearchResults = searchTerm ? projects.filter(item => [item.name,item.objective].some(value => value.toLocaleLowerCase().includes(searchTerm))).slice(0,6) : [];
@@ -592,7 +590,7 @@ function App() {
           跳至主要内容
         </a>
         <HeaderMenuButton aria-label="切换导航" aria-expanded={navExpanded} aria-controls="synesis-navigation" isActive={navExpanded} onClick={() => setNavExpanded(v=>!v)} />
-        <HeaderName prefix="" href="#/dashboard">SYNESIS</HeaderName>
+        <HeaderName prefix="" href="#/leads">SYNESIS</HeaderName>
         <HeaderGlobalBar>
           <HeaderGlobalAction aria-label="搜索" tooltipAlignment="end" onClick={()=>setSearchOpen(true)}><SearchIcon/></HeaderGlobalAction>
           <HeaderGlobalAction aria-label={theme === 'light' ? '切换到深色主题' : '切换到浅色主题'} tooltipAlignment="end" onClick={()=>setTheme(current=>current === 'light' ? 'dark' : 'light')}><span aria-hidden="true">◐</span></HeaderGlobalAction>
@@ -605,7 +603,7 @@ function App() {
           <div className="page-title-row">{page==='projects'&&projectId?<Breadcrumb noTrailingSlash><BreadcrumbItem href="#/dashboard">SYNESIS</BreadcrumbItem><BreadcrumbItem isCurrentPage>WORKSPACE</BreadcrumbItem></Breadcrumb>:<div className="page-heading-copy"><h1 className="page-title">{title[page]}</h1><p className="subheading">{pageDescription[page]}</p></div>}</div>
           {notice && <InlineNotification kind={notice.kind} lowContrast title={notice.kind==='error'?'操作失败':notice.kind==='success'?'操作成功':'系统提示'} subtitle={notice.text} onCloseButtonClick={()=>setNotice(null)}/>}
           {busy && <Loading small withOverlay={false} description="处理中"/>}
-          {page==='dashboard' && <WorkspaceDashboard projectCount={projects.length} pendingPlanCount={pendingPlans.length} taskCount={tasks.length} credentialCount={credentials.length} onCreateResearch={()=>navigate('projects')}/>}
+          {page==='leads' && <ImportExportLeadsFinder onApi={api}/> }\n          {page==='dashboard' && <WorkspaceDashboard projectCount={projects.length} pendingPlanCount={pendingPlans.length} taskCount={tasks.length} credentialCount={credentials.length} onCreateResearch={()=>navigate('projects')}/>}
           {page==='settings' && <CollectionSettingsPage settings={collectionSettings} onChange={setCollectionSettings} onSave={()=>void saveCollectionSettings()} saving={busy}/>}
           {page==='vault' && <CredentialVault
             credentials={credentials} keyValues={keyValues} setKeyValues={setKeyValues} busy={busy}
