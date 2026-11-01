@@ -173,8 +173,9 @@ export function SocialLeadsFinder({onApi}:Props){
   </div>}
   {tab==='actors'&&<div className="leads-actor-workspace">
    <div className="leads-actor-list"><div className="leads-panel-head"><div><span>APIFY STORE DISCOVERY</span><h3>平台采集工具</h3><p>从 Apify Store 检索匹配工具。请由你手动选择具体 Actor，系统不会默认选择第一个结果。</p></div></div>
+    {actors.length===0&&<div className="leads-schema-warning"><b>没有找到匹配的 Actor</b><p>已查询：{selectedPlatforms.map(id=>platforms.find(item=>item.id===id)?.label??id).join('、')}</p>{searchErrors.length===0?<p>Apify Store 没有返回 API 错误，但当前搜索条件下没有匹配工具。请缩短关键词或使用平台通用词。</p>:searchErrors.slice(0,10).map((item,i)=><p key={i}>{item.platform?.toUpperCase()} · HTTP {item.status??'网络错误'} · {item.query||'Store search'}：{item.error}</p>)}</div>}
     {actors.map(actor=><button key={actor.actor_id} className={'leads-actor-card'+(selected?.actor_id===actor.actor_id?' selected':'')} onClick={()=>void loadSchema(actor)}><span className="leads-actor-score">{Math.round(actor.score??0)}<small>匹配参考</small></span><span className="leads-actor-copy"><b>{actor.title}</b><small>{actor.platform?.toUpperCase()} · {actor.actor_id}</small><span>{actor.description||actor.recommendation_reason||'Apify Store Actor'}</span><small>近 30 日用户：{actor.stats?.totalUsers30Days??'未提供'}</small></span><span className="leads-radio">{selected?.actor_id===actor.actor_id?'✓':''}</span></button>)}
-    {searchErrors.length>0&&<div className="leads-schema-warning">{searchErrors.length} 项平台搜索返回错误；其他平台结果仍可使用。{searchErrors.slice(0,3).map((item,i)=><div key={i}>{item.platform}: {item.error}</div>)}</div>}
+    {searchErrors.length>0&&<div className="leads-schema-warning">{searchErrors.length} 项平台搜索返回错误；其他平台结果仍可使用。{searchErrors.slice(0,10).map((item,i)=><div key={i}>{item.platform} · HTTP {item.status??'网络错误'} · {item.query||'Store search'}：{item.error}</div>)}</div>}
     <button className="leads-back-link" onClick={()=>setTab('criteria')}>← 返回修改搜索策略</button>
    </div>
    <div className="leads-panel leads-schema-panel">
