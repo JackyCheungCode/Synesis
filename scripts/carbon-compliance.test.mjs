@@ -110,6 +110,7 @@ test('global shell is wired to the Carbon theme, grid and overlay navigation', (
   const styles = read('../src/styles.scss');
   const foundation = read('../src/styles/carbon-foundation.scss');
   assert.match(app, /GlobalTheme/);
+  assert.match(app, /document\.documentElement\.dataset\.carbonTheme/);
   assert.match(app, /theme === 'light' \? 'white' : 'g90'/);
   assert.match(app, /<Grid fullWidth/);
   assert.match(navigation, /<SideNav/);
@@ -117,6 +118,8 @@ test('global shell is wired to the Carbon theme, grid and overlay navigation', (
   assert.ok(styles.includes("@use '@carbon/styles/scss/components/ui-shell'"));
   assert.equal(styles.includes("@use '@carbon/react';"), false, 'avoid importing the entire Carbon stylesheet bundle');
   assert.match(foundation, /carbon-theme\.\$background/);
+  assert.match(foundation, /:root\[data-carbon-theme='white'\]/);
+  assert.match(foundation, /:root\[data-carbon-theme='g90'\]/);
   assert.match(foundation, /carbon-theme\.theme\(carbon-themes\.\$white\)/);
   assert.match(foundation, /carbon-theme\.theme\(carbon-themes\.\$g90\)/);
 });
