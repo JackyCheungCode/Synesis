@@ -97,3 +97,6 @@
 .sn-multi-selected i{font-style:normal;color:var(--sn-muted);font-size:13px}
 .actor-dynamic-field>.sn-multi-select{grid-column:1/-1}
 @media(max-width:560px){.sn-multi-popover{max-height:55vh}.sn-multi-trigger{min-height:46px}.sn-multi-selected>button{min-height:30px}}
+
+/* Unified scraping provider panel */
+.scraping-provider-panel{margin:14px 0}.scraping-provider-panel .leads-muted{line-height:1.65}.scraping-provider-panel .leads-primary{margin-top:14px}.scraping-provider-output{margin-top:18px;min-width:0}.scraping-provider-output pre{max-height:420px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;border:1px solid var(--sn-border);border-radius:10px;background:var(--sn-surface-soft);font-size:11px;line-height:1.6;color:var(--sn-text)}
