@@ -86,7 +86,6 @@ export function SocialLeadsFinder({onApi}:Props){
  const [searchErrors,setSearchErrors]=useState<any[]>([]);
  const [tab,setTab]=useState<'criteria'|'actors'|'results'|'tasks'>('criteria');
  const [tasks,setTasks]=useState<any[]>([]);
- const togglePlatform=(id:string)=>setSelectedPlatforms(current=>current.includes(id)?current.filter(item=>item!==id):[...current,id]);
  async function loadSchema(actor:Actor){
   setSelected({...actor,input_schema:null});setSchemaLoading(true);setSchemaError('');setRawJsonMode(false);setError('');
   try{
