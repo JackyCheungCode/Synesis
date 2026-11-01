@@ -22,7 +22,7 @@ export const providers: CatalogItem[] = [
   { name: 'xAI', slug: 'x', fallback: 'x', kind: 'provider' },
 ];
 
-export const apiIntegrations = [
+export type ApiIntegration = CatalogItem & { credentialLabel:string; placeholder:string; description?:string };\n\nexport const apiIntegrations: ApiIntegration[] = [
   { name: 'Apify', slug: 'apify', fallback: 'A', credentialLabel: 'Apify API Token', placeholder: '填写 Apify API Token', description: 'Actor 市场、动态 Input Schema、运行与 Dataset' },
   { name: 'Bright Data', slug: 'brightdata', fallback: 'BD', credentialLabel: 'Bright Data API Key', placeholder: '填写 Bright Data API Key', description: 'Web Scraper、SERP、Web Unlocker、Browser' },
   { name: 'Octoparse', slug: 'octoparse', fallback: 'O', credentialLabel: 'Octoparse 登录凭证（JSON）', placeholder: '{ "username": "...", "password": "..." }', description: '云端任务管理、运行状态与数据导出' },
