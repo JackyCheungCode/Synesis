@@ -40,7 +40,6 @@ export function MultiSelect({ label, value, options, onChange, placeholder = '�
       </div>
       <div className="sn-multi-footer"><span>已选择 {selected.length} 项</span><button type="button" onClick={() => { setOpen(false); setQuery(''); }}>完成</button></div>
     </div>}
-    {selected.length > 0 && <div className="sn-multi-selected">{selected.map(option => <button type="button" key={option.value} onClick={() => toggle(option)} aria-label={`移除 ${option.label}`}>{renderMark(option)}<span>{option.label}</span><i>×</i></button>)}</div>}
   </div>;
 }
 
