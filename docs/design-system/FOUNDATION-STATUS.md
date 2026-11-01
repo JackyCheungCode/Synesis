@@ -6,7 +6,7 @@
 - Base: `develop`
 - Working branch: `feature/carbon-foundation`
 - Pull request: https://github.com/JackyCheungCode/Synesis/pull/5
-- Validation run: https://github.com/JackyCheungCode/Synesis/actions/runs/41277988102
+- Validation run: https://github.com/JackyCheungCode/Synesis/actions/runs/41278328243
 - Status: implementation in review; not merged or released
 
 ## Implemented in this Foundation slice
@@ -15,7 +15,7 @@
 |---|---|
 | Official dependencies | `@carbon/react@1.118.0`, `@carbon/styles@1.118.0`, `@carbon/icons-react@11.91.0` pinned exactly |
 | Reproducible install | npm lockfile v3 committed; CI uses `npm ci` |
-| Sass foundation | Carbon Sass entrypoint and centralized foundation stylesheet |
+| Sass foundation | Selective Carbon Sass modules (UI shell, notification, loading, button, tooltip, grid, reset, fonts and theme); no full-library stylesheet import |
 | Themes | Carbon `GlobalTheme`: White for light mode, G90 for dark mode; existing non-sensitive theme preference remains persisted |
 | Semantic tokens | Shell surfaces and typography consume Carbon theme tokens; spacing uses Carbon spacing tokens |
 | Grid | Carbon React `Grid` and `Column` components, using Carbon's 16-column 2x Grid breakpoints |
@@ -43,6 +43,7 @@ The latest successful validation run completed:
 - AI provider model actions test: PASS
 - TypeScript typecheck and Vite production build: PASS
 - Build artifact upload: PASS
+- Carbon CSS output: 344.97 kB (36.90 kB gzip), down from 1,277.69 kB (122.42 kB gzip) with the initial full-library Sass import
 - Production deploy job: SKIPPED
 
 No production deployment was initiated by this PR's GitHub Actions deploy job.
@@ -54,7 +55,7 @@ No production deployment was initiated by this PR's GitHub Actions deploy job.
 - Keyboard-only navigation, focus order and focus restoration review.
 - Screen-reader and automated axe review; document any exceptions.
 - Confirm Carbon IBM Plex font assets render without an external font dependency.
-- Confirm Cloudflare Workers Builds integration behavior for this feature branch; its separate check is not the GitHub Actions deploy job.
+- Cloudflare Workers Builds preview build: PASS; branch trigger is `feature/carbon-foundation` and deploy command is `npx wrangler preview`, not `wrangler deploy`.
 - Phase 2 migration of Login/Register, Import Export Leads Finder, Social Leads Finder, Global Leads and API/AI settings to Carbon controls.
 - Shrink the legacy allowlist as each page is migrated and regression-tested.
 
