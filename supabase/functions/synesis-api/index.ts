@@ -1,5 +1,4 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
-import { readField, resolveProductIdentity, normalizeResearchRecord } from './product-identity.js';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -20,74 +19,7 @@ function cloudflareModelPath(value: string): string {
   return segments.map(segment => encodeURIComponent(segment).replace(/%40/gi, '@')).join('/');
 }
 
-function parseJsonObject(raw: string): Record<string, unknown> {
-  const text = raw.trim().replace(/^\uFEFF/, '');
-  const candidates = [text, text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()];
-  for (const candidate of candidates) {
-    try {
-      const parsed = JSON.parse(candidate);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
-    } catch { /* Try extracting a JSON object from surrounding prose. */ }
-  }
-  // Find the first balanced JSON object while respecting quoted strings and escapes.
-  for (let start = text.indexOf('{'); start >= 0; start = text.indexOf('{', start + 1)) {
-    let depth = 0, quoted = false, escaped = false;
-    for (let i = start; i < text.length; i++) {
-      const char = text[i];
-      if (quoted) {
-        if (escaped) escaped = false;
-        else if (char === '\\') escaped = true;
-        else if (char === '"') quoted = false;
-        continue;
-      }
-      if (char === '"') quoted = true;
-      else if (char === '{') depth++;
-      else if (char === '}' && --depth === 0) {
-        try {
-          const parsed = JSON.parse(text.slice(start, i + 1));
-          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
-        } catch { break; }
-      }
-    }
-  }
-  throw new Error('AI 返回内容中没有可解析的 JSON 对象');
-}
-
 type CompactInputSchema = { type?: string; properties?: Record<string,{type?:string|string[];minItems?:number;maxItems?:number;minLength?:number;maxLength?:number;minimum?:number;maximum?:number;pattern?:string;format?:string;items?:{type?:string;pattern?:string;format?:string};enum?:unknown[]}>; required?: string[] };
-function normalizeAmazonActorInput(actorId:string, raw:unknown):Record<string,unknown> {
-  const input:Record<string,unknown>=raw&&typeof raw==='object'&&!Array.isArray(raw)?{...(raw as Record<string,unknown>)}:{};
-  const toUrlObjects=(field:string)=>{
-    if(!Array.isArray(input[field])) return;
-    input[field]=(input[field] as unknown[]).map(value=>{
-      if(typeof value==='string') return {url:value.trim()};
-      if(value&&typeof value==='object'&&!Array.isArray(value)) {
-        const item=value as Record<string,unknown>;
-        return typeof item.url==='string'?{...item,url:item.url.trim()}:item;
-      }
-      return value;
-    });
-  };
-  if(actorId==='BG3WDrGdteHgZgbPK') {
-    toUrlObjects('categoryOrProductUrls');
-    const language=String(input.language??'en').trim();
-    const aliases:Record<string,string>={english:'en',chinese:'zh_CN','traditional chinese':'zh_TW','simplified chinese':'zh_CN',japanese:'ja',korean:'ko'};
-    const allowed=['cs','da','de','en','es','fr','nl','pl','pt','sv','tr','he','ar','mrta','hi','bn','ta','te','kn','ml','ko','zh_CN','zh_TW','ja'];
-    const normalized=aliases[language.toLowerCase()]??language;
-    input.language=allowed.includes(normalized)?normalized:'en';
-    const proxy=String(input.proxyCountry??'').trim().toLowerCase();
-    if(proxy==='australia') input.proxyCountry='AU';
-    if(proxy==='united states'||proxy==='usa') input.proxyCountry='US';
-  }
-  if(actorId==='R8WeJwLuzLZ6g4Bkk') {
-    toUrlObjects('productUrls');
-    if(!['helpful','recent'].includes(String(input.sort??''))) input.sort='helpful';
-    const cutoff=String(input.reviewsCutoffDate??'');
-    const cutoffPattern=/^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])(T[0-2]\d:[0-5]\d(:[0-5]\d)?(\.\d+)?Z?)?$|^(\d+)\s*(minute|hour|day|week|month|year)s?$/;
-    if(!cutoffPattern.test(cutoff)) input.reviewsCutoffDate='1 year';
-  }
-  return input;
-}
-
 function validateActorInput(input: unknown, schema: CompactInputSchema): string[] {
   const errors:string[]=[];
   if(!input || typeof input!=='object' || Array.isArray(input)) return ['采集参数必须是 JSON 对象'];
