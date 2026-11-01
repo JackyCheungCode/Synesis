@@ -16,8 +16,8 @@ export function MultiSelect({ label, value, options, onChange, placeholder = '�
   const selected = options.filter(option => value.includes(option.value));
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
-    return options.filter(option => !needle || option.label.toLocaleLowerCase().includes(needle) || option.value.toLocaleLowerCase().includes(needle));
-  }, [options, query]);
+    return options.filter(option => !value.includes(option.value) && (!needle || option.label.toLocaleLowerCase().includes(needle) || option.value.toLocaleLowerCase().includes(needle)));
+  }, [options, query, value]);
   const toggle = (item: SelectOption) => onChange(value.includes(item.value) ? value.filter(valueItem => valueItem !== item.value) : [...value, item.value]);
   const renderMark = (option: SelectOption) => option.flag
     ? <span className="sn-select-flag" aria-hidden="true">{option.flag}</span>
@@ -27,7 +27,7 @@ export function MultiSelect({ label, value, options, onChange, placeholder = '�
   return <div className="sn-multi-select">
     <span className="sn-multi-label">{label}</span>
     <button type="button" className={'sn-multi-trigger' + (open ? ' is-open' : '')} aria-expanded={open} onClick={() => setOpen(current => !current)}>
-      <span className="sn-multi-summary">{selected.length ? <>{selected.slice(0, 3).map(option => <span className="sn-multi-chip" key={option.value}>{renderMark(option)}{option.label}</span>)}{selected.length > 3 && <span className="sn-multi-count">+{selected.length - 3}</span>}</> : <span className="sn-multi-placeholder">{placeholder}</span>}</span>
+      <span className="sn-multi-summary">{selected.length ? <>{selected.slice(0, 3).map(option => <span className="sn-multi-chip" key={option.value}>{renderMark(option)}{option.label}<span className="sn-multi-chip-remove" role="button" tabIndex={0} aria-label={`移除${option.label}`} onClick={event => { event.stopPropagation(); toggle(option); }} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); toggle(option); } }}>×</span></span>)}{selected.length > 3 && <span className="sn-multi-count">+{selected.length - 3}</span>}</> : <span className="sn-multi-placeholder">{placeholder}</span>}</span>
       <span className="sn-multi-trailing"><small>{selected.length ? `已选 ${selected.length}` : '多选'}</small><span className="sn-multi-chevron">⌄</span></span>
     </button>
     {open && <div className="sn-multi-popover">
