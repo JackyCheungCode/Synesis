@@ -1,0 +1,70 @@
+/**
+ * Official Carbon component and icon entry point for Synesis.
+ *
+ * New shared UI must import from this module rather than creating
+ * application-specific implementations of foundational controls.
+ */
+export {
+  Accordion,
+  AccordionItem,
+  Button,
+  Checkbox,
+  Column,
+  ComboBox,
+  Content,
+  DataTable,
+  DatePicker,
+  Dropdown,
+  FileUploader,
+  FlexGrid,
+  Form,
+  FormGroup,
+  Grid,
+  Header,
+  HeaderGlobalAction,
+  HeaderGlobalBar,
+  HeaderMenuButton,
+  HeaderName,
+  InlineLoading,
+  InlineNotification,
+  Layer,
+  Loading,
+  Modal,
+  MultiSelect,
+  NumberInput,
+  PasswordInput,
+  RadioButton,
+  RadioButtonGroup,
+  Search,
+  Select,
+  SelectItem,
+  SideNav,
+  SideNavDivider,
+  SideNavItems,
+  SideNavLink,
+  SideNavMenu,
+  SideNavMenuItem,
+  Stack,
+  Tag,
+  TextArea,
+  TextInput,
+  Theme,
+  Tile,
+  Toggle,
+  Tooltip,
+} from '@carbon/react';
+
+export { GlobalTheme, useTheme } from '@carbon/react';
+
+export {
+  Add,
+  Asleep,
+  ChevronDown,
+  Close,
+  Dashboard,
+  Key,
+  Light,
+  Menu,
+  Search as SearchIcon,
+  UserAvatar,
+} from '@carbon/icons-react';
