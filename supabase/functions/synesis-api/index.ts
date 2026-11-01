@@ -244,6 +244,86 @@ Deno.serve(async (req: Request) => {
       return json({providers:registry.map(item=>({...item,connection:configured.get(item.id)??null,ready:Boolean(configured.get(item.id)?.enabled&&configured.get(item.id)?.connection_status==='validated')}))});
     }
 
+    if (action === 'scraping.execute') {
+      const provider=String(body.provider??'').trim();
+      const operation=String(body.operation??'').trim();
+      const input=(body.input&&typeof body.input==='object'&&!Array.isArray(body.input)?body.input:{}) as Record<string,unknown>;
+      if(!['brightdata','octoparse','firecrawl','phantombuster','texau'].includes(provider)) return json({error:'该服务商请使用其专用采集流程'},400);
+      const {config,clear}=await getCredential(provider,'integration');
+      let response:Response;
+      let executionId:string|null=null;
+      if(provider==='firecrawl'){
+        if(operation==='search'){
+          const query=String(input.query??'').trim();
+          if(!query) return json({error:'Firecrawl Search 需要 query'},400);
+          response=await fetch('https://api.firecrawl.dev/v1/search',{method:'POST',headers:{Authorization:'Bearer '+clear,'Content-Type':'application/json'},body:JSON.stringify({query,limit:Math.min(100,Math.max(1,Number(input.limit)||10)),scrapeOptions:{formats:['markdown']}})});
+        }else if(operation==='scrape'){
+          const target=String(input.url??'').trim();
+          if(!/^https:\/\//i.test(target)) return json({error:'Firecrawl Scrape 只接受 HTTPS URL'},400);
+          response=await fetch('https://api.firecrawl.dev/v1/scrape',{method:'POST',headers:{Authorization:'Bearer '+clear,'Content-Type':'application/json'},body:JSON.stringify({url:target,formats:Array.isArray(input.formats)?input.formats:['markdown']})});
+        }else if(operation==='crawl'){
+          const target=String(input.url??'').trim();
+          if(!/^https:\/\//i.test(target)) return json({error:'Firecrawl Crawl 只接受 HTTPS URL'},400);
+          response=await fetch('https://api.firecrawl.dev/v1/crawl',{method:'POST',headers:{Authorization:'Bearer '+clear,'Content-Type':'application/json'},body:JSON.stringify({url:target,limit:Math.min(500,Math.max(1,Number(input.limit)||50)),scrapeOptions:{formats:['markdown']}})});
+        }else return json({error:'Firecrawl 支持 search、scrape、crawl 操作'},400);
+      }else if(provider==='brightdata'){
+        if(operation!=='unlock') return json({error:'Bright Data 当前执行适配器支持 Web Unlocker；SERP 与 Web Scraper 数据集适配正在接入'},501);
+        const target=String(input.url??'').trim();
+        const zone=String(config.metadata?.zone??'').trim();
+        if(!/^https:\/\//i.test(target)) return json({error:'Bright Data Web Unlocker 需要 HTTPS URL'},400);
+        if(!zone) return json({error:'请先在 API 设置中配置 Bright Data Web Unlocker Zone'},400);
+        response=await fetch('https://api.brightdata.com/request',{method:'POST',headers:{Authorization:'Bearer '+clear,'Content-Type':'application/json'},body:JSON.stringify({zone,url:target,format:input.format==='json'?'json':'raw'})});
+      }else if(provider==='phantombuster'){
+        const agentId=String(input.agentId??'').trim();
+        const headers:Record<string,string>={'X-Phantombuster-Key':clear,'Content-Type':'application/json',Accept:'application/json'};
+        if(config.metadata?.orgId) headers['X-Phantombuster-Org']=String(config.metadata.orgId);
+        if(operation==='launch'){
+          if(!agentId) return json({error:'PhantomBuster 启动任务需要 Agent ID'},400);
+          const argument=input.argument&&typeof input.argument==='object'?input.argument:{};
+          response=await fetch('https://api.phantombuster.com/api/v2/agents/launch',{method:'POST',headers,body:JSON.stringify({id:agentId,argument,saveArgument:false})});
+        }else if(operation==='status'||operation==='output'){
+          if(!agentId) return json({error:'PhantomBuster 查询任务需要 Agent ID'},400);
+          const path=operation==='status'?'agents/fetch':'agents/fetch-output';
+          response=await fetch('https://api.phantombuster.com/api/v2/'+path+'?id='+encodeURIComponent(agentId),{headers});
+        }else if(operation==='discover'){
+          response=await fetch('https://api.phantombuster.com/api/v2/agents/fetch-all',{headers});
+        }else return json({error:'PhantomBuster 支持 discover、launch、status、output 操作'},400);
+      }else if(provider==='octoparse'){
+        let bundle:{username?:string;password?:string};
+        try{bundle=JSON.parse(clear);}catch{return json({error:'Octoparse 凭证必须是包含 username 和 password 的 JSON'},400);}
+        const auth=await fetch('https://openapi.bazhuayu.com/token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:bundle.username,password:bundle.password,grant_type:'password'})});
+        const authPayload=await auth.json().catch(()=>({}));
+        const accessToken=String(authPayload?.data?.access_token??'');
+        if(!auth.ok||!accessToken) return json({error:'Octoparse 登录认证失败，请检查账号密码或账户权限。'},502);
+        const taskId=String(input.taskId??'').trim();
+        if(operation==='start'){
+          if(!taskId) return json({error:'Octoparse 启动云采集需要已存在的 taskId'},400);
+          response=await fetch('https://openapi.bazhuayu.com/cloudextraction/start',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({taskId})});
+        }else if(operation==='results'){
+          if(!taskId) return json({error:'Octoparse 读取数据需要 taskId'},400);
+          response=await fetch('https://openapi.bazhuayu.com/data/all',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({taskId,offset:Math.max(0,Number(input.offset)||0),size:Math.min(200,Math.max(1,Number(input.size)||100))})});
+        }else if(operation==='status'){
+          if(!taskId) return json({error:'Octoparse 查询状态需要 taskId'},400);
+          response=await fetch('https://openapi.bazhuayu.com/cloudextraction/task/status',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({taskId})});
+        }else return json({error:'Octoparse 支持 start、status、results 操作；仅管理用户已有云采集任务'},400);
+      }else if(provider==='texau'){
+        if(operation!=='email_enrichment') return json({error:'TexAu 当前已接入邮箱 waterfall enrichment；其他 65+ 端点将按能力逐步注册'},501);
+        const firstName=String(input.first_name??'').trim(),lastName=String(input.last_name??'').trim(),domain=String(input.domain??'').trim();
+        if(!firstName||!lastName||!domain) return json({error:'TexAu 邮箱丰富需要 first_name、last_name 和 domain'},400);
+        response=await fetch('https://v3-api.texau.com/api/v1/email_finding_waterfall',{method:'POST',headers:{'x-api-key':clear,'Content-Type':'application/json'},body:JSON.stringify({first_name:firstName,last_name:lastName,domain})});
+      }else return json({error:'不支持的采集服务商'},400);
+      const contentType=response.headers.get('content-type')??'';
+      const payload=contentType.includes('application/json')?await response.json().catch(()=>({})):await response.text();
+      if(!response.ok){
+        await admin.from('integration_connections').update({connection_status:'error'}).eq('id',config.id).eq('user_id',userId);
+        return json({error:(typeof payload==='string'?payload:payload?.error?.message??payload?.message??payload?.error??'服务商请求失败')+'（HTTP '+response.status+'）',provider,operation},502);
+      }
+      await admin.from('integration_connections').update({connection_status:'validated',last_validated_at:new Date().toISOString()}).eq('id',config.id).eq('user_id',userId);
+      if(provider==='firecrawl') executionId=String((payload as any)?.id??(payload as any)?.jobId??'')||null;
+      if(provider==='phantombuster') executionId=String((payload as any)?.containerId??(payload as any)?.data?.containerId??'')||null;
+      return json({ok:true,provider,operation,execution_id:executionId,data:payload,async:['crawl'].includes(operation)||provider==='phantombuster'&&operation==='launch'});
+    }
+
     if (action === 'connection.test') {
       const { slug, kind, model } = body;
       const { config, clear } = await getCredential(slug,kind);
