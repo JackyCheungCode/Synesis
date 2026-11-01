@@ -12,7 +12,7 @@ import {
 import { UserAvatar } from './components/icons';
 import { useAuth } from './auth/AuthProvider';
 
-type Credential = { slug:string; name:string; kind:'provider'|'integration'; status:string; key_last4?:string; last_validated_at?:string; account_id?:string };
+type Credential = { slug:string; name:string; kind:'provider'|'integration'; status:string; key_last4?:string; last_validated_at?:string; account_id?:string; metadata?:Record<string,string> };
 type ProviderModel = { id:string; name?:string; task?:string };
 const supabaseUrl=import.meta.env.VITE_SUPABASE_URL||'https://vuyyaqsmlzixhdjvaidj.supabase.co';
 const fnUrl=`${supabaseUrl}/functions/v1/synesis-api`;
