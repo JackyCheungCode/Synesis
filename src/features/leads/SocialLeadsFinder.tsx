@@ -83,7 +83,8 @@ export function SocialLeadsFinder({onApi}:Props){
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
  const [searchErrors,setSearchErrors]=useState<any[]>([]);
- const [tab,setTab]=useState<'criteria'|'actors'|'results'>('criteria');
+ const [tab,setTab]=useState<'criteria'|'actors'|'results'|'tasks'>('criteria');
+ const [tasks,setTasks]=useState<any[]>([]);
  const togglePlatform=(id:string)=>setSelectedPlatforms(current=>current.includes(id)?current.filter(item=>item!==id):[...current,id]);
  async function loadSchema(actor:Actor){
   setSelected({...actor,input_schema:null});setSchemaLoading(true);setSchemaError('');setRawJsonMode(false);setError('');
@@ -133,10 +134,16 @@ export function SocialLeadsFinder({onApi}:Props){
   catch(e){setError(e instanceof Error?e.message:'读取采集结果失败');}
   finally{setBusy(false);}
  }
+ async function loadTasks(){
+  setBusy(true);setError('');
+  try{const response=await onApi('social.tasks.list');setTasks(response.tasks??[]);setTab('tasks');}
+  catch(e){setError(e instanceof Error?e.message:'加载社媒采集任务失败');}
+  finally{setBusy(false);}
+ }
  const groups=[...new Set(platforms.map(item=>item.group))];
  return <section className="leads-finder social-leads-finder">
   <div className="leads-intro"><div><span className="leads-eyebrow">GLOBAL CUSTOMER DISCOVERY / SOCIAL INTELLIGENCE</span><h2>Social Leads Finder</h2><p>手动选择社交平台与 Apify Actor，从公开内容和商业信号中发现买家及企业客户。采集结果保留原始来源，并汇入统一全球客户线索库。</p></div><div className="leads-intro-stat"><strong>{actors.length||'—'}</strong><span>匹配采集工具</span></div></div>
-  <div className="leads-stepper" aria-label="社媒客户发现流程"><button className={tab==='criteria'?'active':''} onClick={()=>setTab('criteria')}>01 搜索策略</button><i/><button className={tab==='actors'?'active':''} onClick={()=>setTab('actors')} disabled={!actors.length}>02 Actor 与参数</button><i/><button className={tab==='results'?'active':''} onClick={()=>setTab('results')} disabled={!run}>03 采集结果</button></div>
+  <div className="leads-stepper" aria-label="社媒客户发现流程"><button className={tab==='criteria'?'active':''} onClick={()=>setTab('criteria')}>01 搜索策略</button><i/><button className={tab==='actors'?'active':''} onClick={()=>setTab('actors')} disabled={!actors.length}>02 Actor 与参数</button><i/><button className={tab==='results'?'active':''} onClick={()=>setTab('results')} disabled={!run}>03 采集结果</button><i/><button className={tab==='tasks'?'active':''} onClick={()=>void loadTasks()}>04 任务记录</button></div>
   {error&&<div className="leads-error" role="alert">{error}</div>}
   {tab==='criteria'&&<div className="leads-layout">
    <div className="leads-form-main">
@@ -182,6 +189,9 @@ export function SocialLeadsFinder({onApi}:Props){
    {storedStats&&<div className="leads-schema-warning">已保存 {storedStats.records} 条原始记录；本次识别并关联 {storedStats.leads} 条客户线索。重复客户会合并，来源证据保留。</div>}
    {run?.status!=='SUCCEEDED'&&<div className="leads-schema-warning">采集任务尚未成功结束。可刷新状态；只有 Actor 成功后才会读取完整 Dataset。</div>}
    {results.length===0?<div className="leads-empty">目前没有可显示的结果。任务可能仍在运行，或 Actor 返回空 Dataset。</div>:<div className="social-result-list">{results.map((item,index)=>{const text=postText(item);const url=postUrl(item);const author=authorName(item);const likes=metric(item,'likes','likeCount','diggCount','stats.likes','engagement.likeCount');const comments=metric(item,'comments','commentCount','replyCount','stats.comments');const date=metric(item,'timestamp','createdAt','publishedAt','date');return <article className="social-result-card" key={String(item.id??item.postId??item.videoId??index)}><div className="social-result-meta"><b>{author}</b><span>{date?String(date):selected?.platform}</span></div>{text&&<p>{text}</p>}<div className="social-result-metrics">{likes!==undefined&&<span>♥ {String(likes)}</span>}{comments!==undefined&&<span>评论 {String(comments)}</span>}{item.views!==undefined&&<span>浏览 {String(item.views)}</span>}{url&&<a href={url} target="_blank" rel="noreferrer">查看原帖 ↗</a>}</div><details><summary>查看原始数据</summary><pre>{JSON.stringify(item,null,2)}</pre></details></article>;})}</div>}
+  </section>}
+  {tab==='tasks'&&<section className="leads-panel"><div className="leads-panel-head"><div><span>SOCIAL COLLECTION HISTORY</span><h3>社媒采集任务</h3><p>每个任务对应用户手动选择的平台与 Actor。运行状态、Dataset 和结果数量均独立记录。</p></div><button className="leads-secondary" onClick={()=>void loadTasks()} disabled={busy}>刷新任务</button></div>
+   {tasks.length===0?<div className="leads-empty">暂无社媒采集任务。完成一次 Actor 启动后，任务会记录在这里。</div>:<div className="social-result-list">{tasks.map(task=><article className="social-result-card" key={task.id}><div className="social-result-meta"><b>{task.actor_title||task.actor_id}</b><span>{task.platform_slug?.toUpperCase()} · {task.status}</span></div><p>任务 ID：{task.id}</p><div className="social-result-metrics"><span>Run：{task.external_run_id||'尚未启动'}</span><span>结果：{task.result_count??0}</span><span>创建：{task.created_at?new Date(task.created_at).toLocaleString():'—'}</span></div>{task.error_message&&<div className="leads-error">{task.error_message}</div>}</article>)}</div>}
   </section>}
  </section>;
 }
