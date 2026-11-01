@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 type Criteria = {
   productKeywords: string; hsCodes: string; targetCountries: string; originCountries: string;
   companyTypes: string; industries: string; shipmentDateFrom: string; shipmentDateTo: string;
+  knownImporters:string; knownSuppliers:string; destinationPorts:string; originPorts:string; excludeKeywords:string; employeeRange:string;
   minShipments: string; minImportValue: string; maxImportValue: string; activeRecently: string;
   requireEmail: boolean; requirePhone: boolean; requireWebsite: boolean; requireLinkedin: boolean;
   decisionMakerTitles: string; maxResults: string; notes: string;
@@ -11,7 +12,7 @@ type Actor = { actor_id: string; title: string; description?: string; score?: nu
 type Props = { onApi: (action: string, payload?: Record<string, unknown>) => Promise<any> };
 const initial: Criteria = {
   productKeywords:'',hsCodes:'',targetCountries:'United States',originCountries:'',companyTypes:'Importer, Distributor, Wholesaler',
-  industries:'',shipmentDateFrom:'',shipmentDateTo:'',minShipments:'',minImportValue:'',maxImportValue:'',activeRecently:'12',
+  industries:'',shipmentDateFrom:'',shipmentDateTo:'',knownImporters:'',knownSuppliers:'',destinationPorts:'',originPorts:'',excludeKeywords:'',employeeRange:'',minShipments:'',minImportValue:'',maxImportValue:'',activeRecently:'12',
   requireEmail:true,requirePhone:false,requireWebsite:true,requireLinkedin:false,decisionMakerTitles:'Purchasing Manager, Procurement Manager, Import Manager, Buyer',
   maxResults:'100',notes:'',
 };
@@ -24,6 +25,11 @@ function toActorInput(actor:Actor, c:Criteria):Record<string,unknown>{
   hsCodes:split(c.hsCodes),hs_codes:split(c.hsCodes),country:split(c.targetCountries)[0]??'United States',
   targetCountries:split(c.targetCountries),target_countries:split(c.targetCountries),originCountries:split(c.originCountries),
   watchHsCodes:split(c.hsCodes),productKeywordsArray:split(c.productKeywords),
+  knownImporters:split(c.knownImporters),watchConsignees:split(c.knownImporters),consignees:split(c.knownImporters),importers:split(c.knownImporters),
+  knownSuppliers:split(c.knownSuppliers),watchShippers:split(c.knownSuppliers),shippers:split(c.knownSuppliers),suppliers:split(c.knownSuppliers),
+  destinationPorts:split(c.destinationPorts),arrivalPorts:split(c.destinationPorts),portsOfDischarge:split(c.destinationPorts),
+  originPorts:split(c.originPorts),loadingPorts:split(c.originPorts),portsOfLoading:split(c.originPorts),
+  excludeKeywords:split(c.excludeKeywords),excludeTerms:split(c.excludeKeywords),excludeCompanies:split(c.excludeKeywords),employeeRange:c.employeeRange||undefined,employeeSize:c.employeeRange||undefined,
   companyTypes:split(c.companyTypes),company_types:split(c.companyTypes),companyType:split(c.companyTypes)[0],
   businessType:split(c.companyTypes)[0],business_type:split(c.companyTypes),sector:split(c.industries)[0],industry:split(c.industries)[0],industries:split(c.industries),
   shipmentDateFrom:c.shipmentDateFrom||undefined,startDate:c.shipmentDateFrom||undefined,dateFrom:c.shipmentDateFrom||undefined,fromDate:c.shipmentDateFrom||undefined,
@@ -131,6 +137,10 @@ export function ImportExportLeadsFinder({onApi}:Props){
       <label className="leads-field"><span>HS Code</span><input value={criteria.hsCodes} onChange={e=>patch('hsCodes',e.target.value)} placeholder="例如：961700, 732393"/></label>
       <label className="leads-field"><span>目标进口国家 / 地区</span><input value={criteria.targetCountries} onChange={e=>patch('targetCountries',e.target.value)} placeholder="United States, Canada, Germany"/></label>
       <label className="leads-field"><span>供应来源国家 / 地区</span><input value={criteria.originCountries} onChange={e=>patch('originCountries',e.target.value)} placeholder="China, Vietnam, India"/></label>
+      <label className="leads-field wide"><span>已知进口商 / 收货人名称</span><input value={criteria.knownImporters} onChange={e=>patch('knownImporters',e.target.value)} placeholder="可填写公司名称或 ImportYeti slug，多个用逗号分隔"/></label>
+      <label className="leads-field wide"><span>已知海外供应商 / 发货人名称</span><input value={criteria.knownSuppliers} onChange={e=>patch('knownSuppliers',e.target.value)} placeholder="用于追踪供应链关系，多个用逗号分隔"/></label>
+      <label className="leads-field"><span>目的港 / 卸货港</span><input value={criteria.destinationPorts} onChange={e=>patch('destinationPorts',e.target.value)} placeholder="Los Angeles, New York"/></label>
+      <label className="leads-field"><span>起运港 / 装货港</span><input value={criteria.originPorts} onChange={e=>patch('originPorts',e.target.value)} placeholder="Shanghai, Ningbo, Shenzhen"/></label>
       <label className="leads-field"><span>进口活跃时间（月）</span><select value={criteria.activeRecently} onChange={e=>patch('activeRecently',e.target.value)}><option value="">不限</option><option value="3">最近 3 个月</option><option value="6">最近 6 个月</option><option value="12">最近 12 个月</option><option value="24">最近 24 个月</option></select></label>
       <label className="leads-field"><span>提单 / 进口记录起始日期</span><input type="date" value={criteria.shipmentDateFrom} onChange={e=>patch('shipmentDateFrom',e.target.value)}/></label>
       <label className="leads-field"><span>提单 / 进口记录结束日期</span><input type="date" value={criteria.shipmentDateTo} onChange={e=>patch('shipmentDateTo',e.target.value)}/></label>
@@ -143,6 +153,8 @@ export function ImportExportLeadsFinder({onApi}:Props){
      <div className="leads-field-grid">
       <label className="leads-field"><span>客户类型</span><input value={criteria.companyTypes} onChange={e=>patch('companyTypes',e.target.value)} placeholder="Importer, Distributor, Wholesaler"/></label>
       <label className="leads-field"><span>行业 / 细分市场</span><input value={criteria.industries} onChange={e=>patch('industries',e.target.value)} placeholder="Retail, Foodservice, Industrial supply"/></label>
+      <label className="leads-field"><span>企业员工规模</span><input value={criteria.employeeRange} onChange={e=>patch('employeeRange',e.target.value)} placeholder="例如：50-200, 200-1000"/></label>
+      <label className="leads-field"><span>排除关键词 / 公司</span><input value={criteria.excludeKeywords} onChange={e=>patch('excludeKeywords',e.target.value)} placeholder="例如：freight forwarder, logistics broker"/></label>
       <label className="leads-field wide"><span>采购 / 决策人职位关键词</span><input value={criteria.decisionMakerTitles} onChange={e=>patch('decisionMakerTitles',e.target.value)} placeholder="Purchasing Manager, Buyer, Sourcing Director"/></label>
       <label className="leads-field wide"><span>补充说明</span><textarea rows={2} value={criteria.notes} onChange={e=>patch('notes',e.target.value)} placeholder="例如：排除货运代理；优先持续采购且从东南亚采购的进口商。"/></label>
      </div>
