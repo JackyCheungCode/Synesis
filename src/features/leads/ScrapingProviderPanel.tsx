@@ -11,7 +11,7 @@ const descriptions:Record<Provider,string>={
  phantombuster:'发现你账户已有 Agent，按 Agent 参数启动，并查询状态或输出。',
  texau:'当前提供邮箱 waterfall enrichment；需要姓名和企业域名，不是通用网页搜索。',
 };
-export function ScrapingProviderPanel({onApi,query='',context}:Props){
+export function ScrapingProviderPanel({onApi,query=''}:Props){
  const [provider,setProvider]=useState<Provider>('apify');
  const [operation,setOperation]=useState('search');
  const [url,setUrl]=useState('');
