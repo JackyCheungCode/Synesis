@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DynamicActorForm } from './DynamicActorForm';
+import { MultiSelect, countryOptions } from './MultiSelect';
 
 type Criteria = {
   productKeywords: string; hsCodes: string; targetCountries: string; originCountries: string;
@@ -141,8 +142,8 @@ export function ImportExportLeadsFinder({onApi}:Props){
      <div className="leads-field-grid">
       <label className="leads-field wide"><span>产品关键词 <b>*</b></span><textarea rows={3} value={criteria.productKeywords} onChange={e=>patch('productKeywords',e.target.value)} placeholder="例如：stainless steel water bottle, vacuum flask, insulated bottle；支持多个关键词"/></label>
       <label className="leads-field"><span>HS Code</span><input value={criteria.hsCodes} onChange={e=>patch('hsCodes',e.target.value)} placeholder="例如：961700, 732393"/></label>
-      <label className="leads-field"><span>目标进口国家 / 地区</span><input value={criteria.targetCountries} onChange={e=>patch('targetCountries',e.target.value)} placeholder="United States, Canada, Germany"/></label>
-      <label className="leads-field"><span>供应来源国家 / 地区</span><input value={criteria.originCountries} onChange={e=>patch('originCountries',e.target.value)} placeholder="China, Vietnam, India"/></label>
+      <div className="leads-field"><MultiSelect label="目标进口国家 / 地区" value={split(criteria.targetCountries)} options={countryOptions} onChange={items=>patch('targetCountries',items.join(', '))} placeholder="搜索国家并多选…" /></div>
+      <div className="leads-field"><MultiSelect label="供应来源国家 / 地区" value={split(criteria.originCountries)} options={countryOptions} onChange={items=>patch('originCountries',items.join(', '))} placeholder="搜索国家并多选…" /></div>
       <label className="leads-field wide"><span>已知进口商 / 收货人名称</span><input value={criteria.knownImporters} onChange={e=>patch('knownImporters',e.target.value)} placeholder="可填写公司名称或 ImportYeti slug，多个用逗号分隔"/></label>
       <label className="leads-field wide"><span>已知海外供应商 / 发货人名称</span><input value={criteria.knownSuppliers} onChange={e=>patch('knownSuppliers',e.target.value)} placeholder="用于追踪供应链关系，多个用逗号分隔"/></label>
       <label className="leads-field"><span>目的港 / 卸货港</span><input value={criteria.destinationPorts} onChange={e=>patch('destinationPorts',e.target.value)} placeholder="Los Angeles, New York"/></label>
