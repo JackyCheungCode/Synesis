@@ -117,4 +117,6 @@ test('global shell is wired to the Carbon theme, grid and overlay navigation', (
   assert.ok(styles.includes("@use '@carbon/react/scss/components/ui-shell'"));
   assert.equal(styles.includes("@use '@carbon/react';"), false, 'avoid importing the entire Carbon stylesheet bundle');
   assert.match(foundation, /carbon-theme\.\$background/);
+  assert.match(foundation, /carbon-theme\.theme\(carbon-themes\.\$white\)/);
+  assert.match(foundation, /carbon-theme\.theme\(carbon-themes\.\$g90\)/);
 });
