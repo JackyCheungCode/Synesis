@@ -24,6 +24,9 @@ export function ScrapingProviderPanel({onApi,query=''}:Props){
  const [limit,setLimit]=useState('10');
  const [format,setFormat]=useState('markdown');
  const [offset,setOffset]=useState('0');
+ const [mcpTools,setMcpTools]=useState<any[]>([]);
+ const [mcpToolName,setMcpToolName]=useState('');
+ const [mcpArguments,setMcpArguments]=useState('{}');
  const [output,setOutput]=useState<any>(null);
  const [error,setError]=useState('');
  const [busy,setBusy]=useState(false);
@@ -40,13 +43,22 @@ export function ScrapingProviderPanel({onApi,query=''}:Props){
    else if(provider==='phantombuster'){
     let parsed:unknown={};try{parsed=JSON.parse(argument);}catch{throw new Error('Agent Argument 必须是有效 JSON');}
     input={agentId,argument:parsed};
-   }else if(provider==='texau')input={first_name:firstName,last_name:lastName,domain};
+   }else if(provider==='texau'){
+    if(operation==='email_enrichment')input={first_name:firstName,last_name:lastName,domain};
+    else if(operation==='mcp_call'){
+     let parsed:unknown={};try{parsed=JSON.parse(mcpArguments);}catch{throw new Error('MCP 工具参数必须是有效 JSON');}
+     input={toolName:mcpToolName,arguments:parsed};
+    }
+   }
    const result=await onApi('scraping.execute',{provider,operation,input});
    setOutput(result);
+   if(provider==='texau'&&operation==='mcp_tools'){
+    const tools=Array.isArray(result.tools)?result.tools:[];setMcpTools(tools);setMcpToolName(String(tools[0]?.name??''));
+   }
   }catch(e){setError(e instanceof Error?e.message:'采集服务请求失败');}
   finally{setBusy(false);}
  }
- const ready=provider==='apify'?false:provider==='firecrawl'?operation==='search'?Boolean(effectiveQuery):/^https:\/\//i.test(url):provider==='brightdata'?/^https:\/\//i.test(url):provider==='octoparse'?Boolean(taskId.trim()):provider==='phantombuster'?operation==='discover'||Boolean(agentId.trim()):Boolean(firstName.trim()&&lastName.trim()&&domain.trim());
+ const ready=provider==='apify'?false:provider==='firecrawl'?operation==='search'?Boolean(effectiveQuery):/^https:\/\//i.test(url):provider==='brightdata'?/^https:\/\//i.test(url):provider==='octoparse'?Boolean(taskId.trim()):provider==='phantombuster'?operation==='discover'||Boolean(agentId.trim()):provider==='texau'?operation==='mcp_tools'||operation==='mcp_call'?Boolean(mcpToolName):Boolean(firstName.trim()&&lastName.trim()&&domain.trim()):false;
  return <section className="leads-panel scraping-provider-panel">
   <div className="leads-panel-head"><div><span>UNIFIED SCRAPING PROVIDERS</span><h3>选择本次采集服务</h3><p>不同服务商提供不同工具与参数；Synesis 会按所选服务商使用对应 API，不会把一种服务的参数错误地传给另一家。</p></div></div>
   <div className="leads-field-grid">
@@ -62,9 +74,9 @@ export function ScrapingProviderPanel({onApi,query=''}:Props){
    {provider==='brightdata'&&<><label className="leads-field"><span>操作</span><select value="unlock" disabled><option value="unlock">Web Unlocker</option></select></label><label className="leads-field wide"><span>目标 HTTPS URL</span><input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://example.com"/></label><label className="leads-field"><span>返回格式</span><select value={format} onChange={e=>setFormat(e.target.value)}><option value="raw">HTML / Raw</option><option value="json">JSON</option></select></label></>}
    {provider==='octoparse'&&<><label className="leads-field"><span>操作</span><select value={operation} onChange={e=>setOperation(e.target.value)}><option value="start">启动已有云任务</option><option value="status">查询任务状态</option><option value="results">读取任务数据</option></select></label><label className="leads-field"><span>Octoparse Task ID</span><input value={taskId} onChange={e=>setTaskId(e.target.value)} placeholder="填写已创建的 Task ID"/></label>{operation==='results'&&<label className="leads-field"><span>数据 Offset</span><input type="number" min="0" value={offset} onChange={e=>setOffset(e.target.value)}/></label>}</>}
    {provider==='phantombuster'&&<><label className="leads-field"><span>操作</span><select value={operation} onChange={e=>setOperation(e.target.value)}><option value="discover">发现账户 Agent</option><option value="launch">启动 Agent</option><option value="status">查询 Agent 状态</option><option value="output">读取 Agent 输出</option></select></label>{operation!=='discover'&&<><label className="leads-field"><span>Agent ID</span><input value={agentId} onChange={e=>setAgentId(e.target.value)} placeholder="填写 Agent ID"/></label>{operation==='launch'&&<label className="leads-field wide"><span>Agent Argument JSON</span><textarea rows={4} value={argument} onChange={e=>setArgument(e.target.value)}/></label>}</>}</>}
-   {provider==='texau'&&<><label className="leads-field"><span>操作</span><select value="email_enrichment" disabled><option value="email_enrichment">Email Finding Waterfall</option></select></label><label className="leads-field"><span>名</span><input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="First name"/></label><label className="leads-field"><span>姓</span><input value={lastName} onChange={e=>setLastName(e.target.value)} placeholder="Last name"/></label><label className="leads-field wide"><span>企业域名</span><input value={domain} onChange={e=>setDomain(e.target.value)} placeholder="example.com"/></label></>}
+   {provider==='texau'&&<><label className="leads-field"><span>操作</span><select value={operation} onChange={e=>setOperation(e.target.value)}><option value="email_enrichment">Email Finding Waterfall</option><option value="mcp_tools">读取 MCP 工具目录</option><option value="mcp_call">调用 MCP 工具</option></select></label>{operation==='email_enrichment'&&<><label className="leads-field"><span>名</span><input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="First name"/></label><label className="leads-field"><span>姓</span><input value={lastName} onChange={e=>setLastName(e.target.value)} placeholder="Last name"/></label><label className="leads-field wide"><span>企业域名</span><input value={domain} onChange={e=>setDomain(e.target.value)} placeholder="example.com"/></label></>}{operation==='mcp_tools'&&<p className="leads-side-note">连接 TexAu 托管 MCP Server，读取当前 API Key 可用的工具目录；读取目录不执行 enrichment。</p>}{operation==='mcp_call'&&<><label className="leads-field"><span>MCP 工具名称</span><select value={mcpToolName} onChange={e=>setMcpToolName(e.target.value)}><option value="">先读取工具目录</option>{mcpTools.map(tool=><option key={tool.name} value={tool.name}>{tool.name}</option>)}</select></label><label className="leads-field wide"><span>MCP 工具 Arguments JSON</span><textarea rows={5} value={mcpArguments} onChange={e=>setMcpArguments(e.target.value)}/></label><p className="leads-side-note">调用工具可能消耗 TexAu credits。请检查工具名称、参数和账户额度后再执行。</p></>}</>}
   </div>
-  {provider==='apify'?<p className="leads-side-note">Apify 已保留在原有工作流中：先推荐 Actor，再读取真实 Input Schema，确认参数后启动。选择其他服务商时，将显示对应服务的专用操作。</p>:<button className="leads-primary" disabled={busy||!ready} onClick={()=>void execute()}>{busy?'正在请求 '+names[provider]+'…':'使用 '+names[provider]+' 执行'} <span>→</span></button>}
+  {provider==='apify'?<p className="leads-side-note">Apify 已保留在原有工作流中：先推荐 Actor，再读取真实 Input Schema，确认参数后启动。选择其他服务商时，将显示对应服务的专用操作。</p>:<button className="leads-primary" disabled={busy||!ready} onClick={()=>void execute()}>{busy?'正在请求 '+names[provider]+'…':provider==='texau'&&operation==='mcp_tools'?'读取 TexAu MCP 工具目录':provider==='texau'&&operation==='mcp_call'?'调用 TexAu MCP 工具':'使用 '+names[provider]+' 执行'} <span>→</span></button>}
   {error&&<div className="leads-error" role="alert">{error}</div>}
   {output&&<div className="scraping-provider-output"><div className="leads-panel-head"><div><span>PROVIDER RESPONSE</span><h3>{names[provider]} 返回结果</h3><p>原始服务响应预览。统一字段映射、客户去重与写入全球线索库将在标准化层完成。</p></div></div><pre>{JSON.stringify(output,null,2)}</pre></div>}
  </section>;
