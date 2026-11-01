@@ -1,6 +1,8 @@
+@use './styles/synesis-design';
 @use '@carbon/react';
 @use './styles/carbon-foundation';
-@use './styles/synesis-design';
+
+
 
 // Legacy business-page styles remain temporarily scoped to the Phase 2 migration backlog.
 /* Global customer discovery — Synesis native design tokens */
