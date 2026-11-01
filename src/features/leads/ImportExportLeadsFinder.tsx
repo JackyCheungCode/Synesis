@@ -48,6 +48,12 @@ function toActorInput(actor:Actor, c:Criteria):Record<string,unknown>{
    if(declared==='string'&&typeof candidate==='number') candidate=String(candidate);
    if((declared==='integer'||declared==='number')&&typeof candidate==='string'&&candidate.trim()!=='') candidate=Number(candidate);
    if(declared==='array'&&typeof candidate==='string') candidate=candidate.split(/[，,;；\\n]+/).map(x=>x.trim()).filter(Boolean);
+   if(Array.isArray(def?.enum)&&!Array.isArray(candidate)&&!def.enum.includes(candidate)){
+    const text=String(candidate).toLowerCase();
+    const enumMatch=def.enum.find((option:any)=>String(option).toLowerCase()===text||String(option).toLowerCase().includes(text)||text.includes(String(option).toLowerCase()));
+    if(enumMatch!==undefined) candidate=enumMatch;
+    else if(key.toLowerCase()==='country'&&def.enum.includes('US')) candidate='US';
+   }
    input[key]=candidate;
   }
   else if(def?.default!==undefined) input[key]=def.default;
