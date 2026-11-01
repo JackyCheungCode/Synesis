@@ -384,6 +384,78 @@ Deno.serve(async (req: Request) => {
       return json({actors:available,criteria_received:{product_keywords:Boolean(keywords),hs_codes:Boolean(hsCodes),target_countries:Boolean(targetCountries)},apify_configured:Boolean((await admin.from('integration_connections').select('id').eq('user_id',userId).eq('service_slug','apify').maybeSingle()).data)});
     }
 
+    if (action === 'social.actors.recommend') {
+      const criteria=(body.criteria&&typeof body.criteria==='object'?body.criteria:{}) as Record<string,unknown>;
+      const platforms=Array.isArray(criteria.platforms)?criteria.platforms.map((value:unknown)=>String(value).toLowerCase()).filter(Boolean):[];
+      const allowedPlatforms:Record<string,string[]>={
+        instagram:['instagram scraper','instagram posts comments profile'],
+        tiktok:['tiktok scraper','tiktok hashtag videos profiles'],
+        youtube:['youtube scraper','youtube videos channels comments'],
+        facebook:['facebook scraper','facebook public pages posts'],
+        linkedin:['linkedin public profile posts company'],
+        x:['twitter x scraper tweets search'],
+        reddit:['reddit scraper posts comments subreddits'],
+        pinterest:['pinterest scraper pins boards'],
+        threads:['threads scraper posts profiles'],
+        telegram:['telegram public channels messages'],
+        discord:['discord public servers messages'],
+        twitch:['twitch channels streams clips'],
+        medium:['medium articles authors'],
+        quora:['quora questions answers topics'],
+        snapchat:['snapchat public profiles stories'],
+      };
+      const selected=platforms.filter(platform=>Object.prototype.hasOwnProperty.call(allowedPlatforms,platform));
+      const keywords=String(criteria.keywords??'').trim();
+      const product=String(criteria.productOrService??'').trim();
+      const intent=String(criteria.intent??'buyer_intent');
+      if(!selected.length) return json({error:'请至少选择一个社交平台'},400);
+      if(!keywords&&!product) return json({error:'请填写潜在客户关键词或产品 / 服务'},400);
+      const searchTerms=[keywords,product].filter(Boolean).join(' ');
+      const searches=await Promise.all(selected.map(async platform=>{
+        const terms=allowedPlatforms[platform].map(term=>term+' '+searchTerms);
+        const responses=await Promise.all(terms.map(async term=>{
+          const url='https://api.apify.com/v2/store?'+new URLSearchParams({search:term,sortBy:'popularity',limit:'10',includeInputSchema:'true',responseFormat:'agent'}).toString();
+          const response=await fetch(url,{headers:{Accept:'application/json'}});
+          const payload=await response.json().catch(()=>({}));
+          if(!response.ok) return {items:[],error:payload?.error?.message??'Apify Store 搜索失败（HTTP '+response.status+'）',status:response.status};
+          return {items:payload?.data?.items??[],error:null,status:200};
+        }));
+        const unique=new Map<string,any>();
+        for(const response of responses) for(const actor of response.items){
+          const actorId=actor?.username&&actor?.name?String(actor.username)+'/'+String(actor.name):'';
+          if(!actorId||unique.has(actorId)) continue;
+          unique.set(actorId,{...actor,actor_id:actorId,platform});
+        }
+        const ranked=[...unique.values()].map(actor=>{
+          const text=[actor.title,actor.name,actor.description,actor.readmeSummary].join(' ').toLowerCase();
+          const words=searchTerms.toLowerCase().split(/[^a-z0-9\u4e00-\u9fff]+/).filter(word=>word.length>1);
+          const matched=words.filter(word=>text.includes(word)).length;
+          const popularity=Number(actor.stats?.totalUsers30Days??actor.stats?.totalUsers??0);
+          const score=Math.min(99,55+matched*7+Math.min(15,Math.log10(popularity+1)*3));
+          return {...actor,score,platform_label:platform.toUpperCase(),recommendation_reason:'Apify Store 搜索匹配；请在启动前检查 Actor 描述、Input Schema、价格和平台访问限制。',intent};
+        }).sort((a,b)=>b.score-a.score).slice(0,4);
+        return {platform,actors:ranked,errors:responses.filter(item=>item.error).map(item=>({status:item.status,error:item.error}))};
+      }));
+      const actors=searches.flatMap(item=>item.actors).sort((a,b)=>b.score-a.score);
+      return json({actors,platforms_checked:selected,platforms_without_results:searches.filter(item=>!item.actors.length).map(item=>item.platform),search_errors:searches.flatMap(item=>item.errors.map(error=>({platform:item.platform,...error}))),apify_store_source:'https://apify.com/store'});
+    }
+
+    if (action === 'social.run') {
+      const actorId=String(body.actorId??'').trim();
+      const input=body.input;
+      if(!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(actorId)) return json({error:'Actor ID 格式无效'},400);
+      if(!input||typeof input!=='object'||Array.isArray(input)) return json({error:'Actor Input 必须是 JSON 对象'},400);
+      const {clear:apifyToken}=await getCredential('apify','integration');
+      const lookup=await readActorInputSchema(actorId,apifyToken);
+      if(!lookup.schema&&lookup.status!==422) return json({error:lookup.error??'无法读取 Actor Input Schema',code:'ACTOR_INPUT_SCHEMA_UNAVAILABLE',upstream_status:lookup.status},lookup.status);
+      const validation=validateActorInput(input,(lookup.schema??{}) as CompactInputSchema);
+      if(validation.length) return json({error:'Actor 输入参数未通过 Schema 校验',validation},400);
+      const actorPath=encodeURIComponent(actorId.replace('/','~'));
+      const response=await fetch('https://api.apify.com/v2/actors/'+actorPath+'/runs?waitForFinish=0',{method:'POST',headers:{Authorization:'Bearer '+apifyToken,'Content-Type':'application/json'},body:JSON.stringify(input)});
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok||!payload?.data?.id) return json({error:payload?.error?.message??payload?.message??'Apify Actor 启动失败（HTTP '+response.status+'）',upstream_status:response.status},502);
+      return json({run:payload.data,items:[],actor_id:actorId,platform:body.platform??null});
+    }
     if (action === 'leads.actor.schema') {
       const actorId=String(body.actorId??'').trim();
       if(!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(actorId)) return json({error:'Actor ID 格式无效'},400);
