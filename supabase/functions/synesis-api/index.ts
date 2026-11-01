@@ -301,7 +301,8 @@ Deno.serve(async (req: Request) => {
           response=await fetch('https://openapi.bazhuayu.com/cloudextraction/start',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({taskId})});
         }else if(operation==='results'){
           if(!taskId) return json({error:'Octoparse 读取数据需要 taskId'},400);
-          const params=new URLSearchParams({taskId,offset:String(Math.max(0,Number(input.offset)||0)),size:String(Math.min(1000,Math.max(1,Number(input.size)||100)))});\n          response=await fetch('https://openapi.bazhuayu.com/data/all?'+params.toString(),{headers:{Authorization:'Bearer '+accessToken}});
+          const params=new URLSearchParams({taskId,offset:String(Math.max(0,Number(input.offset)||0)),size:String(Math.min(1000,Math.max(1,Number(input.size)||100)))});
+          response=await fetch('https://openapi.bazhuayu.com/data/all?'+params.toString(),{headers:{Authorization:'Bearer '+accessToken}});
         }else if(operation==='status'){
           if(!taskId) return json({error:'Octoparse 查询状态需要 taskId'},400);
           response=await fetch('https://openapi.bazhuayu.com/cloudextraction/statuses/v2',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({taskIds:[taskId]})});
