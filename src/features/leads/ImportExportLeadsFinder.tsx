@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DynamicActorForm } from './DynamicActorForm';
 
 type Criteria = {
   productKeywords: string; hsCodes: string; targetCountries: string; originCountries: string;
@@ -8,7 +9,7 @@ type Criteria = {
   requireEmail: boolean; requirePhone: boolean; requireWebsite: boolean; requireLinkedin: boolean;
   decisionMakerTitles: string; maxResults: string; notes: string;
 };
-type Actor = { actor_id: string; title: string; description?: string; score?: number; recommendation_reason?: string; input_schema?: any; stats?: any; supported_fields?: string[]; unsupported_fields?: string[] };
+type Actor = { actor_id: string; title: string; description?: string; score?: number; recommendation_reason?: string; input_schema?: any; schema_hash?: string; schema_fetched_at?: string; stats?: any; supported_fields?: string[]; unsupported_fields?: string[] };
 type Props = { onApi: (action: string, payload?: Record<string, unknown>) => Promise<any> };
 const initial: Criteria = {
   productKeywords:'',hsCodes:'',targetCountries:'United States',originCountries:'',companyTypes:'Importer, Distributor, Wholesaler',
@@ -20,57 +21,39 @@ const split = (v:string) => v.split(/[，,;；\\n]+/).map(x=>x.trim()).filter(Bo
 function toActorInput(actor:Actor, c:Criteria):Record<string,unknown>{
  const props=actor.input_schema?.properties??{};
  const input:Record<string,unknown>={};
- const values:Record<string,unknown>={
-  productKeywords:split(c.productKeywords),keywords:split(c.productKeywords),searchQuery:[...split(c.productKeywords),...split(c.hsCodes)].join(' '),
-  hsCodes:split(c.hsCodes),hs_codes:split(c.hsCodes),hs_code:split(c.hsCodes),country:split(c.targetCountries)[0]??'United States',
-  targetCountries:split(c.targetCountries),target_countries:split(c.targetCountries),target_country:split(c.targetCountries)[0],originCountries:split(c.originCountries),origin_countries:split(c.originCountries),origin_country:split(c.originCountries)[0],
-  watchHsCodes:split(c.hsCodes),productKeywordsArray:split(c.productKeywords),
-  knownImporters:split(c.knownImporters),watchConsignees:split(c.knownImporters),consignees:split(c.knownImporters),importers:split(c.knownImporters),consignee:split(c.knownImporters)[0],
-  knownSuppliers:split(c.knownSuppliers),watchShippers:split(c.knownSuppliers),shippers:split(c.knownSuppliers),suppliers:split(c.knownSuppliers),shipper:split(c.knownSuppliers)[0],
-  destinationPorts:split(c.destinationPorts),arrivalPorts:split(c.destinationPorts),portsOfDischarge:split(c.destinationPorts),portOfDischarge:split(c.destinationPorts)[0],
-  originPorts:split(c.originPorts),loadingPorts:split(c.originPorts),portsOfLoading:split(c.originPorts),portOfLoading:split(c.originPorts)[0],
-  excludeKeywords:split(c.excludeKeywords),excludeTerms:split(c.excludeKeywords),excludeCompanies:split(c.excludeKeywords),employeeRange:c.employeeRange||undefined,employeeSize:c.employeeRange||undefined,employees:c.employeeRange||undefined,
-  companyTypes:split(c.companyTypes),company_types:split(c.companyTypes),companyType:split(c.companyTypes)[0],
-  businessType:split(c.companyTypes)[0],business_type:split(c.companyTypes),sector:split(c.industries)[0],industry:split(c.industries)[0],industries:split(c.industries),
-  shipmentDateFrom:c.shipmentDateFrom||undefined,startDate:c.shipmentDateFrom||undefined,dateFrom:c.shipmentDateFrom||undefined,fromDate:c.shipmentDateFrom||undefined,
-  shipmentDateTo:c.shipmentDateTo||undefined,endDate:c.shipmentDateTo||undefined,dateTo:c.shipmentDateTo||undefined,toDate:c.shipmentDateTo||undefined,
-  minShipments:c.minShipments?Number(c.minShipments):undefined,min_shipments:c.minShipments?Number(c.minShipments):undefined,
-  minImportValue:c.minImportValue?Number(c.minImportValue):undefined,min_import_value:c.minImportValue?Number(c.minImportValue):undefined,
-  maxImportValue:c.maxImportValue?Number(c.maxImportValue):undefined,max_import_value:c.maxImportValue?Number(c.maxImportValue):undefined,
-  activeRecently:c.activeRecently?Number(c.activeRecently):undefined,monthsBack:c.activeRecently?Number(c.activeRecently):undefined,lookbackMonths:c.activeRecently?Number(c.activeRecently):undefined,
-  requireEmail:c.requireEmail,enrichEmails:c.requireEmail,includeEmail:c.requireEmail,
-  requirePhone:c.requirePhone,includePhone:c.requirePhone,
-  requireWebsite:c.requireWebsite,includeWebsite:c.requireWebsite,
-  requireLinkedin:c.requireLinkedin,includeLinkedin:c.requireLinkedin,enrichSocials:c.requireLinkedin,
-  decisionMakerTitles:split(c.decisionMakerTitles),jobTitles:split(c.decisionMakerTitles),titles:split(c.decisionMakerTitles),
-  maxLeads:Number(c.maxResults)||100,maxResults:Number(c.maxResults)||100,limit:Number(c.maxResults)||100,maxRecords:Number(c.maxResults)||100,
+ for(const [key,definition] of Object.entries(props) as [string,any][]) if(definition?.default!==undefined) input[key]=definition.default;
+ const set=(key:string,value:unknown)=>{
+  const definition=props[key];
+  if(!definition||value===undefined||value===null||value===''||(Array.isArray(value)&&!value.length)) return;
+  const type=Array.isArray(definition.type)?definition.type.find((item:string)=>item!=='null'):definition.type;
+  let next=value;
+  if(type==='array'&&!Array.isArray(next)) next=String(next).split(/[，,;；\n]+/).map(item=>item.trim()).filter(Boolean);
+  if(type==='string'&&Array.isArray(next)) next=next.join(', ');
+  if((type==='integer'||type==='number')&&typeof next==='string') next=Number(next);
+  if(type==='integer'&&typeof next==='number'&&!Number.isInteger(next)) return;
+  if(type==='number'&&typeof next==='number'&&!Number.isFinite(next)) return;
+  if(Array.isArray(definition.enum)&&!definition.enum.some((option:unknown)=>String(option).toLowerCase()===String(next).toLowerCase())) return;
+  input[key]=next;
  };
- for(const [key,def] of Object.entries(props) as [string,any][]){
-  const match=Object.keys(values).find(k=>k.toLowerCase()===key.toLowerCase());
-  if(match&&values[match]!==undefined&&values[match]!==''&&(!Array.isArray(values[match])||(values[match] as unknown[]).length)) {
-   let candidate=values[match];
-   const declared=Array.isArray(def?.type)?def.type[0]:def?.type;
-   if(declared==='string'&&Array.isArray(candidate)) candidate=candidate.join(', ');
-   if(declared==='string'&&typeof candidate==='number') candidate=String(candidate);
-   if((declared==='integer'||declared==='number')&&typeof candidate==='string'&&candidate.trim()!=='') candidate=Number(candidate);
-   if(declared==='array'&&typeof candidate==='string') candidate=candidate.split(/[，,;；\\n]+/).map(x=>x.trim()).filter(Boolean);
-   if(Array.isArray(def?.enum)&&!Array.isArray(candidate)&&!def.enum.includes(candidate)){
-    const text=String(candidate).toLowerCase();
-    const enumMatch=def.enum.find((option:any)=>String(option).toLowerCase()===text||String(option).toLowerCase().includes(text)||text.includes(String(option).toLowerCase()));
-    if(enumMatch!==undefined) candidate=enumMatch;
-    else if(key.toLowerCase()==='country'&&def.enum.includes('US')) candidate='US';
-   }
-   input[key]=candidate;
+ const keywords=split(c.productKeywords), hsCodes=split(c.hsCodes);
+ if(actor.actor_id==='fortuitous_pirate/bill-of-lading-scraper'){
+  set('searchType','consignee'); set('searchQuery',[...keywords,...hsCodes].join(' '));
+ }
+ if(actor.actor_id==='flamboyant_liner/shipment-monitor'){
+  set('watchHsCodes',hsCodes); set('productKeywords',keywords);
+  set('watchConsignees',split(c.knownImporters)); set('watchShippers',split(c.knownSuppliers));
+ }
+ if(actor.actor_id==='akash9078/import-export-leads-finder'){
+  const country=split(c.targetCountries)[0], countryEnum=props.country?.enum;
+  const countryAliases:Record<string,string>={'united states':'US','usa':'US','u.s.':'US','united kingdom':'UK','great britain':'UK','south korea':'South Korea'};
+  if(country){
+   const normalized=countryAliases[country.toLowerCase()]??country;
+   const match=Array.isArray(countryEnum)?countryEnum.find((option:unknown)=>[country,normalized].some(candidate=>String(option).toLowerCase()===candidate.toLowerCase())):normalized;
+   if(match!==undefined)set('country',match);else delete input.country;
   }
-  else if(def?.default!==undefined) input[key]=def.default;
-  else if((actor.actor_id.includes('bill-of-lading-scraper'))&&key==='searchQuery') input[key]=[...split(c.productKeywords),...split(c.hsCodes)].join(' ');
- }
- if(actor.actor_id.includes('bill-of-lading-scraper')) { input.searchType='consignee'; input.searchQuery=input.searchQuery||[...split(c.productKeywords),...split(c.hsCodes)].join(' '); }
- if(actor.actor_id.includes('shipment-monitor')) {
-  input.watchHsCodes=split(c.hsCodes); input.productKeywords=split(c.productKeywords);
- }
- if(actor.actor_id.includes('import-export-leads-finder')) {
-  input.country=split(c.targetCountries)[0]||'India'; input.maxLeads=Number(c.maxResults)||100;
+  const sector=split(c.industries)[0], sectorEnum=props.sector?.enum;
+  if(sector){const match=Array.isArray(sectorEnum)?sectorEnum.find((option:unknown)=>String(option).toLowerCase()===sector.toLowerCase()):sector;if(match!==undefined)set('sector',match);else delete input.sector;}
+  set('maxLeads',Number(c.maxResults)||undefined);
  }
  return input;
 }
@@ -83,6 +66,10 @@ export function ImportExportLeadsFinder({onApi}:Props){
  const [actors,setActors]=useState<Actor[]>([]);
  const [selected,setSelected]=useState<Actor|null>(null);
  const [actorInput,setActorInput]=useState('{}');
+ const [actorValues,setActorValues]=useState<Record<string,unknown>>({});
+ const [actorDrafts,setActorDrafts]=useState<Record<string,Record<string,unknown>>>({});
+ const [rawJsonMode,setRawJsonMode]=useState(false);
+ const [schemaLoading,setSchemaLoading]=useState(false);
  const [run,setRun]=useState<any>(null);
  const [results,setResults]=useState<any[]>([]);
  const [busy,setBusy]=useState(false);
@@ -90,6 +77,19 @@ export function ImportExportLeadsFinder({onApi}:Props){
  const [tab,setTab]=useState<'criteria'|'actor'|'results'>('criteria');
  const patch=(key:keyof Criteria,value:any)=>setCriteria(v=>({...v,[key]:value}));
  const ready=Boolean(criteria.productKeywords.trim()||criteria.hsCodes.trim());
+ async function loadActorSchema(actor:Actor){
+  setSelected(actor);setSchemaLoading(true);setError('');setRawJsonMode(false);
+  try{
+   const response=await onApi('leads.actor.schema',{actorId:actor.actor_id});
+   const refreshed={...actor,input_schema:response.schema,schema_hash:response.schema_hash,schema_fetched_at:response.fetched_at};
+   setSelected(refreshed);
+   const initialInput=actorDrafts[actor.actor_id]??toActorInput(refreshed,criteria);
+   setActorValues(initialInput);setActorInput(JSON.stringify(initialInput,null,2));
+  }catch(e){
+   setError(e instanceof Error?e.message:'无法读取所选 Actor 的最新 Input Schema');
+   setActorValues({});setActorInput('{}');
+  }finally{setSchemaLoading(false);}
+ }
  async function recommend(){
   setBusy(true);setError('');setRun(null);setResults([]);
   try{
@@ -97,17 +97,20 @@ export function ImportExportLeadsFinder({onApi}:Props){
    const list=(response.actors??[]) as Actor[];
    setActors(list);
    if(!list.length) throw new Error('没有找到可用 Actor。请检查 Apify API 配置或调整产品关键词。');
-   setSelected(list[0]);
-   setActorInput(JSON.stringify(toActorInput(list[0],criteria),null,2));
    setTab('actor');
+   await loadActorSchema(list[0]);
   }catch(e){setError(e instanceof Error?e.message:'Actor 推荐失败');}
   finally{setBusy(false);}
  }
- function choose(actor:Actor){setSelected(actor);setActorInput(JSON.stringify(toActorInput(actor,criteria),null,2));setTab('actor');}
+ function choose(actor:Actor){void loadActorSchema(actor);}
+ function updateActorValues(next:Record<string,unknown>){
+  setActorValues(next);setActorInput(JSON.stringify(next,null,2));
+  if(selected)setActorDrafts(previous=>({...previous,[selected.actor_id]:next}));
+ }
  async function startRun(){
   if(!selected)return;
-  let input:unknown;
-  try{input=JSON.parse(actorInput);}catch{setError('Actor Input 必须是有效 JSON 对象。');return;}
+  let input:unknown=actorValues;
+  if(rawJsonMode){try{input=JSON.parse(actorInput);}catch{setError('Actor Input 必须是有效 JSON 对象。');return;}}
   if(!input||typeof input!=='object'||Array.isArray(input)){setError('Actor Input 必须是 JSON 对象。');return;}
   setBusy(true);setError('');
   try{
@@ -173,12 +176,16 @@ export function ImportExportLeadsFinder({onApi}:Props){
     <button className="leads-back-link" onClick={()=>setTab('criteria')}>← 返回修改搜索条件</button>
    </div>
    <div className="leads-panel leads-schema-panel">
-    {selected?<><div className="leads-panel-head"><div><span>ACTOR INPUT SCHEMA</span><h3>{selected.title}</h3><p>{selected.description||selected.actor_id}</p></div></div>
-     <div className="leads-schema-summary"><b>{fields.length} 个输入字段</b><span>{fields.filter(f=>f.required).length} 个必填字段</span></div>
-     <div className="leads-schema-fields">{fields.map(f=><div key={f.key}><b>{f.key}{f.required?' *':''}</b><span>{f.type}{f.default!==undefined?' · 默认 '+String(f.default):''}</span><small>{f.description||'Actor Schema 未提供字段说明'}</small>{f.enum.length>0&&<small>允许值：{f.enum.join(', ')}</small>}</div>)}</div>
-     <label className="leads-field leads-json-field"><span>实际发送给 Actor 的 Input JSON（可编辑）</span><textarea rows={12} spellCheck={false} value={actorInput} onChange={e=>setActorInput(e.target.value)}/></label>
-     <div className="leads-schema-warning">系统仅自动映射 Schema 中可确认支持的字段。已支持：{selected.supported_fields?.join('、')||'尚未识别'}。未支持：{selected.unsupported_fields?.join('、')||'无'}。请检查必填项及 JSON；不支持的条件不会被伪装成已生效的筛选。</div>
-     <button className="leads-primary" disabled={busy} onClick={()=>void startRun()}>{busy?'正在启动 Apify…':'确认 Actor 并启动采集'} <span>→</span></button>
+    {selected?<><div className="leads-panel-head"><div><span>LIVE ACTOR INPUT SCHEMA</span><h3>{selected.title}</h3><p>{selected.description||selected.actor_id}</p></div></div>
+     <div className="leads-schema-summary"><b>{fields.length} 个输入字段</b><span>{fields.filter(f=>f.required).length} 个必填字段</span><span>{schemaLoading?'正在刷新 Schema…':selected.schema_hash?'Schema 版本 '+selected.schema_hash.slice(0,10):'Schema 已加载'}</span></div>
+     {schemaLoading?<div className="leads-empty">正在读取该 Actor 当前版本的参数定义…</div>:<>
+      <div className="leads-schema-warning">可自动映射的通用条件：{selected.supported_fields?.join('、')||'暂无'}。未匹配到已验证参数的条件：{selected.unsupported_fields?.join('、')||'无'}。只有明确验证过的 Actor 专属字段才会自动填入；其他参数请在下方填写。</div>
+      {!rawJsonMode&&<DynamicActorForm schema={selected.input_schema} value={actorValues} onChange={updateActorValues}/>}
+      <div className="actor-json-tools"><button type="button" className="leads-back-link" onClick={()=>{if(rawJsonMode){try{const parsed=JSON.parse(actorInput);if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error();setActorValues(parsed as Record<string,unknown>);if(selected)setActorDrafts(previous=>({...previous,[selected.actor_id]:parsed as Record<string,unknown>}));}catch{setError('JSON 格式无效，修正后才能返回动态表单。');return;}}else{setActorInput(JSON.stringify(actorValues,null,2));}setRawJsonMode(!rawJsonMode);}}>{rawJsonMode?'返回动态表单':'高级模式：编辑原始 JSON'}</button><span>提交前将由服务端按最新 Schema 再次校验</span></div>
+      {rawJsonMode&&<label className="leads-field leads-json-field"><span>Actor Input JSON</span><textarea rows={14} spellCheck={false} value={actorInput} onChange={e=>setActorInput(e.target.value)}/></label>}
+      <div className="leads-schema-warning">默认值会自动填入；必填项以 * 标记。数组支持逗号或换行输入，复杂对象可使用高级 JSON 模式。</div>
+      <button className="leads-primary" disabled={busy||schemaLoading||!selected.input_schema} onClick={()=>void startRun()}>{busy?'正在启动 Apify…':'确认参数并启动采集'} <span>→</span></button>
+     </>}
     </>:<p>请先选择 Actor。</p>}
    </div>
   </div>}

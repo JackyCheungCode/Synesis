@@ -301,7 +301,6 @@ Deno.serve(async (req: Request) => {
         if(!meta?.id||meta.isDeprecated) return null;
         const schemaPayload=schemaResponse.ok?await schemaResponse.json().catch(()=>({})):null;
         const schema=schemaPayload?.data??schemaPayload;
-        const schemaText=JSON.stringify(schema??{}).toLowerCase();
         let score=candidate.base;
         const isUSMarket=/united states|usa|u\.s\.|(^|[,; ])us($|[,; ])/.test(targetCountries);
         const isOtherMarket=Boolean(targetCountries)&&!isUSMarket;
@@ -334,8 +333,15 @@ Deno.serve(async (req: Request) => {
           ['企业员工规模',Boolean(criteria.employeeRange),/employee|staff|companySize/i],
           ['最大结果数',Boolean(criteria.maxResults),/maxResults|maxLeads|limit|count/i],
         ].filter(([,active])=>active);
-        const supportedFields=requestedFields.filter(([,active,pattern])=>active&&pattern.test(schemaText)).map(([label])=>label);
-        const unsupportedFields=requestedFields.filter(([,active,pattern])=>active&&!pattern.test(schemaText)).map(([label])=>label);
+        const explicitMappings:Record<string,Array<[string,string]>>={
+          'fortuitous_pirate/bill-of-lading-scraper':[['产品关键词','searchQuery'],['HS Code','searchQuery']],
+          'flamboyant_liner/shipment-monitor':[['HS Code','watchHsCodes'],['产品关键词','productKeywords'],['已知进口商','watchConsignees'],['已知供应商','watchShippers']],
+          'akash9078/import-export-leads-finder':[['目标进口国家','country'],['行业','sector'],['最大结果数','maxLeads']],
+        };
+        const mapped=explicitMappings[candidate.id]??[];
+        const schemaProperties=(schema as any)?.properties??{};
+        const supportedFields=mapped.filter(([label,property])=>requestedFields.some(([requested])=>requested===label)&&Object.prototype.hasOwnProperty.call(schemaProperties,property)).map(([label])=>label);
+        const unsupportedFields=requestedFields.map(([label])=>label).filter(label=>!supportedFields.includes(label));
         return {
           actor_id:candidate.id,title:String(meta.title??meta.name??candidate.id),description:String(meta.description??'').slice(0,700),
           score:Math.min(99,score+supportedFields.length*2),recommendation_reason:candidate.reason,
@@ -346,6 +352,22 @@ Deno.serve(async (req: Request) => {
       }));
       const available=actors.filter(Boolean).sort((a:any,b:any)=>b.score-a.score);
       return json({actors:available,criteria_received:{product_keywords:Boolean(keywords),hs_codes:Boolean(hsCodes),target_countries:Boolean(targetCountries)},apify_configured:Boolean((await admin.from('integration_connections').select('id').eq('user_id',userId).eq('service_slug','apify').maybeSingle()).data)});
+    }
+
+    if (action === 'leads.actor.schema') {
+      const actorId=String(body.actorId??'').trim();
+      if(!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(actorId)) return json({error:'Actor ID 格式无效'},400);
+      const {clear:apifyToken}=await getCredential('apify','integration');
+      const actorPath=encodeURIComponent(actorId.replace('/','~'));
+      const response=await fetch(`https://api.apify.com/v2/acts/${actorPath}/input-schema`,{headers:{Authorization:`Bearer ${apifyToken}`,Accept:'application/json'}});
+      if(!response.ok) return json({error:`无法读取 Actor Input Schema（HTTP ${response.status}）`},502);
+      const payload=await response.json().catch(()=>({}));
+      const schema=(payload?.data??payload) as Record<string,unknown>;
+      if(!schema||typeof schema!=='object'||Array.isArray(schema)) return json({error:'Actor 返回的 Input Schema 格式无效'},502);
+      const serialized=JSON.stringify(schema);
+      const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(serialized));
+      const schemaHash=Array.from(new Uint8Array(digest)).map(byte=>byte.toString(16).padStart(2,'0')).join('');
+      return json({actor_id:actorId,schema,schema_hash:schemaHash,fetched_at:new Date().toISOString()});
     }
 
     if (action === 'leads.run') {
