@@ -1,6 +1,8 @@
+@use '@carbon/react';
+@use './styles/carbon-foundation';
 @use './styles/synesis-design';
 
-
+// Legacy business-page styles remain temporarily scoped to the Phase 2 migration backlog.
 /* Global customer discovery — Synesis native design tokens */
 .leads-finder{display:flex;flex-direction:column;gap:22px;color:var(--sn-text)}
 .leads-intro{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:8px 0 18px;border-bottom:1px solid var(--sn-border)}
