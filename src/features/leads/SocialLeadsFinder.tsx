@@ -105,8 +105,12 @@ export function SocialLeadsFinder({onApi}:Props){
    const response=await onApi('social.actors.recommend',{criteria:{platforms:selectedPlatforms,intent,keywords,productOrService,targetCountries,language,includeTerms,excludeTerms,maxResults}});
    const list=(response.actors??[]) as Actor[];
    setActors(list);setSearchErrors(response.search_errors??[]);setSelected(null);setProjectId('');setTaskId('');setStoredStats(null);setActorValues({});setActorInput('{}');
-   if(!list.length)throw new Error('所选平台暂未找到可用 Actor。请调整关键词，或检查 Apify Store 是否有对应平台的公开采集工具。');
    setTab('actors');
+   if(!list.length){
+    const failures=(response.search_errors??[]).length;
+    if(failures)throw new Error('Apify Store 搜索请求有 '+failures+' 项失败。请查看下方平台级错误详情；如果没有错误但结果为 0，说明当前关键词未匹配到可用 Actor，可缩短关键词或换用平台通用词。');
+    setError('Apify Store 已正常响应，但当前关键词没有匹配到可用 Actor。请缩短关键词或尝试平台通用词。');
+   }
   }catch(e){setError(e instanceof Error?e.message:'社媒 Actor 推荐失败');}
   finally{setBusy(false);}
  }
