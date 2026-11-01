@@ -22,7 +22,7 @@ export const providers: CatalogItem[] = [
   { name: 'xAI', slug: 'x', fallback: 'x', kind: 'provider' },
 ];
 
-export type ApiIntegration = CatalogItem & { credentialLabel:string; placeholder:string; description?:string };
+export type ApiIntegration = Omit<CatalogItem, 'kind'> & { credentialLabel:string; placeholder:string; description?:string };
 
 export const apiIntegrations: ApiIntegration[] = [
   { name: 'Apify', slug: 'apify', fallback: 'A', credentialLabel: 'Apify API Token', placeholder: '填写 Apify API Token', description: 'Actor 市场、动态 Input Schema、运行与 Dataset' },
