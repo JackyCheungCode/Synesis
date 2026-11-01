@@ -45,7 +45,8 @@ function toActorInput(actor:Actor, c:Criteria):Record<string,unknown>{
    let candidate=values[match];
    const declared=Array.isArray(def?.type)?def.type[0]:def?.type;
    if(declared==='string'&&Array.isArray(candidate)) candidate=candidate.join(', ');
-   if(declared==='string'&&typeof candidate==='number') candidate=String(candidate);\n   if((declared==='integer'||declared==='number')&&typeof candidate==='string'&&candidate.trim()!=='') candidate=Number(candidate);
+   if(declared==='string'&&typeof candidate==='number') candidate=String(candidate);
+   if((declared==='integer'||declared==='number')&&typeof candidate==='string'&&candidate.trim()!=='') candidate=Number(candidate);
    if(declared==='array'&&typeof candidate==='string') candidate=candidate.split(/[，,;；\\n]+/).map(x=>x.trim()).filter(Boolean);
    input[key]=candidate;
   }
