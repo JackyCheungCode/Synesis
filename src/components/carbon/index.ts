@@ -1,8 +1,6 @@
 /**
- * Official Carbon component and icon entry point for Synesis.
- *
- * New shared UI must import from this module rather than creating
- * application-specific implementations of foundational controls.
+ * Canonical import surface for the official IBM Carbon React components
+ * and Carbon icon package used by Synesis.
  */
 export {
   Accordion,
@@ -15,10 +13,6 @@ export {
   DataTable,
   DatePicker,
   Dropdown,
-  FileUploader,
-  FlexGrid,
-  Form,
-  FormGroup,
   Grid,
   Header,
   HeaderGlobalAction,
@@ -27,7 +21,6 @@ export {
   HeaderName,
   InlineLoading,
   InlineNotification,
-  Layer,
   Loading,
   Modal,
   MultiSelect,
@@ -39,7 +32,6 @@ export {
   Select,
   SelectItem,
   SideNav,
-  SideNavDivider,
   SideNavItems,
   SideNavLink,
   SideNavMenu,
@@ -52,19 +44,15 @@ export {
   Tile,
   Toggle,
   Tooltip,
+  GlobalTheme,
+  useTheme,
 } from '@carbon/react';
-
-export { GlobalTheme, useTheme } from '@carbon/react';
 
 export {
   Add,
   Asleep,
-  ChevronDown,
   Close,
-  Dashboard,
   Key,
-  Light,
-  Menu,
   Search as SearchIcon,
   UserAvatar,
 } from '@carbon/icons-react';
