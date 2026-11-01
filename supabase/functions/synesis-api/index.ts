@@ -1402,11 +1402,29 @@ Deno.serve(async (req: Request) => {
           if(/united states|usa|u\.s\./.test(targetCountries)) score+=2;
           if(/china|vietnam|india|thailand|taiwan/.test(String(criteria.originCountries??'').toLowerCase())) score+=1;
         }
-        const requestedFields=[keywords?'keyword|product|cargo|searchquery':'',hsCodes?'hs.?code|hsCodes|watchHsCodes':'',criteria.targetCountries?'country|consignee|targetCountries':'',criteria.originCountries?'origin|shipper|source':''].filter(Boolean);
-        const supported=requestedFields.filter(pattern=>new RegExp(pattern,'i').test(schemaText)).length;
+        const requestedFields:Array<[string,boolean,RegExp]>=[
+          ['产品关键词',Boolean(keywords),/keyword|product|cargo|searchquery/i],
+          ['HS Code',Boolean(hsCodes),/hs.?code|watchHsCodes/i],
+          ['目标进口国家',Boolean(criteria.targetCountries),/country|consignee|targetCountries/i],
+          ['供应来源国家',Boolean(criteria.originCountries),/origin|shipper|source/i],
+          ['进口日期范围',Boolean(criteria.shipmentDateFrom||criteria.shipmentDateTo),/date|start|end|from|to/i],
+          ['最低进口次数',Boolean(criteria.minShipments),/shipment.*min|min.*shipment|count/i],
+          ['进口货值范围',Boolean(criteria.minImportValue||criteria.maxImportValue),/value|amount|price/i],
+          ['企业类型',Boolean(criteria.companyTypes),/company.?type|business.?type|sector/i],
+          ['行业',Boolean(criteria.industries),/industry|sector/i],
+          ['邮箱要求',Boolean(criteria.requireEmail),/email/i],
+          ['电话要求',Boolean(criteria.requirePhone),/phone|telephone/i],
+          ['网站要求',Boolean(criteria.requireWebsite),/website|domain|url/i],
+          ['LinkedIn 要求',Boolean(criteria.requireLinkedin),/linkedin|social/i],
+          ['采购决策人职位',Boolean(criteria.decisionMakerTitles),/title|job.?title|decision.?maker/i],
+          ['最大结果数',Boolean(criteria.maxResults),/maxResults|maxLeads|limit|count/i],
+        ].filter(([,active])=>active);
+        const supportedFields=requestedFields.filter(([,active,pattern])=>active&&pattern.test(schemaText)).map(([label])=>label);
+        const unsupportedFields=requestedFields.filter(([,active,pattern])=>active&&!pattern.test(schemaText)).map(([label])=>label);
         return {
           actor_id:candidate.id,title:String(meta.title??meta.name??candidate.id),description:String(meta.description??'').slice(0,700),
-          score:Math.min(99,score+supported*2),recommendation_reason:candidate.reason,
+          score:Math.min(99,score+supportedFields.length*2),recommendation_reason:candidate.reason,
+          supported_fields:supportedFields,unsupported_fields:unsupportedFields,
           input_schema:schema&&typeof schema==='object'?schema:null,
           stats:meta.stats??null,
         };
