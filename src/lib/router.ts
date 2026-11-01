@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type WorkspacePage = 'dashboard' | 'projects' | 'products' | 'vault' | 'settings';
+export type WorkspacePage = 'leads' | 'vault' | 'dashboard' | 'projects' | 'products' | 'settings';
 export type WorkspaceRoute = { page: WorkspacePage; projectId?: string };
 
 function parseHash(): WorkspaceRoute {
