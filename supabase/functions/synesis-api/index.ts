@@ -523,12 +523,13 @@ Deno.serve(async (req: Request) => {
           const website=String(item.companyWebsite??item.websiteUrl??item.website??author.website??'').trim();
           const country=String(item.country??item.location?.country??author.country??'').trim();
           const accountType=String(author.type??item.accountType??'').toLowerCase();
-          const isCompany=Boolean(item.isCompany||item.companyName||author.isCompany||accountType.includes('company'));
+          const isCompany=Boolean(item.isCompany||item.companyName||author.isCompany||accountType.includes('company')||accountType.includes('business')||accountType.includes('organization'));
           const customerType=isCompany?'company':(['person','individual','personal'].includes(accountType)?'person':'unknown');
           const publicEmail=String(item.email??author.email??'').trim().toLowerCase();
           const websiteDomain=website.toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
           const username=String(item.username??item.handle??author.username??author.handle??'').trim().toLowerCase();
-          const identity=publicEmail?'email:'+publicEmail:websiteDomain?'website:'+websiteDomain:profileUrl?'profile:'+profileUrl.toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,''):customerType==='company'?'company:'+name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim()+'|'+country.toLowerCase():username?'handle:'+task.platform_slug+':'+username:'source:'+task.id+':'+index;
+          const normalizedName=name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+          const identity=publicEmail?'email:'+publicEmail:customerType==='company'&&websiteDomain?'website:'+websiteDomain:profileUrl?'profile:'+profileUrl.toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,''):customerType==='company'?'company:'+normalizedName+'|'+country.toLowerCase():username?'handle:'+task.platform_slug+':'+username:'source:'+task.id+':'+index;
           const canonicalKey=identity.slice(0,500);
           const {data:lead,error:leadError}=await admin.from('global_leads').upsert({
             user_id:userId,customer_type:customerType,canonical_key:canonicalKey,display_name:name,country:country||null,
