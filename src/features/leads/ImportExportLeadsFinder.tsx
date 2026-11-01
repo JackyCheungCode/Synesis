@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DynamicActorForm } from './DynamicActorForm';
 
 type Criteria = {
   productKeywords: string; hsCodes: string; targetCountries: string; originCountries: string;
@@ -8,7 +9,7 @@ type Criteria = {
   requireEmail: boolean; requirePhone: boolean; requireWebsite: boolean; requireLinkedin: boolean;
   decisionMakerTitles: string; maxResults: string; notes: string;
 };
-type Actor = { actor_id: string; title: string; description?: string; score?: number; recommendation_reason?: string; input_schema?: any; stats?: any; supported_fields?: string[]; unsupported_fields?: string[] };
+type Actor = { actor_id: string; title: string; description?: string; score?: number; recommendation_reason?: string; input_schema?: any; schema_hash?: string; schema_fetched_at?: string; stats?: any; supported_fields?: string[]; unsupported_fields?: string[] };
 type Props = { onApi: (action: string, payload?: Record<string, unknown>) => Promise<any> };
 const initial: Criteria = {
   productKeywords:'',hsCodes:'',targetCountries:'United States',originCountries:'',companyTypes:'Importer, Distributor, Wholesaler',
@@ -20,57 +21,34 @@ const split = (v:string) => v.split(/[，,;；\\n]+/).map(x=>x.trim()).filter(Bo
 function toActorInput(actor:Actor, c:Criteria):Record<string,unknown>{
  const props=actor.input_schema?.properties??{};
  const input:Record<string,unknown>={};
- const values:Record<string,unknown>={
-  productKeywords:split(c.productKeywords),keywords:split(c.productKeywords),searchQuery:[...split(c.productKeywords),...split(c.hsCodes)].join(' '),
-  hsCodes:split(c.hsCodes),hs_codes:split(c.hsCodes),hs_code:split(c.hsCodes),country:split(c.targetCountries)[0]??'United States',
-  targetCountries:split(c.targetCountries),target_countries:split(c.targetCountries),target_country:split(c.targetCountries)[0],originCountries:split(c.originCountries),origin_countries:split(c.originCountries),origin_country:split(c.originCountries)[0],
-  watchHsCodes:split(c.hsCodes),productKeywordsArray:split(c.productKeywords),
-  knownImporters:split(c.knownImporters),watchConsignees:split(c.knownImporters),consignees:split(c.knownImporters),importers:split(c.knownImporters),consignee:split(c.knownImporters)[0],
-  knownSuppliers:split(c.knownSuppliers),watchShippers:split(c.knownSuppliers),shippers:split(c.knownSuppliers),suppliers:split(c.knownSuppliers),shipper:split(c.knownSuppliers)[0],
-  destinationPorts:split(c.destinationPorts),arrivalPorts:split(c.destinationPorts),portsOfDischarge:split(c.destinationPorts),portOfDischarge:split(c.destinationPorts)[0],
-  originPorts:split(c.originPorts),loadingPorts:split(c.originPorts),portsOfLoading:split(c.originPorts),portOfLoading:split(c.originPorts)[0],
-  excludeKeywords:split(c.excludeKeywords),excludeTerms:split(c.excludeKeywords),excludeCompanies:split(c.excludeKeywords),employeeRange:c.employeeRange||undefined,employeeSize:c.employeeRange||undefined,employees:c.employeeRange||undefined,
-  companyTypes:split(c.companyTypes),company_types:split(c.companyTypes),companyType:split(c.companyTypes)[0],
-  businessType:split(c.companyTypes)[0],business_type:split(c.companyTypes),sector:split(c.industries)[0],industry:split(c.industries)[0],industries:split(c.industries),
-  shipmentDateFrom:c.shipmentDateFrom||undefined,startDate:c.shipmentDateFrom||undefined,dateFrom:c.shipmentDateFrom||undefined,fromDate:c.shipmentDateFrom||undefined,
-  shipmentDateTo:c.shipmentDateTo||undefined,endDate:c.shipmentDateTo||undefined,dateTo:c.shipmentDateTo||undefined,toDate:c.shipmentDateTo||undefined,
-  minShipments:c.minShipments?Number(c.minShipments):undefined,min_shipments:c.minShipments?Number(c.minShipments):undefined,
-  minImportValue:c.minImportValue?Number(c.minImportValue):undefined,min_import_value:c.minImportValue?Number(c.minImportValue):undefined,
-  maxImportValue:c.maxImportValue?Number(c.maxImportValue):undefined,max_import_value:c.maxImportValue?Number(c.maxImportValue):undefined,
-  activeRecently:c.activeRecently?Number(c.activeRecently):undefined,monthsBack:c.activeRecently?Number(c.activeRecently):undefined,lookbackMonths:c.activeRecently?Number(c.activeRecently):undefined,
-  requireEmail:c.requireEmail,enrichEmails:c.requireEmail,includeEmail:c.requireEmail,
-  requirePhone:c.requirePhone,includePhone:c.requirePhone,
-  requireWebsite:c.requireWebsite,includeWebsite:c.requireWebsite,
-  requireLinkedin:c.requireLinkedin,includeLinkedin:c.requireLinkedin,enrichSocials:c.requireLinkedin,
-  decisionMakerTitles:split(c.decisionMakerTitles),jobTitles:split(c.decisionMakerTitles),titles:split(c.decisionMakerTitles),
-  maxLeads:Number(c.maxResults)||100,maxResults:Number(c.maxResults)||100,limit:Number(c.maxResults)||100,maxRecords:Number(c.maxResults)||100,
+ for(const [key,definition] of Object.entries(props) as [string,any][]) if(definition?.default!==undefined) input[key]=definition.default;
+ const set=(key:string,value:unknown)=>{
+  const definition=props[key];
+  if(!definition||value===undefined||value===null||value===''||(Array.isArray(value)&&!value.length)) return;
+  const type=Array.isArray(definition.type)?definition.type.find((item:string)=>item!=='null'):definition.type;
+  let next=value;
+  if(type==='array'&&!Array.isArray(next)) next=String(next).split(/[，,;；\n]+/).map(item=>item.trim()).filter(Boolean);
+  if(type==='string'&&Array.isArray(next)) next=next.join(', ');
+  if((type==='integer'||type==='number')&&typeof next==='string') next=Number(next);
+  if(type==='integer'&&typeof next==='number'&&!Number.isInteger(next)) return;
+  if(type==='number'&&typeof next==='number'&&!Number.isFinite(next)) return;
+  if(Array.isArray(definition.enum)&&!definition.enum.some((option:unknown)=>String(option).toLowerCase()===String(next).toLowerCase())) return;
+  input[key]=next;
  };
- for(const [key,def] of Object.entries(props) as [string,any][]){
-  const match=Object.keys(values).find(k=>k.toLowerCase()===key.toLowerCase());
-  if(match&&values[match]!==undefined&&values[match]!==''&&(!Array.isArray(values[match])||(values[match] as unknown[]).length)) {
-   let candidate=values[match];
-   const declared=Array.isArray(def?.type)?def.type[0]:def?.type;
-   if(declared==='string'&&Array.isArray(candidate)) candidate=candidate.join(', ');
-   if(declared==='string'&&typeof candidate==='number') candidate=String(candidate);
-   if((declared==='integer'||declared==='number')&&typeof candidate==='string'&&candidate.trim()!=='') candidate=Number(candidate);
-   if(declared==='array'&&typeof candidate==='string') candidate=candidate.split(/[，,;；\\n]+/).map(x=>x.trim()).filter(Boolean);
-   if(Array.isArray(def?.enum)&&!Array.isArray(candidate)&&!def.enum.includes(candidate)){
-    const text=String(candidate).toLowerCase();
-    const enumMatch=def.enum.find((option:any)=>String(option).toLowerCase()===text||String(option).toLowerCase().includes(text)||text.includes(String(option).toLowerCase()));
-    if(enumMatch!==undefined) candidate=enumMatch;
-    else if(key.toLowerCase()==='country'&&def.enum.includes('US')) candidate='US';
-   }
-   input[key]=candidate;
-  }
-  else if(def?.default!==undefined) input[key]=def.default;
-  else if((actor.actor_id.includes('bill-of-lading-scraper'))&&key==='searchQuery') input[key]=[...split(c.productKeywords),...split(c.hsCodes)].join(' ');
+ const keywords=split(c.productKeywords), hsCodes=split(c.hsCodes);
+ if(actor.actor_id==='fortuitous_pirate/bill-of-lading-scraper'){
+  set('searchType','consignee'); set('searchQuery',[...keywords,...hsCodes].join(' '));
  }
- if(actor.actor_id.includes('bill-of-lading-scraper')) { input.searchType='consignee'; input.searchQuery=input.searchQuery||[...split(c.productKeywords),...split(c.hsCodes)].join(' '); }
- if(actor.actor_id.includes('shipment-monitor')) {
-  input.watchHsCodes=split(c.hsCodes); input.productKeywords=split(c.productKeywords);
+ if(actor.actor_id==='flamboyant_liner/shipment-monitor'){
+  set('watchHsCodes',hsCodes); set('productKeywords',keywords);
+  set('watchConsignees',split(c.knownImporters)); set('watchShippers',split(c.knownSuppliers));
  }
- if(actor.actor_id.includes('import-export-leads-finder')) {
-  input.country=split(c.targetCountries)[0]||'India'; input.maxLeads=Number(c.maxResults)||100;
+ if(actor.actor_id==='akash9078/import-export-leads-finder'){
+  const country=split(c.targetCountries)[0], countryEnum=props.country?.enum;
+  if(country){const match=Array.isArray(countryEnum)?countryEnum.find((option:unknown)=>String(option).toLowerCase()===country.toLowerCase()):country;if(match!==undefined)set('country',match);}
+  const sector=split(c.industries)[0], sectorEnum=props.sector?.enum;
+  if(sector){const match=Array.isArray(sectorEnum)?sectorEnum.find((option:unknown)=>String(option).toLowerCase()===sector.toLowerCase()):sector;if(match!==undefined)set('sector',match);}
+  set('maxLeads',Number(c.maxResults)||undefined);
  }
  return input;
 }
