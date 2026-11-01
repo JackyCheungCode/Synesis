@@ -10,7 +10,7 @@ const backend=readFileSync(new URL('../supabase/functions/synesis-api/index.ts',
 const nav=readFileSync(new URL('../src/components/WorkspaceNavigation.tsx',import.meta.url),'utf8');
 const social=readFileSync(new URL('../src/features/leads/SocialLeadsFinder.tsx',import.meta.url),'utf8');
 const globalLeads=readFileSync(new URL('../src/features/leads/GlobalLeads.tsx',import.meta.url),'utf8');
-const socialMigration=readFileSync(new URL('../supabase/migrations/20261101110000_create_social_leads_and_global_customer_entities.sql',import.meta.url),'utf8');
+const socialMigration=readFileSync(new URL('../supabase/migrations/20261101023111_create_social_leads_and_global_customer_entities.sql',import.meta.url),'utf8');
 
 test('API and AI credential configuration remains connected to encrypted backend actions',()=>{
  assert.match(frontend,/api\('credentials\.list'\)/);
