@@ -1,21 +1,21 @@
-@use '@carbon/react/scss/config' with (
+@use '@carbon/styles/scss/config' with (
   $css--body: false,
   $css--font-face: true
 );
 @use './styles/synesis-design';
-@use '@carbon/react/scss/reset';
-@use '@carbon/react/scss/font-face';
-@use '@carbon/react/scss/grid';
-@use '@carbon/react/scss/zone';
-@use '@carbon/react/scss/layer';
-@use '@carbon/react/scss/themes';
-@use '@carbon/react/scss/theme';
-@use '@carbon/react/scss/type';
-@use '@carbon/react/scss/components/ui-shell';
-@use '@carbon/react/scss/components/notification';
-@use '@carbon/react/scss/components/loading';
-@use '@carbon/react/scss/components/button';
-@use '@carbon/react/scss/components/tooltip';
+@use '@carbon/styles/scss/reset';
+@use '@carbon/styles/scss/font-face';
+@use '@carbon/styles/scss/grid';
+@use '@carbon/styles/scss/zone';
+@use '@carbon/styles/scss/layer';
+@use '@carbon/styles/scss/themes';
+@use '@carbon/styles/scss/theme';
+@use '@carbon/styles/scss/type';
+@use '@carbon/styles/scss/components/ui-shell';
+@use '@carbon/styles/scss/components/notification';
+@use '@carbon/styles/scss/components/loading';
+@use '@carbon/styles/scss/components/button';
+@use '@carbon/styles/scss/components/tooltip';
 @use './styles/carbon-foundation';
 
 // Legacy business-page styles remain temporarily scoped to the Phase 2 migration backlog.
