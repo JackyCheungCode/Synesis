@@ -388,62 +388,84 @@ Deno.serve(async (req: Request) => {
       const criteria=(body.criteria&&typeof body.criteria==='object'?body.criteria:{}) as Record<string,unknown>;
       const platforms=Array.isArray(criteria.platforms)?criteria.platforms.map((value:unknown)=>String(value).toLowerCase()).filter(Boolean):[];
       const allowedPlatforms:Record<string,string[]>={
-        instagram:['instagram scraper','instagram posts comments profile'],
-        tiktok:['tiktok scraper','tiktok hashtag videos profiles'],
-        youtube:['youtube scraper','youtube videos channels comments'],
-        facebook:['facebook scraper','facebook public pages posts'],
-        linkedin:['linkedin public profile posts company'],
-        x:['twitter x scraper tweets search'],
-        reddit:['reddit scraper posts comments subreddits'],
-        pinterest:['pinterest scraper pins boards'],
-        threads:['threads scraper posts profiles'],
-        telegram:['telegram public channels messages'],
-        discord:['discord public servers messages'],
-        twitch:['twitch channels streams clips'],
-        medium:['medium articles authors'],
-        quora:['quora questions answers topics'],
-        snapchat:['snapchat public profiles stories'],
+        instagram:['instagram scraper','instagram posts','instagram profile'],
+        tiktok:['tiktok scraper','tiktok videos','tiktok profiles'],
+        youtube:['youtube scraper','youtube videos','youtube comments'],
+        facebook:['facebook scraper','facebook pages','facebook posts'],
+        linkedin:['linkedin scraper','linkedin profiles','linkedin company'],
+        x:['twitter scraper','x tweets search'],
+        reddit:['reddit scraper','reddit posts comments'],
+        pinterest:['pinterest scraper','pinterest pins'],
+        threads:['threads scraper','threads posts'],
+        telegram:['telegram public channels','telegram scraper'],
+        discord:['discord public servers','discord scraper'],
+        twitch:['twitch channels','twitch scraper'],
+        medium:['medium articles','medium authors'],
+        quora:['quora questions','quora answers'],
+        snapchat:['snapchat public profiles','snapchat scraper'],
       };
-      const selected=platforms.filter(platform=>Object.prototype.hasOwnProperty.call(allowedPlatforms,platform));
+      const selected=[...new Set(platforms)].filter(platform=>Object.prototype.hasOwnProperty.call(allowedPlatforms,platform));
       const keywords=String(criteria.keywords??'').trim();
       const product=String(criteria.productOrService??'').trim();
       const intent=String(criteria.intent??'buyer_intent');
-      if(!selected.length) return json({error:'请至少选择一个社交平台'},400);
+      if(!selected.length) return json({error:'请至少选择一个受支持的社交平台'},400);
       if(!keywords&&!product) return json({error:'请填写潜在客户关键词或产品 / 服务'},400);
-      const searchTerms=[keywords,product].filter(Boolean).join(' ');
+
+      let apifyToken='';
+      try { const credential=await getCredential('apify','integration'); apifyToken=credential.clear; }
+      catch { return json({error:'尚未配置有效的 Apify API Token。请先到 API 与 AI 配置中保存并验证 Apify 凭证。',code:'APIFY_CREDENTIAL_MISSING'},400); }
+      const searchTerms=keywords.split(/[，,;；\n]+/).map(value=>value.trim()).filter(Boolean).slice(0,4);
+      const productTerms=product.split(/[，,;；\n]+/).map(value=>value.trim()).filter(Boolean).slice(0,3);
       const searches=await Promise.all(selected.map(async platform=>{
-        const platformTerms=allowedPlatforms[platform];
-        const terms=[...platformTerms.map(term=>term+' '+searchTerms),...platformTerms];
-        const responses=await Promise.all([...new Set(terms)].map(async term=>{
-          const url='https://api.apify.com/v2/store?'+new URLSearchParams({search:term,limit:'10',includeInputSchema:'true',responseFormat:'full'}).toString();
-          const response=await fetch(url,{headers:{Accept:'application/json'}});
-          const payload=await response.json().catch(()=>({}));
-          if(!response.ok) return {items:[],error:payload?.error?.message??payload?.message??'Apify Store 搜索失败（HTTP '+response.status+'）',status:response.status};
-          const items=Array.isArray(payload?.data?.items)?payload.data.items:Array.isArray(payload?.items)?payload.items:[];
-          return {items,error:null,status:200};
+        // Keep platform discovery terms separate from user keywords. Appending long user
+        // queries to every platform phrase made Store full-text search too restrictive.
+        const queries=[...allowedPlatforms[platform],...productTerms,...searchTerms].slice(0,7);
+        const responses=await Promise.all(queries.map(async term=>{
+          const params=new URLSearchParams({search:term,limit:'10',includeInputSchema:'true'});
+          const url='https://api.apify.com/v2/store?'+params.toString();
+          try{
+            const response=await fetch(url,{headers:{Accept:'application/json',Authorization:'Bearer '+apifyToken}});
+            const payload=await response.json().catch(()=>({}));
+            if(!response.ok) return {items:[],error:payload?.error?.message??payload?.message??'Apify Store 搜索失败',status:response.status,query:term};
+            const items=Array.isArray(payload?.data?.items)?payload.data.items:Array.isArray(payload?.items)?payload.items:[];
+            return {items,error:null,status:response.status,query:term};
+          }catch(error){
+            return {items:[],error:error instanceof Error?error.message:'Apify Store 网络请求失败',status:0,query:term};
+          }
         }));
         const unique=new Map<string,any>();
         for(const response of responses) for(const actor of response.items){
-          const username=String(actor?.username??'').trim();
-          const name=String(actor?.name??'').trim();
-          const actorId=username&&name?username+'/'+name:String(actor?.id??'');
+          const actorId=actor?.username&&actor?.name?String(actor.username)+'/'+String(actor.name):'';
           if(!actorId||unique.has(actorId)) continue;
+          const actorText=[actor.title,actor.name,actor.description,actor.readmeSummary].join(' ').toLowerCase();
+          const normalizedPlatform=platform==='x'?'twitter':platform;
+          const platformMatch=actorText.includes(normalizedPlatform)||
+            (platform==='youtube'&&/youtube|video|channel/.test(actorText))||
+            (platform==='linkedin'&&/linkedin|professional network/.test(actorText))||
+            (platform==='x'&&/twitter|tweet/.test(actorText))||
+            (platform==='reddit'&&/reddit|subreddit/.test(actorText));
+          if(!platformMatch) continue;
           unique.set(actorId,{...actor,actor_id:actorId,platform});
         }
-        const platformWords=platformTerms.join(' ').toLowerCase().split(/[^a-z0-9]+/).filter(word=>word.length>2);
+        const words=[...searchTerms,...productTerms].join(' ').toLowerCase().split(/[^a-z0-9\u4e00-\u9fff]+/).filter(word=>word.length>1);
         const ranked=[...unique.values()].map(actor=>{
-          const description=[actor.title,actor.name,actor.description,actor.readmeSummary,actor.username].join(' ').toLowerCase();
-          const words=searchTerms.toLowerCase().split(/[^a-z0-9\u4e00-\u9fff]+/).filter(word=>word.length>1);
-          const matched=words.filter(word=>description.includes(word)).length;
-          const platformMatched=platformWords.some(word=>description.includes(word));
+          const actorText=[actor.title,actor.name,actor.description,actor.readmeSummary].join(' ').toLowerCase();
+          const matched=words.filter(word=>actorText.includes(word)).length;
           const popularity=Number(actor.stats?.totalUsers30Days??actor.stats?.totalUsers??0);
-          const score=Math.min(99,55+matched*7+(platformMatched?8:0)+Math.min(15,Math.log10(popularity+1)*3));
-          return {...actor,score,platform_label:platform.toUpperCase(),recommendation_reason:'Apify Store 搜索匹配；请检查 Actor 描述、Input Schema、价格和平台访问限制。',intent};
+          const score=Math.min(99,55+matched*7+Math.min(15,Math.log10(popularity+1)*3));
+          return {...actor,score,platform_label:platform.toUpperCase(),recommendation_reason:'按平台相关性从 Apify Store 搜索；启动前请核对 Actor 描述、真实 Input Schema、价格与平台访问限制。',intent};
         }).sort((a,b)=>b.score-a.score).slice(0,8);
-        return {platform,actors:ranked,errors:responses.filter(item=>item.error).map(item=>({status:item.status,error:item.error}))};
+        return {platform,actors:ranked,errors:responses.filter(item=>item.error).map(item=>({status:item.status,error:item.error,query:item.query}))};
       }));
       const actors=searches.flatMap(item=>item.actors).sort((a,b)=>b.score-a.score);
-      return json({actors,platforms_checked:selected,platforms_without_results:searches.filter(item=>!item.actors.length).map(item=>item.platform),search_errors:searches.flatMap(item=>item.errors.map(error=>({platform:item.platform,...error}))),apify_store_source:'https://apify.com/store'});
+      const searchErrors=searches.flatMap(item=>item.errors.map(error=>({platform:item.platform,...error})));
+      return json({
+        actors,platforms_checked:selected,
+        platforms_without_results:searches.filter(item=>!item.actors.length).map(item=>item.platform),
+        search_errors:searchErrors,
+        search_diagnostics:searches.map(item=>({platform:item.platform,queries_checked:item.queries_checked??0,actors_found:item.actors.length,errors:item.errors.length})),
+        apify_store_source:'https://apify.com/store'
+      });
     }
 
     if (action === 'social.project.create') {
