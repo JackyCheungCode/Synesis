@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import {
   Key,
   Search,
@@ -17,7 +18,7 @@ type Props = {
 };
 
 export function WorkspaceNavigation({ page, open, onNavigate, onClose }: Props) {
-  const navigate = (target: WorkspacePage) => (event: React.MouseEvent) => {
+  const navigate = (target: WorkspacePage) => (event: MouseEvent) => {
     event.preventDefault();
     onNavigate(target);
     onClose();
