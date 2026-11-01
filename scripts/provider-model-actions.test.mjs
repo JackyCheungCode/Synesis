@@ -8,6 +8,9 @@ const dynamicForm=readFileSync(new URL('../src/features/leads/DynamicActorForm.t
 const router=readFileSync(new URL('../src/lib/router.ts',import.meta.url),'utf8');
 const backend=readFileSync(new URL('../supabase/functions/synesis-api/index.ts',import.meta.url),'utf8');
 const nav=readFileSync(new URL('../src/components/WorkspaceNavigation.tsx',import.meta.url),'utf8');
+const social=readFileSync(new URL('../src/features/leads/SocialLeadsFinder.tsx',import.meta.url),'utf8');
+const globalLeads=readFileSync(new URL('../src/features/leads/GlobalLeads.tsx',import.meta.url),'utf8');
+const socialMigration=readFileSync(new URL('../supabase/migrations/20261101110000_create_social_leads_and_global_customer_entities.sql',import.meta.url),'utf8');
 
 test('API and AI credential configuration remains connected to encrypted backend actions',()=>{
  assert.match(frontend,/api\('credentials\.list'\)/);
@@ -32,11 +35,13 @@ test('Apify integration credentials remain testable and server-side only',()=>{
  assert.match(backend,/getCredential\('apify','integration'\)/);
 });
 
-test('Global Customer Discovery exposes only the leads finder and configuration routes',()=>{
- assert.match(router,/WorkspacePage = 'leads' \| 'vault'/);
+test('Global Customer Discovery exposes trade leads, social leads, global leads and configuration routes',()=>{
+ assert.match(router,/WorkspacePage = 'leads' \| 'social' \| 'global-leads' \| 'vault'/);
  assert.match(router,/return \{ page: 'leads' \}/);
  assert.match(nav,/全球客户发现/);
  assert.match(nav,/Import Export Leads Finder/);
+ assert.match(nav,/Social Leads Finder/);
+ assert.match(nav,/全球客户线索库/);
  assert.match(nav,/API 与 AI 配置/);
  assert.doesNotMatch(frontend,/ResearchWizard|WorkspaceDashboard|ProductLibrary|CollectionSettingsPage/);
 });
@@ -58,7 +63,9 @@ test('Actor recommendations are schema-aware and show unsupported criteria expli
  assert.match(dynamicForm,/definition\.items/);
  assert.match(dynamicForm,/definition\.description/);
  assert.ok(backend.includes("action === 'leads.actor.schema'"));
- assert.match(backend,/input-schema/);
+ assert.match(backend,/readActorInputSchema/);
+ assert.match(backend,/actor-builds/);
+ assert.doesNotMatch(backend,/\/v2\/acts\/[^'`]+\/input-schema/);
  assert.ok(backend.includes("action === 'leads.actor.schema'"));
  assert.match(backend,/schema_hash/);
  assert.match(backend,/crypto\.subtle\.digest/);
@@ -82,6 +89,29 @@ test('lead results retrieve run status and dataset items',()=>{
  assert.match(backend,/actor-runs/);
  assert.match(backend,/datasets/);
  assert.match(backend,/run\.status==='SUCCEEDED'/);
+});
+
+test('Social Leads Finder requires explicit platform and Actor selection and persists task execution',()=>{
+ assert.match(social,/const defaults:string\[\]=\[\]/);
+ assert.doesNotMatch(social,/await loadSchema\(list\[0\]\)/);
+ assert.match(social,/social\.project\.create/);
+ assert.match(social,/social\.run/);
+ assert.match(social,/social\.results/);
+ assert.match(social,/social\.tasks\.list/);
+ assert.ok(backend.includes("action === 'social.project.create'"));
+ assert.ok(backend.includes("action === 'social.run'"));
+ assert.ok(backend.includes("action === 'social.results'"));
+});
+
+test('global customer identity, source evidence and BYOK AI analysis are user-scoped',()=>{
+ for(const table of ['social_discovery_projects','social_collection_tasks','social_collection_records','global_leads','global_lead_sources','global_lead_evidence']) assert.ok(socialMigration.includes('create table if not exists public.'+table),`missing table ${table}`);
+ assert.match(socialMigration,/unique\(user_id, canonical_key\)/);
+ assert.match(socialMigration,/enable row level security/);
+ assert.ok(backend.includes("action === 'global.leads.list'"));
+ assert.ok(backend.includes("action === 'global.leads.detail'"));
+ assert.ok(backend.includes("action === 'social.ai.analyze'"));
+ assert.match(globalLeads,/social\.ai\.analyze/);
+ assert.match(globalLeads,/查看证据/);
 });
 
 test('legacy market research, collection task, and product API actions are retired',()=>{
