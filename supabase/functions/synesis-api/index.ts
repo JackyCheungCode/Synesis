@@ -301,10 +301,10 @@ Deno.serve(async (req: Request) => {
           response=await fetch('https://openapi.bazhuayu.com/cloudextraction/start',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({taskId})});
         }else if(operation==='results'){
           if(!taskId) return json({error:'Octoparse 读取数据需要 taskId'},400);
-          response=await fetch('https://openapi.bazhuayu.com/data/all',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({taskId,offset:Math.max(0,Number(input.offset)||0),size:Math.min(200,Math.max(1,Number(input.size)||100))})});
+          const params=new URLSearchParams({taskId,offset:String(Math.max(0,Number(input.offset)||0)),size:String(Math.min(1000,Math.max(1,Number(input.size)||100)))});\n          response=await fetch('https://openapi.bazhuayu.com/data/all?'+params.toString(),{headers:{Authorization:'Bearer '+accessToken}});
         }else if(operation==='status'){
           if(!taskId) return json({error:'Octoparse 查询状态需要 taskId'},400);
-          response=await fetch('https://openapi.bazhuayu.com/cloudextraction/task/status',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({taskId})});
+          response=await fetch('https://openapi.bazhuayu.com/cloudextraction/statuses/v2',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({taskIds:[taskId]})});
         }else return json({error:'Octoparse 支持 start、status、results 操作；仅管理用户已有云采集任务'},400);
       }else if(provider==='texau'){
         if(operation!=='email_enrichment') return json({error:'TexAu 当前已接入邮箱 waterfall enrichment；其他 65+ 端点将按能力逐步注册'},501);
