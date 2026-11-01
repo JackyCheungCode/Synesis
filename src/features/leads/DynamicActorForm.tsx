@@ -85,6 +85,12 @@ export function DynamicActorForm({ schema, value, onChange }: Props) {
       type === 'integer' || type === 'number' ? <input {...common} type="number" step={type === 'integer' ? 1 : 'any'}
         min={definition.minimum} max={definition.maximum} value={displayValue(current)}
         onChange={event => update(key, event.target.value === '' ? undefined : Number(event.target.value))} /> :
+      type === 'array' && Array.isArray(definition.items?.enum) ? <select {...common} multiple value={Array.isArray(current) ? current.map(String) : []} onChange={event => {
+        const selected = Array.from(event.target.selectedOptions).map(option => definition.items?.enum?.find(item => String(item) === option.value));
+        update(key, selected);
+      }}>
+        {definition.items.enum.map(option => <option key={String(option)} value={String(option)}>{String(option)}</option>)}
+      </select> :
       type === 'array' && definition.items?.type === 'string' ? <textarea {...common} rows={3}
         value={displayValue(current)} placeholder="多个值请用逗号或换行分隔"
         onChange={event => update(key, splitList(event.target.value))} /> :
