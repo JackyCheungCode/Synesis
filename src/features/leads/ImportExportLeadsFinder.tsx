@@ -45,9 +45,14 @@ function toActorInput(actor:Actor, c:Criteria):Record<string,unknown>{
  }
  if(actor.actor_id==='akash9078/import-export-leads-finder'){
   const country=split(c.targetCountries)[0], countryEnum=props.country?.enum;
-  if(country){const match=Array.isArray(countryEnum)?countryEnum.find((option:unknown)=>String(option).toLowerCase()===country.toLowerCase()):country;if(match!==undefined)set('country',match);}
+  const countryAliases:Record<string,string>={'united states':'US','usa':'US','u.s.':'US','united kingdom':'UK','great britain':'UK','south korea':'South Korea'};
+  if(country){
+   const normalized=countryAliases[country.toLowerCase()]??country;
+   const match=Array.isArray(countryEnum)?countryEnum.find((option:unknown)=>[country,normalized].some(candidate=>String(option).toLowerCase()===candidate.toLowerCase())):normalized;
+   if(match!==undefined)set('country',match);else delete input.country;
+  }
   const sector=split(c.industries)[0], sectorEnum=props.sector?.enum;
-  if(sector){const match=Array.isArray(sectorEnum)?sectorEnum.find((option:unknown)=>String(option).toLowerCase()===sector.toLowerCase()):sector;if(match!==undefined)set('sector',match);}
+  if(sector){const match=Array.isArray(sectorEnum)?sectorEnum.find((option:unknown)=>String(option).toLowerCase()===sector.toLowerCase()):sector;if(match!==undefined)set('sector',match);else delete input.sector;}
   set('maxLeads',Number(c.maxResults)||undefined);
  }
  return input;
@@ -172,7 +177,7 @@ export function ImportExportLeadsFinder({onApi}:Props){
    </div>
    <div className="leads-panel leads-schema-panel">
     {selected?<><div className="leads-panel-head"><div><span>LIVE ACTOR INPUT SCHEMA</span><h3>{selected.title}</h3><p>{selected.description||selected.actor_id}</p></div></div>
-     <div className="leads-schema-summary"><b>{fields.length} 个输入字段</b><span>{fields.filter(f=>f.required).length} 个必填字段</span><span>{schemaLoading?'正在刷新 Schema…':selected.schema_hash?'Schema 已刷新':'Schema 已加载'}</span></div>
+     <div className="leads-schema-summary"><b>{fields.length} 个输入字段</b><span>{fields.filter(f=>f.required).length} 个必填字段</span><span>{schemaLoading?'正在刷新 Schema…':selected.schema_hash?'Schema 版本 '+selected.schema_hash.slice(0,10):'Schema 已加载'}</span></div>
      {schemaLoading?<div className="leads-empty">正在读取该 Actor 当前版本的参数定义…</div>:<>
       <div className="leads-schema-warning">可自动映射的通用条件：{selected.supported_fields?.join('、')||'暂无'}。未匹配到已验证参数的条件：{selected.unsupported_fields?.join('、')||'无'}。只有明确验证过的 Actor 专属字段才会自动填入；其他参数请在下方填写。</div>
       {!rawJsonMode&&<DynamicActorForm schema={selected.input_schema} value={actorValues} onChange={updateActorValues}/>}
