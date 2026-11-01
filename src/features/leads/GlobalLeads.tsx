@@ -13,7 +13,15 @@ export function GlobalLeads({onApi}:Props){
  const [busy,setBusy]=useState(false);
  const [analyzing,setAnalyzing]=useState('');
  const [analysisNotice,setAnalysisNotice]=useState('');
+ const [detail,setDetail]=useState<any>(null);
+ const [detailBusy,setDetailBusy]=useState(false);
  const [error,setError]=useState('');
+ async function loadDetail(leadId:string){
+  setDetailBusy(true);setError('');
+  try{const response=await onApi('global.leads.detail',{leadId});setDetail(response);}
+  catch(e){setError(e instanceof Error?e.message:'读取客户来源证据失败');}
+  finally{setDetailBusy(false);}
+ }
  async function analyzeLead(leadId:string){
   setAnalyzing(leadId);setError('');
   try{const result=await onApi('social.ai.analyze',{leadId});setAnalysisNotice('AI 分析完成，客户评分 '+result.analysis.lead_score+'/100。');await load();}
@@ -45,9 +53,14 @@ export function GlobalLeads({onApi}:Props){
    {error&&<div className="leads-error" role="alert">{error}</div>}
    {analysisNotice&&<div className="leads-schema-warning" role="status">{analysisNotice}</div>}
    {busy?<div className="leads-empty">正在加载全球客户线索…</div>:leads.length===0?<div className="leads-empty">暂无客户线索。完成社媒采集并同步结果后，客户会自动汇入这里。</div>:
-    <div className="global-leads-table-wrap"><table className="global-leads-table"><thead><tr><th>客户</th><th>类型</th><th>国家 / 地区</th><th>行业 / 角色</th><th>商业意向</th><th>评分</th><th>状态</th><th>来源资料</th><th>AI 分析</th></tr></thead><tbody>
-     {leads.map(lead=><tr key={lead.id}><td><strong>{lead.display_name}</strong><small>{lead.website_url||lead.profile_url||'尚无公开主页'}</small></td><td><span className={'global-lead-type '+lead.customer_type}>{typeLabel[lead.customer_type]}</span></td><td>{lead.country||'—'}</td><td>{[lead.industry,lead.business_role].filter(Boolean).join(' · ')||'—'}</td><td>{lead.intent_type||'待分析'}</td><td>{lead.lead_score===null||lead.lead_score===undefined?'—':lead.lead_score+'/100'}</td><td>{statusLabel[lead.lifecycle_status]||lead.lifecycle_status}</td><td>{lead.profile_url?<a href={lead.profile_url} target="_blank" rel="noreferrer">公开主页 ↗</a>:lead.website_url?<a href={lead.website_url} target="_blank" rel="noreferrer">企业官网 ↗</a>:'—'}</td><td><button className="leads-secondary" onClick={()=>void analyzeLead(lead.id)} disabled={Boolean(analyzing)||busy}>{analyzing===lead.id?'分析中…':lead.intent_type?'重新分析':'AI 分析'}</button></td></tr>)}
+    <div className="global-leads-table-wrap"><table className="global-leads-table"><thead><tr><th>客户</th><th>类型</th><th>国家 / 地区</th><th>行业 / 角色</th><th>商业意向</th><th>评分</th><th>状态</th><th>来源资料</th><th>证据</th><th>AI 分析</th></tr></thead><tbody>
+     {leads.map(lead=><tr key={lead.id}><td><strong>{lead.display_name}</strong><small>{lead.website_url||lead.profile_url||'尚无公开主页'}</small></td><td><span className={'global-lead-type '+lead.customer_type}>{typeLabel[lead.customer_type]}</span></td><td>{lead.country||'—'}</td><td>{[lead.industry,lead.business_role].filter(Boolean).join(' · ')||'—'}</td><td>{lead.intent_type||'待分析'}</td><td>{lead.lead_score===null||lead.lead_score===undefined?'—':lead.lead_score+'/100'}</td><td>{statusLabel[lead.lifecycle_status]||lead.lifecycle_status}</td><td>{lead.profile_url?<a href={lead.profile_url} target="_blank" rel="noreferrer">公开主页 ↗</a>:lead.website_url?<a href={lead.website_url} target="_blank" rel="noreferrer">企业官网 ↗</a>:'—'}</td><td><button className="leads-secondary" onClick={()=>void loadDetail(lead.id)} disabled={detailBusy}>{detailBusy?'读取中…':'查看证据'}</button></td><td><button className="leads-secondary" onClick={()=>void analyzeLead(lead.id)} disabled={Boolean(analyzing)||busy}>{analyzing===lead.id?'分析中…':lead.intent_type?'重新分析':'AI 分析'}</button></td></tr>)}
     </tbody></table></div>}
+   {detail&&<section className="global-lead-evidence-panel"><div className="leads-panel-head"><div><span>GLOBAL LEAD EVIDENCE</span><h3>{detail.lead.display_name} · 来源与证据</h3><p>{typeLabel[detail.lead.customer_type]||'待识别'} · {detail.lead.country||'国家未知'} · {detail.sources.length} 条来源 · {detail.evidence.length} 条证据</p></div><button className="leads-secondary" onClick={()=>setDetail(null)}>关闭</button></div>
+    {detail.sources.map((source:any)=><article className="social-result-card" key={source.id}><div className="social-result-meta"><b>{source.source_system} / {source.source_platform}</b><span>{source.observed_at||source.created_at}</span></div>{source.source_content&&<p>{source.source_content}</p>}{source.source_url&&<a href={source.source_url} target="_blank" rel="noreferrer">打开原始来源 ↗</a>}</article>)}
+    {detail.evidence.map((item:any)=><article className="social-result-card" key={item.id}><b>{item.evidence_type}</b><p>{item.content}</p>{item.evidence_url&&<a href={item.evidence_url} target="_blank" rel="noreferrer">查看证据 ↗</a>}<small>{item.analysis?.status==='analyzed'?'已完成 AI 分析':'等待 AI 分析'}</small></article>)}
+    {detail.sources.length===0&&detail.evidence.length===0&&<div className="leads-empty">暂无可展示的来源证据。</div>}
+   </section>}
    <p className="leads-muted">当前列表最多展示最近 250 条。客户主体按当前用户工作区隔离；跨平台、跨需求、跨来源在同一工作区内去重。</p>
   </div>
  </section>;
