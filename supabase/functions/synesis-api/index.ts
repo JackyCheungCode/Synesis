@@ -412,28 +412,34 @@ Deno.serve(async (req: Request) => {
       if(!keywords&&!product) return json({error:'请填写潜在客户关键词或产品 / 服务'},400);
       const searchTerms=[keywords,product].filter(Boolean).join(' ');
       const searches=await Promise.all(selected.map(async platform=>{
-        const terms=allowedPlatforms[platform].map(term=>term+' '+searchTerms);
-        const responses=await Promise.all(terms.map(async term=>{
-          const url='https://api.apify.com/v2/store?'+new URLSearchParams({search:term,sortBy:'popularity',limit:'10',includeInputSchema:'true',responseFormat:'agent'}).toString();
+        const platformTerms=allowedPlatforms[platform];
+        const terms=[...platformTerms.map(term=>term+' '+searchTerms),...platformTerms];
+        const responses=await Promise.all([...new Set(terms)].map(async term=>{
+          const url='https://api.apify.com/v2/store?'+new URLSearchParams({search:term,limit:'10',includeInputSchema:'true',responseFormat:'full'}).toString();
           const response=await fetch(url,{headers:{Accept:'application/json'}});
           const payload=await response.json().catch(()=>({}));
-          if(!response.ok) return {items:[],error:payload?.error?.message??'Apify Store 搜索失败（HTTP '+response.status+'）',status:response.status};
-          return {items:payload?.data?.items??[],error:null,status:200};
+          if(!response.ok) return {items:[],error:payload?.error?.message??payload?.message??'Apify Store 搜索失败（HTTP '+response.status+'）',status:response.status};
+          const items=Array.isArray(payload?.data?.items)?payload.data.items:Array.isArray(payload?.items)?payload.items:[];
+          return {items,error:null,status:200};
         }));
         const unique=new Map<string,any>();
         for(const response of responses) for(const actor of response.items){
-          const actorId=actor?.username&&actor?.name?String(actor.username)+'/'+String(actor.name):'';
+          const username=String(actor?.username??'').trim();
+          const name=String(actor?.name??'').trim();
+          const actorId=username&&name?username+'/'+name:String(actor?.id??'');
           if(!actorId||unique.has(actorId)) continue;
           unique.set(actorId,{...actor,actor_id:actorId,platform});
         }
+        const platformWords=platformTerms.join(' ').toLowerCase().split(/[^a-z0-9]+/).filter(word=>word.length>2);
         const ranked=[...unique.values()].map(actor=>{
-          const text=[actor.title,actor.name,actor.description,actor.readmeSummary].join(' ').toLowerCase();
+          const description=[actor.title,actor.name,actor.description,actor.readmeSummary,actor.username].join(' ').toLowerCase();
           const words=searchTerms.toLowerCase().split(/[^a-z0-9\u4e00-\u9fff]+/).filter(word=>word.length>1);
-          const matched=words.filter(word=>text.includes(word)).length;
+          const matched=words.filter(word=>description.includes(word)).length;
+          const platformMatched=platformWords.some(word=>description.includes(word));
           const popularity=Number(actor.stats?.totalUsers30Days??actor.stats?.totalUsers??0);
-          const score=Math.min(99,55+matched*7+Math.min(15,Math.log10(popularity+1)*3));
-          return {...actor,score,platform_label:platform.toUpperCase(),recommendation_reason:'Apify Store 搜索匹配；请在启动前检查 Actor 描述、Input Schema、价格和平台访问限制。',intent};
-        }).sort((a,b)=>b.score-a.score).slice(0,4);
+          const score=Math.min(99,55+matched*7+(platformMatched?8:0)+Math.min(15,Math.log10(popularity+1)*3));
+          return {...actor,score,platform_label:platform.toUpperCase(),recommendation_reason:'Apify Store 搜索匹配；请检查 Actor 描述、Input Schema、价格和平台访问限制。',intent};
+        }).sort((a,b)=>b.score-a.score).slice(0,8);
         return {platform,actors:ranked,errors:responses.filter(item=>item.error).map(item=>({status:item.status,error:item.error}))};
       }));
       const actors=searches.flatMap(item=>item.actors).sort((a,b)=>b.score-a.score);
@@ -721,7 +727,8 @@ Deno.serve(async (req: Request) => {
       const schema=(lookup.schema??{}) as CompactInputSchema;
       const validation=validateActorInput(input,schema);
       if(validation.length) return json({error:'Actor 输入参数未通过 Schema 校验',validation},400);
-      const response=await fetch(`https://api.apify.com/v2/acts/${actorPath}/runs?waitForFinish=0`,{
+      const actorPath=encodeURIComponent(actorId.replace('/','~'));
+      const response=await fetch(`https://api.apify.com/v2/actors/${actorPath}/runs?waitForFinish=0`,{
         method:'POST',headers:{Authorization:`Bearer ${apifyToken}`,'Content-Type':'application/json'},
         body:JSON.stringify(input),
       });
