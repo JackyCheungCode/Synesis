@@ -30,7 +30,13 @@ function toActorInput(actor:Actor, c:Criteria):Record<string,unknown>{
  };
  for(const [key,def] of Object.entries(props) as [string,any][]){
   const match=Object.keys(values).find(k=>k.toLowerCase()===key.toLowerCase());
-  if(match&&values[match]!==undefined&&values[match]!==''&&(!Array.isArray(values[match])||(values[match] as unknown[]).length)) input[key]=values[match];
+  if(match&&values[match]!==undefined&&values[match]!==''&&(!Array.isArray(values[match])||(values[match] as unknown[]).length)) {
+   let candidate=values[match];
+   const declared=Array.isArray(def?.type)?def.type[0]:def?.type;
+   if(declared==='string'&&Array.isArray(candidate)) candidate=candidate.join(', ');
+   if(declared==='array'&&typeof candidate==='string') candidate=candidate.split(/[，,;；\\n]+/).map(x=>x.trim()).filter(Boolean);
+   input[key]=candidate;
+  }
   else if(def?.default!==undefined) input[key]=def.default;
   else if((actor.actor_id.includes('bill-of-lading-scraper'))&&key==='searchQuery') input[key]=[...split(c.productKeywords),...split(c.hsCodes)].join(' ');
  }
