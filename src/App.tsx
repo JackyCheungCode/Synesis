@@ -57,7 +57,6 @@ export default function App(){
    const metadataValue=(slug:string,key:string)=>String(integrations.find(item=>item.slug===slug)?.metadata?.[key]??'');
    setIntegrationMeta(current=>({...current,reddit:metadataValue('reddit','clientId'),tiktok:metadataValue('tiktok','clientKey'),brightdataZone:metadataValue('brightdata','zone'),phantombusterOrg:metadataValue('phantombuster','orgId')}));
    const active=loaded.find((item:Credential)=>item.kind==='provider'&&item.status==='validated');
-   const active=(result.credentials??[]).find((item:Credential)=>item.kind==='provider'&&item.status==='validated');
    if(active)setSelectedProvider(active.slug);
   }catch(e){setNotice({kind:'error',text:e instanceof Error?e.message:'加载凭证失败'});}
   finally{setBusy(false);}
