@@ -11,6 +11,7 @@ export function WorkspaceNavigation({page,open,onNavigate,onClose}:Props){
     <span className="sn-nav-section">客户发现</span>
     {link('leads','Import Export Leads Finder',Search)}
     {link('social','Social Leads Finder',Search)}
+    {link('global-leads','全球客户线索库',Search)}
     <span className="sn-nav-section">平台配置</span>
     {link('vault','API 与 AI 配置',Key)}
    </nav>
