@@ -13,7 +13,7 @@ import {
   Modal, Loading, Accordion, AccordionItem,
 } from './components/ui';
 import {
-  Search as SearchIcon, UserAvatar,
+  UserAvatar,
 } from './components/icons';
 import { LineChart, DonutChart } from './components/ui';
 import { useAuth } from './auth/AuthProvider';
