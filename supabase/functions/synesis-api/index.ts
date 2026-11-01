@@ -18,6 +18,39 @@ function cloudflareModelPath(value: string): string {
   // Preserve namespace separators: Cloudflare routes model names as path segments.
   return segments.map(segment => encodeURIComponent(segment).replace(/%40/gi, '@')).join('/');
 }
+type ActorSchemaLookup = { schema: Record<string, unknown> | null; status: number; error?: string; buildId?: string };
+async function readActorInputSchema(actorId: string, token: string, knownMeta?: Record<string, any>): Promise<ActorSchemaLookup> {
+  const actorPath = actorId.replace('/', '~');
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (token) headers.Authorization = 'Bearer ' + token;
+  let meta = knownMeta;
+  if (!meta) {
+    const actorResponse = await fetch('https://api.apify.com/v2/actors/' + encodeURIComponent(actorPath), { headers });
+    if (!actorResponse.ok) {
+      const detail = await actorResponse.json().catch(() => ({}));
+      const message = detail?.error?.message ?? detail?.message ?? '无法读取 Actor 详情';
+      return { schema: null, status: actorResponse.status, error: 'Apify Actor 详情读取失败（HTTP ' + actorResponse.status + '）：' + message };
+    }
+    const actorPayload = await actorResponse.json().catch(() => ({}));
+    meta = actorPayload?.data ?? actorPayload;
+  }
+  const preferredTag = String(meta?.defaultRunOptions?.build ?? 'latest');
+  const buildId = meta?.taggedBuilds?.[preferredTag]?.buildId ?? meta?.taggedBuilds?.latest?.buildId;
+  if (!buildId) return { schema: null, status: 422, error: '该 Actor 尚无可读取的默认构建（latest build），无法取得 Input Schema。可切换到高级 JSON 输入尝试运行。' };
+  const buildResponse = await fetch('https://api.apify.com/v2/actor-builds/' + encodeURIComponent(String(buildId)), { headers });
+  if (!buildResponse.ok) {
+    const detail = await buildResponse.json().catch(() => ({}));
+    const message = detail?.error?.message ?? detail?.message ?? '无法读取 Actor 构建定义';
+    return { schema: null, status: buildResponse.status, error: 'Apify Actor Build 读取失败（HTTP ' + buildResponse.status + '）：' + message, buildId: String(buildId) };
+  }
+  const buildPayload = await buildResponse.json().catch(() => ({}));
+  const build = buildPayload?.data ?? buildPayload;
+  let schema = build?.actorDefinition?.input ?? build?.inputSchema ?? null;
+  if (typeof schema === 'string') { try { schema = JSON.parse(schema); } catch { return { schema: null, status: 502, error: 'Apify 返回的 Input Schema 不是有效 JSON。', buildId: String(buildId) }; } }
+  if (schema === null || schema === undefined) return { schema: null, status: 422, error: '该 Actor 的默认构建没有定义 Input Schema。可切换到高级 JSON 输入；Apify 会按 Actor 自身规则处理输入。', buildId: String(buildId) };
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return { schema: null, status: 502, error: 'Apify 返回的 Input Schema 格式无效。', buildId: String(buildId) };
+  return { schema: schema as Record<string, unknown>, status: 200, buildId: String(buildId) };
+}
 
 type CompactInputSchema = { type?: string; properties?: Record<string,{type?:string|string[];minItems?:number;maxItems?:number;minLength?:number;maxLength?:number;minimum?:number;maximum?:number;pattern?:string;format?:string;items?:{type?:string;pattern?:string;format?:string};enum?:unknown[]}>; required?: string[] };
 function validateActorInput(input: unknown, schema: CompactInputSchema): string[] {
@@ -291,16 +324,13 @@ Deno.serve(async (req: Request) => {
         const headers:Record<string,string>={Accept:'application/json'};
         let token='';
         try { const credential=await getCredential('apify','integration'); token=credential.clear; headers.Authorization=`Bearer ${token}`; } catch { /* Recommendation metadata may be public; running still requires a configured token. */ }
-        const [metaResponse,schemaResponse]=await Promise.all([
-          fetch(`https://api.apify.com/v2/acts/${encodeURIComponent(actorPath)}?fields=id,name,title,username,description,stats,isDeprecated`,{headers}),
-          fetch(`https://api.apify.com/v2/acts/${encodeURIComponent(actorPath)}/input-schema`,{headers}),
-        ]);
+        const metaResponse=await fetch(`https://api.apify.com/v2/actors/${encodeURIComponent(actorPath)}`,{headers});
         if(!metaResponse.ok) return null;
         const metaPayload=await metaResponse.json().catch(()=>({}));
         const meta=metaPayload?.data??metaPayload;
         if(!meta?.id||meta.isDeprecated) return null;
-        const schemaPayload=schemaResponse.ok?await schemaResponse.json().catch(()=>({})):null;
-        const schema=schemaPayload?.data??schemaPayload;
+        const schemaResult=await readActorInputSchema(candidate.id,token,meta);
+        const schema=schemaResult.schema;
         let score=candidate.base;
         const isUSMarket=/united states|usa|u\.s\.|(^|[,; ])us($|[,; ])/.test(targetCountries);
         const isOtherMarket=Boolean(targetCountries)&&!isUSMarket;
@@ -346,7 +376,7 @@ Deno.serve(async (req: Request) => {
           actor_id:candidate.id,title:String(meta.title??meta.name??candidate.id),description:String(meta.description??'').slice(0,700),
           score:Math.min(99,score+supportedFields.length*2),recommendation_reason:candidate.reason,
           supported_fields:supportedFields,unsupported_fields:unsupportedFields,
-          input_schema:schema&&typeof schema==='object'?schema:null,
+          input_schema:schema, schema_error:schemaResult.error??null, schema_status:schemaResult.status, schema_build_id:schemaResult.buildId??null,
           stats:meta.stats??null,
         };
       }));
@@ -358,16 +388,13 @@ Deno.serve(async (req: Request) => {
       const actorId=String(body.actorId??'').trim();
       if(!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(actorId)) return json({error:'Actor ID 格式无效'},400);
       const {clear:apifyToken}=await getCredential('apify','integration');
-      const actorPath=encodeURIComponent(actorId.replace('/','~'));
-      const response=await fetch(`https://api.apify.com/v2/acts/${actorPath}/input-schema`,{headers:{Authorization:`Bearer ${apifyToken}`,Accept:'application/json'}});
-      if(!response.ok) return json({error:`无法读取 Actor Input Schema（HTTP ${response.status}）`},502);
-      const payload=await response.json().catch(()=>({}));
-      const schema=(payload?.data??payload) as Record<string,unknown>;
-      if(!schema||typeof schema!=='object'||Array.isArray(schema)) return json({error:'Actor 返回的 Input Schema 格式无效'},502);
+      const lookup=await readActorInputSchema(actorId,apifyToken);
+      if(!lookup.schema) return json({error:lookup.error??'Actor Input Schema 不可用',code:'ACTOR_INPUT_SCHEMA_UNAVAILABLE',upstream_status:lookup.status},lookup.status);
+      const schema=lookup.schema;
       const serialized=JSON.stringify(schema);
       const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(serialized));
       const schemaHash=Array.from(new Uint8Array(digest)).map(byte=>byte.toString(16).padStart(2,'0')).join('');
-      return json({actor_id:actorId,schema,schema_hash:schemaHash,fetched_at:new Date().toISOString()});
+      return json({actor_id:actorId,schema,schema_hash:schemaHash,build_id:lookup.buildId??null,fetched_at:new Date().toISOString()});
     }
 
     if (action === 'leads.run') {
@@ -375,11 +402,9 @@ Deno.serve(async (req: Request) => {
       const input=body.input;
       if(!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+$/.test(actorId)) return json({error:'Actor ID 格式无效'},400);
       const {clear:apifyToken}=await getCredential('apify','integration');
-      const actorPath=encodeURIComponent(actorId.replace('/','~'));
-      const schemaResponse=await fetch(`https://api.apify.com/v2/acts/${actorPath}/input-schema`,{headers:{Authorization:`Bearer ${apifyToken}`}});
-      if(!schemaResponse.ok) return json({error:`无法读取 Actor Input Schema（HTTP ${schemaResponse.status}）`},502);
-      const schemaPayload=await schemaResponse.json().catch(()=>({}));
-      const schema=(schemaPayload?.data??schemaPayload??{}) as CompactInputSchema;
+      const lookup=await readActorInputSchema(actorId,apifyToken);
+      if(!lookup.schema && lookup.status!==422) return json({error:lookup.error??'无法读取 Actor Input Schema',code:'ACTOR_INPUT_SCHEMA_UNAVAILABLE',upstream_status:lookup.status},lookup.status);
+      const schema=(lookup.schema??{}) as CompactInputSchema;
       const validation=validateActorInput(input,schema);
       if(validation.length) return json({error:'Actor 输入参数未通过 Schema 校验',validation},400);
       const response=await fetch(`https://api.apify.com/v2/acts/${actorPath}/runs?waitForFinish=0`,{
