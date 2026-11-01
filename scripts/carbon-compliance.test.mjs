@@ -44,11 +44,13 @@ test('Carbon is the only permitted UI framework in package dependencies', () => 
   }
 });
 
-test('CI exposes the Carbon compliance test and has a manual production release gate', () => {
+test('Carbon compliance is an independent CI job and production release is manual', () => {
   const pkg = JSON.parse(read('../package.json'));
   assert.ok(pkg.scripts['test:carbon-compliance'], 'Missing test:carbon-compliance script');
   const workflow = read('../.github/workflows/ci.yml');
-  assert.match(workflow, /Carbon compliance/);
+  assert.match(workflow, /^  carbon-compliance:\s*$/m);
+  assert.match(workflow, /name:\s*Carbon compliance/);
+  assert.match(workflow, /needs:\s*carbon-compliance/);
   assert.match(workflow, /environment:\s*production/);
   assert.match(workflow, /workflow_dispatch/);
   assert.match(workflow, /inputs\.deploy_production\s*==\s*true/);
