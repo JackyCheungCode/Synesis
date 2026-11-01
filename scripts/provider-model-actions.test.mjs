@@ -49,7 +49,7 @@ test('Actor recommendations are schema-aware and show unsupported criteria expli
  assert.match(finder,/input_schema/);
  assert.match(finder,/supported_fields/);
  assert.match(finder,/unsupported_fields/);
- assert.match(finder,/Actor Input JSON/);
+ assert.match(finder,/实际发送给 Actor 的 Input JSON/);
  assert.match(backend,/action === 'leads\.actors\.recommend'/);
  assert.match(backend,/input-schema/);
  assert.match(backend,/supportedFields/);
