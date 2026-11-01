@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-type Props={onApi:(action:string,payload?:Record<string,unknown>)=>Promise<any>;query?:string;context:'social'|'trade'};
+type Props={onApi:(action:string,payload?:Record<string,unknown>)=>Promise<any>;query?:string;};
 type Provider='apify'|'brightdata'|'octoparse'|'firecrawl'|'phantombuster'|'texau';
 const names:Record<Provider,string>={apify:'Apify',brightdata:'Bright Data',octoparse:'Octoparse',firecrawl:'Firecrawl',phantombuster:'PhantomBuster',texau:'TexAu'};
 const descriptions:Record<Provider,string>={
