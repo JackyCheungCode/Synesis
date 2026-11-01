@@ -58,7 +58,7 @@ export function ScrapingProviderPanel({onApi,query=''}:Props){
   }catch(e){setError(e instanceof Error?e.message:'采集服务请求失败');}
   finally{setBusy(false);}
  }
- const ready=provider==='apify'?false:provider==='firecrawl'?operation==='search'?Boolean(effectiveQuery):/^https:\/\//i.test(url):provider==='brightdata'?/^https:\/\//i.test(url):provider==='octoparse'?Boolean(taskId.trim()):provider==='phantombuster'?operation==='discover'||Boolean(agentId.trim()):provider==='texau'?operation==='mcp_tools'||operation==='mcp_call'?Boolean(mcpToolName):Boolean(firstName.trim()&&lastName.trim()&&domain.trim()):false;
+ const ready=provider==='apify'?false:provider==='firecrawl'?operation==='search'?Boolean(effectiveQuery):/^https:\/\//i.test(url):provider==='brightdata'?/^https:\/\//i.test(url):provider==='octoparse'?Boolean(taskId.trim()):provider==='phantombuster'?operation==='discover'||Boolean(agentId.trim()):provider==='texau'?operation==='mcp_tools'||(operation==='mcp_call'&&Boolean(mcpToolName))||(operation==='email_enrichment'&&Boolean(firstName.trim()&&lastName.trim()&&domain.trim())):false;
  return <section className="leads-panel scraping-provider-panel">
   <div className="leads-panel-head"><div><span>UNIFIED SCRAPING PROVIDERS</span><h3>选择本次采集服务</h3><p>不同服务商提供不同工具与参数；Synesis 会按所选服务商使用对应 API，不会把一种服务的参数错误地传给另一家。</p></div></div>
   <div className="leads-field-grid">
