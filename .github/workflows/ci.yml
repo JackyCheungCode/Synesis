@@ -43,6 +43,13 @@ jobs:
           node-version: 22.14.0
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Export generated npm lockfile for Foundation bootstrap
+        if: hashFiles('package-lock.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: synesis-package-lock-bootstrap
+          path: package-lock.json
+          if-no-files-found: error
       - name: Test importer lead discovery
         run: npm run test:leads-finder
       - name: Test AI provider model actions
