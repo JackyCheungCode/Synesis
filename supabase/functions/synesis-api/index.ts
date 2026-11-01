@@ -463,7 +463,7 @@ Deno.serve(async (req: Request) => {
         actors,platforms_checked:selected,
         platforms_without_results:searches.filter(item=>!item.actors.length).map(item=>item.platform),
         search_errors:searchErrors,
-        search_diagnostics:searches.map(item=>({platform:item.platform,queries_checked:item.queries_checked??0,actors_found:item.actors.length,errors:item.errors.length})),
+        search_diagnostics:searches.map(item=>({platform:item.platform,queries_checked:allowedPlatforms[item.platform].length+productTerms.length+searchTerms.length,actors_found:item.actors.length,errors:item.errors.length})),
         apify_store_source:'https://apify.com/store'
       });
     }
