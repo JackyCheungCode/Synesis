@@ -90,3 +90,30 @@ test('new source additions cannot extend the registered legacy patterns', () => 
     }
   }
 });
+
+test('official Carbon packages are pinned and a reproducible npm lockfile is committed', () => {
+  const pkg = JSON.parse(read('../package.json'));
+  const lock = JSON.parse(read('../package-lock.json'));
+  for (const [name, version] of Object.entries({
+    '@carbon/react': '1.118.0',
+    '@carbon/styles': '1.118.0',
+    '@carbon/icons-react': '11.91.0',
+  })) {
+    assert.equal(pkg.dependencies[name], version, `${name} must be pinned to ${version}`);
+    assert.equal(lock.packages[''].dependencies[name], version, `package-lock must pin ${name}`);
+  }
+});
+
+test('global shell is wired to the Carbon theme, grid and overlay navigation', () => {
+  const app = read('../src/App.tsx');
+  const navigation = read('../src/components/WorkspaceNavigation.tsx');
+  const styles = read('../src/styles.scss');
+  const foundation = read('../src/styles/carbon-foundation.scss');
+  assert.match(app, /GlobalTheme/);
+  assert.match(app, /theme === 'light' \? 'white' : 'g90'/);
+  assert.match(app, /<Grid fullWidth/);
+  assert.match(navigation, /<SideNav/);
+  assert.match(navigation, /<SideNavMenu/);
+  assert.match(styles, /@use '@carbon\\/react'/);
+  assert.match(foundation, /carbon-theme\.\$background/);
+});
