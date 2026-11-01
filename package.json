@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "deploy": "npm run build && wrangler deploy",
-    "test:product-identity": "node --test scripts/product-identity.test.mjs",
+    "test:leads-finder": "node --test scripts/provider-model-actions.test.mjs",
     "test:design-system": "node --test scripts/design-system.test.mjs",
     "test:provider-model-actions": "node --test scripts/provider-model-actions.test.mjs"
   },

@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type WorkspacePage = 'dashboard' | 'projects' | 'products' | 'vault' | 'settings';
-export type WorkspaceRoute = { page: WorkspacePage; projectId?: string };
+export type WorkspacePage = 'leads' | 'vault';
+export type WorkspaceRoute = { page: WorkspacePage };
 
 function parseHash(): WorkspaceRoute {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const page = parts[0];
-  if (page === 'research' && parts[1]) return { page: 'projects', projectId: decodeURIComponent(parts[1]) };
-  if (page === 'projects') return { page: 'projects' };
-  if (page === 'products' || page === 'vault' || page === 'settings') return { page };
-  return { page: 'dashboard' };
+  if (page === 'leads' || page === 'vault') return { page };
+  
+  return { page: 'leads' };
 }
 
 function routeHash(route: WorkspaceRoute): string {
-  if (route.page === 'projects' && route.projectId) return `#/research/${encodeURIComponent(route.projectId)}`;
   return `#/${route.page}`;
 }
 
@@ -22,7 +20,7 @@ export function useWorkspaceRoute() {
   const [route, setRoute] = useState<WorkspaceRoute>(() => parseHash());
 
   useEffect(() => {
-    if (!window.location.hash) window.history.replaceState(null, '', routeHash({ page: 'dashboard' }));
+    if (!window.location.hash) window.history.replaceState(null, '', routeHash({ page: 'leads' }));
     const sync = () => setRoute(parseHash());
     window.addEventListener('hashchange', sync);
     window.addEventListener('popstate', sync);
@@ -32,8 +30,8 @@ export function useWorkspaceRoute() {
     };
   }, []);
 
-  const navigate = useCallback((page: WorkspacePage, projectId?: string) => {
-    const next = { page, projectId };
+  const navigate = useCallback((page: WorkspacePage) => {
+    const next = { page };
     const hash = routeHash(next);
     if (window.location.hash !== hash) window.history.pushState(null, '', hash);
     setRoute(next);
